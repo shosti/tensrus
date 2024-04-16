@@ -1,9 +1,11 @@
 use num::Num;
 
-pub trait Tensor<T: Num, const Dim: usize> {
+pub trait Tensor<T: Num, const DIM: usize> {
     fn dim(&self) -> usize {
-        Dim
+        DIM
     }
+
+    fn shape(&self) -> [usize; DIM];
 }
 
 #[derive(Debug)]
@@ -17,7 +19,11 @@ impl<T: Num> From<T> for Value<T> {
     }
 }
 
-impl<T: Num> Tensor<T, 1> for Value<T> {}
+impl<T: Num> Tensor<T, 0> for Value<T> {
+    fn shape(&self) -> [usize; 0] {
+        []
+    }
+}
 
 #[derive(Debug)]
 pub struct Vector<T: Num, const N: usize> {
@@ -34,7 +40,11 @@ impl<T: Num, const N: usize> From<[T; N]> for Vector<T, N> {
     }
 }
 
-impl<T: Num, const N: usize> Tensor<T, 2> for Vector<T, N> {}
+impl<T: Num, const N: usize> Tensor<T, 1> for Vector<T, N> {
+    fn shape(&self) -> [usize; 1] {
+        [self.shape.0]
+    }
+}
 
 #[derive(Debug)]
 pub struct Matrix<T: Num, const N: usize, const M: usize>
@@ -64,4 +74,8 @@ where
     }
 }
 
-impl<T: Num, const N: usize, const M: usize> Tensor<T, 3> for Matrix<T, N, M> where [(); N * M]: {}
+impl<T: Num, const N: usize, const M: usize> Tensor<T, 2> for Matrix<T, N, M> where [(); N * M]: {
+    fn shape(&self) -> [usize; 2] {
+        [self.shape.0, self.shape.1]
+    }
+}
