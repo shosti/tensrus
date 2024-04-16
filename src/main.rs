@@ -15,8 +15,11 @@ fn main() {
     println!("Y.RANK(): {:#?}", y.rank());
     println!("Y.SHAPE(): {:#?}", y.shape());
 
-    let z = tensor::Matrix::from([[1.23, 4.56, 7.89], [2.34, 5.67, 8.90]]);
+    let mut z = tensor::Matrix::from([[1.23, 4.56, 7.89], [2.34, 5.67, 8.90]]);
     println!("Z: {:#?}", z);
     println!("Z.RANK(): {:#?}", z.rank());
     println!("Z.SHAPE(): {:#?}", z.shape());
+
+    z *= 7.0;
+    println!("Z: {:#?}", z);
 }

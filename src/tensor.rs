@@ -1,6 +1,7 @@
+use std::ops::MulAssign;
 use num::Num;
 
-pub trait Tensor<T: Num, const R: usize> {
+pub trait Tensor<T: Num + Copy, const R: usize>: MulAssign<T> {
     fn rank(&self) -> usize {
         R
     }
@@ -9,50 +10,64 @@ pub trait Tensor<T: Num, const R: usize> {
 }
 
 #[derive(Debug)]
-pub struct Scalar<T: Num> {
-    mem: T,
+pub struct Scalar<T: Num + Copy> {
+    val: T,
 }
 
-impl<T: Num> From<T> for Scalar<T> {
+impl<T: Num + Copy> From<T> for Scalar<T> {
     fn from(val: T) -> Self {
-        Scalar { mem: val }
+        Scalar { val: val }
     }
 }
 
-impl<T: Num> Tensor<T, 0> for Scalar<T> {
+impl<T: Num + Copy> Tensor<T, 0> for Scalar<T> {
     fn shape(&self) -> [usize; 0] {
         []
     }
 }
 
-#[derive(Debug)]
-pub struct Vector<T: Num, const N: usize> {
-    shape: (usize,),
-    mem: [T; N],
+impl<T: Num + Copy> MulAssign<T> for Scalar<T> {
+    fn mul_assign(&mut self, other: T) {
+        self.val = self.val * other;
+    }
 }
 
-impl<T: Num, const N: usize> From<[T; N]> for Vector<T, N> {
+#[derive(Debug)]
+pub struct Vector<T: Num + Copy, const N: usize> {
+    shape: (usize,),
+    val: [T; N],
+}
+
+impl<T: Num + Copy, const N: usize> From<[T; N]> for Vector<T, N> {
     fn from(vals: [T; N]) -> Self {
         Vector {
             shape: (N,),
-            mem: vals,
+            val: vals,
         }
     }
 }
 
-impl<T: Num, const N: usize> Tensor<T, 1> for Vector<T, N> {
+impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
     fn shape(&self) -> [usize; 1] {
         [self.shape.0]
     }
 }
 
+impl<T: Num + Copy, const N: usize> MulAssign<T> for Vector<T, N> {
+    fn mul_assign(&mut self, other: T) {
+        for i in 0..N {
+            self.val[i] = self.val[i] * other;
+        }
+    }
+}
+
 #[derive(Debug)]
-pub struct Matrix<T: Num, const N: usize, const M: usize>
+pub struct Matrix<T: Num + Copy, const N: usize, const M: usize>
 where
     [(); N * M]:,
 {
     shape: (usize, usize),
-    mem: [T; N * M],
+    val: [T; N * M],
 }
 
 impl<T: Num + Copy, const N: usize, const M: usize> From<[[T; N]; M]> for Matrix<T, N, M>
@@ -62,11 +77,11 @@ where
     fn from(vals: [[T; N]; M]) -> Self {
         let mut ret: Matrix<T, N, M> = Matrix {
             shape: (N, M),
-            mem: std::array::from_fn(|_| T::zero()),
+            val: std::array::from_fn(|_| T::zero()),
         };
         for i in 0..M {
             for j in 0..N {
-                ret.mem[(i * N) + j] = vals[i][j];
+                ret.val[(i * N) + j] = vals[i][j];
             }
         }
 
@@ -74,8 +89,16 @@ where
     }
 }
 
-impl<T: Num, const N: usize, const M: usize> Tensor<T, 2> for Matrix<T, N, M> where [(); N * M]: {
+impl<T: Num + Copy, const N: usize, const M: usize> Tensor<T, 2> for Matrix<T, N, M> where [(); N * M]: {
     fn shape(&self) -> [usize; 2] {
         [self.shape.0, self.shape.1]
+    }
+}
+
+impl<T: Num + Copy, const N: usize, const M: usize> MulAssign<T> for Matrix<T, N, M> where [(); N * M]: {
+    fn mul_assign(&mut self, other: T) {
+        for i in 0..N {
+            self.val[i] = self.val[i] * other;
+        }
     }
 }
