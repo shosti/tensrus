@@ -1,6 +1,10 @@
 use num::Num;
 
-pub trait Tensor<T: Num> {}
+pub trait Tensor<T: Num, const Dim: usize> {
+    fn dim(&self) -> usize {
+        Dim
+    }
+}
 
 #[derive(Debug)]
 pub struct Value<T: Num> {
@@ -13,27 +17,31 @@ impl<T: Num> From<T> for Value<T> {
     }
 }
 
+impl<T: Num> Tensor<T, 1> for Value<T> {}
+
 #[derive(Debug)]
 pub struct Vector<T: Num, const N: usize> {
-    dim: (usize,),
+    shape: (usize,),
     mem: [T; N],
 }
 
 impl<T: Num, const N: usize> From<[T; N]> for Vector<T, N> {
     fn from(vals: [T; N]) -> Self {
         Vector {
-            dim: (N,),
+            shape: (N,),
             mem: vals,
         }
     }
 }
+
+impl<T: Num, const N: usize> Tensor<T, 2> for Vector<T, N> {}
 
 #[derive(Debug)]
 pub struct Matrix<T: Num, const N: usize, const M: usize>
 where
     [(); N * M]:,
 {
-    dim: (usize, usize),
+    shape: (usize, usize),
     mem: [T; N * M],
 }
 
@@ -43,7 +51,7 @@ where
 {
     fn from(vals: [[T; N]; M]) -> Self {
         let mut ret: Matrix<T, N, M> = Matrix {
-            dim: (N, M),
+            shape: (N, M),
             mem: std::array::from_fn(|_| T::zero()),
         };
         for i in 0..M {
@@ -55,3 +63,5 @@ where
         ret
     }
 }
+
+impl<T: Num, const N: usize, const M: usize> Tensor<T, 3> for Matrix<T, N, M> where [(); N * M]: {}
