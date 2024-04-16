@@ -1,25 +1,25 @@
 use num::Num;
 
-pub trait Tensor<T: Num, const DIM: usize> {
-    fn dim(&self) -> usize {
-        DIM
+pub trait Tensor<T: Num, const R: usize> {
+    fn rank(&self) -> usize {
+        R
     }
 
-    fn shape(&self) -> [usize; DIM];
+    fn shape(&self) -> [usize; R];
 }
 
 #[derive(Debug)]
-pub struct Value<T: Num> {
+pub struct Scalar<T: Num> {
     mem: T,
 }
 
-impl<T: Num> From<T> for Value<T> {
+impl<T: Num> From<T> for Scalar<T> {
     fn from(val: T) -> Self {
-        Value { mem: val }
+        Scalar { mem: val }
     }
 }
 
-impl<T: Num> Tensor<T, 0> for Value<T> {
+impl<T: Num> Tensor<T, 0> for Scalar<T> {
     fn shape(&self) -> [usize; 0] {
         []
     }
