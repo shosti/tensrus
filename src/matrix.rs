@@ -7,7 +7,6 @@ pub struct Matrix<T: Num + Copy, const N: usize, const M: usize>
 where
     [(); N * M]:,
 {
-    shape: (usize, usize),
     val: [T; N * M],
 }
 
@@ -17,7 +16,6 @@ where
 {
     fn from(vals: [[T; N]; M]) -> Self {
         let mut ret: Matrix<T, N, M> = Matrix {
-            shape: (N, M),
             val: std::array::from_fn(|_| T::zero()),
         };
         for i in 0..M {
@@ -32,7 +30,7 @@ where
 
 impl<T: Num + Copy, const N: usize, const M: usize> Tensor<T, 2> for Matrix<T, N, M> where [(); N * M]: {
     fn shape(&self) -> [usize; 2] {
-        [self.shape.0, self.shape.1]
+        [N, M]
     }
 }
 
