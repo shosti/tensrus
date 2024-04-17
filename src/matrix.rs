@@ -15,15 +15,13 @@ where
     [(); N * M]:,
 {
     fn from(vals: [[T; N]; M]) -> Self {
-        let mut arr = std::array::from_fn(|_| T::zero());
-        for i in 0..M {
-            for j in 0..N {
-                arr[(i * N) + j] = vals[i][j];
-            }
-        }
-
         Self {
-            vals: Storage::from(arr),
+            vals: Storage::from_fn(|i| {
+                let row = i / N;
+                let col = i % N;
+
+                vals[row][col]
+            }),
         }
     }
 }

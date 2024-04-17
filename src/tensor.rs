@@ -1,6 +1,6 @@
 use num::Num;
 use std::cell::RefCell;
-use std::ops::{MulAssign};
+use std::ops::{FnMut, Index, MulAssign};
 use std::rc::Rc;
 
 pub trait Tensor<T: Num + Copy, const R: usize>: MulAssign<T> {
@@ -17,6 +17,15 @@ pub struct Storage<T: Num + Copy, const N: usize> {
 }
 
 impl<T: Num + Copy, const N: usize> Storage<T, N> {
+    pub fn from_fn<F>(cb: F) -> Self
+    where
+        F: FnMut(usize) -> T,
+    {
+        Self {
+            vals: Rc::new(RefCell::new(std::array::from_fn(cb))),
+        }
+    }
+
     pub fn elem_mul(&mut self, other: T) {
         let mut vals = self.vals.borrow_mut();
 
