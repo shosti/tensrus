@@ -1,15 +1,15 @@
 use std::ops::MulAssign;
 use num::Num;
-use crate::tensor::Tensor;
+use crate::tensor::{Tensor, Storage};
 
 #[derive(Debug)]
 pub struct Scalar<T: Num + Copy> {
-    val: T,
+    val: Storage<T, 1>,
 }
 
 impl<T: Num + Copy> From<T> for Scalar<T> {
     fn from(val: T) -> Self {
-        Scalar { val: val }
+        Scalar { val: Storage::from([val]) }
     }
 }
 
@@ -21,6 +21,6 @@ impl<T: Num + Copy> Tensor<T, 0> for Scalar<T> {
 
 impl<T: Num + Copy> MulAssign<T> for Scalar<T> {
     fn mul_assign(&mut self, other: T) {
-        self.val = self.val * other;
+        self.val.elem_mul(other);
     }
 }

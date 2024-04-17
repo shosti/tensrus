@@ -1,13 +1,13 @@
-use std::ops::MulAssign;
+use crate::tensor::{Storage, Tensor};
 use num::Num;
-use crate::tensor::Tensor;
+use std::ops::MulAssign;
 
 #[derive(Debug)]
 pub struct Matrix<T: Num + Copy, const N: usize, const M: usize>
 where
     [(); N * M]:,
 {
-    val: [T; N * M],
+    vals: Storage<T, { N * M }>,
 }
 
 impl<T: Num + Copy, const N: usize, const M: usize> From<[[T; N]; M]> for Matrix<T, N, M>
@@ -15,29 +15,33 @@ where
     [(); N * M]:,
 {
     fn from(vals: [[T; N]; M]) -> Self {
-        let mut ret: Matrix<T, N, M> = Matrix {
-            val: std::array::from_fn(|_| T::zero()),
-        };
+        let mut arr = std::array::from_fn(|_| T::zero());
         for i in 0..M {
             for j in 0..N {
-                ret.val[(i * N) + j] = vals[i][j];
+                arr[(i * N) + j] = vals[i][j];
             }
         }
 
-        ret
+        Self {
+            vals: Storage::from(arr),
+        }
     }
 }
 
-impl<T: Num + Copy, const N: usize, const M: usize> Tensor<T, 2> for Matrix<T, N, M> where [(); N * M]: {
+impl<T: Num + Copy, const N: usize, const M: usize> Tensor<T, 2> for Matrix<T, N, M>
+where
+    [(); N * M]:,
+{
     fn shape(&self) -> [usize; 2] {
         [N, M]
     }
 }
 
-impl<T: Num + Copy, const N: usize, const M: usize> MulAssign<T> for Matrix<T, N, M> where [(); N * M]: {
+impl<T: Num + Copy, const N: usize, const M: usize> MulAssign<T> for Matrix<T, N, M>
+where
+    [(); N * M]:,
+{
     fn mul_assign(&mut self, other: T) {
-        for i in 0..N {
-            self.val[i] = self.val[i] * other;
-        }
+        self.vals.elem_mul(other);
     }
 }
