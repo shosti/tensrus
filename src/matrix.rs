@@ -2,7 +2,7 @@ use crate::tensor::{IndexError, Storage, Tensor};
 use crate::vector::Vector;
 use num::Num;
 use std::fmt::Display;
-use std::ops::MulAssign;
+use std::ops::{Mul, MulAssign};
 
 pub struct Matrix<T: Num + Copy, const M: usize, const N: usize>
 where
@@ -15,7 +15,7 @@ impl<T: Num + Copy, const M: usize, const N: usize> Matrix<T, M, N>
 where
     [(); M * N]:,
 {
-    pub fn column_vector(&self, j: usize) -> Result<Vector<T, M>, IndexError> {
+    pub fn col(&self, j: usize) -> Result<Vector<T, M>, IndexError> {
         if j >= N {
             return Err(IndexError {});
         }
@@ -23,7 +23,7 @@ where
         Ok(Vector::from_fn(|idx| self.get([idx[0], j]).unwrap()))
     }
 
-    pub fn row_vector(&self, i: usize) -> Result<Vector<T, N>, IndexError> {
+    pub fn row(&self, i: usize) -> Result<Vector<T, N>, IndexError> {
         if i >= M {
             return Err(IndexError {});
         }
@@ -121,18 +121,24 @@ where
     }
 }
 
-// impl<T: Num + Copy, const M: usize, const N: usize, const P: usize> Mul<Matrix<T, N, P>>
-//     for Matrix<T, M, N>
-// where
-//     [(); M * N]:,
-// {
-//     type Output = Matrix<T, M, P>;
+impl<T: Num + Copy, const M: usize, const N: usize, const P: usize> Mul<Matrix<T, N, P>>
+    for Matrix<T, M, N>
+where
+    [(); M * N]:,
+    [(); N * P]:,
+    [(); M * P]:,
+{
+    type Output = Matrix<T, M, P>;
 
-//     fn mul(self, rhs: Matrix<T, N, P>) -> Self::Output {
-//         let mut out = Storage::from_fn(|| T::zero());
-
-//     }
-// }
+    fn mul(self, other: Matrix<T, N, P>) -> Self::Output {
+        Matrix::from_fn(|idx| {
+            let [i, j] = idx;
+            self.row(i)
+                .unwrap()
+                .dot(&other.col(j).unwrap())
+        })
+    }
+}
 
 impl<T: Num + Copy, const M: usize, const N: usize> Eq for Matrix<T, M, N> where [(); M * N]: {}
 
@@ -228,34 +234,34 @@ mod tests {
              [10, 11, 12]]
         );
 
-        assert_eq!(x.column_vector(0), Ok(Vector::from([1, 4, 7, 10])));
-        assert_eq!(x.column_vector(1), Ok(Vector::from([2, 5, 8, 11])));
-        assert_eq!(x.column_vector(2), Ok(Vector::from([3, 6, 9, 12])));
-        assert_eq!(x.column_vector(3), Err(IndexError {}));
-        assert_eq!(x.row_vector(0), Ok(Vector::from([1, 2, 3])));
-        assert_eq!(x.row_vector(1), Ok(Vector::from([4, 5, 6])));
-        assert_eq!(x.row_vector(2), Ok(Vector::from([7, 8, 9])));
-        assert_eq!(x.row_vector(3), Ok(Vector::from([10, 11, 12])));
-        assert_eq!(x.row_vector(4), Err(IndexError {}));
+        assert_eq!(x.col(0), Ok(Vector::from([1, 4, 7, 10])));
+        assert_eq!(x.col(1), Ok(Vector::from([2, 5, 8, 11])));
+        assert_eq!(x.col(2), Ok(Vector::from([3, 6, 9, 12])));
+        assert_eq!(x.col(3), Err(IndexError {}));
+        assert_eq!(x.row(0), Ok(Vector::from([1, 2, 3])));
+        assert_eq!(x.row(1), Ok(Vector::from([4, 5, 6])));
+        assert_eq!(x.row(2), Ok(Vector::from([7, 8, 9])));
+        assert_eq!(x.row(3), Ok(Vector::from([10, 11, 12])));
+        assert_eq!(x.row(4), Err(IndexError {}));
     }
 
-    // #[test]
-    // fn matrix_multiply() {
-    //     let x = Matrix::from(
-    //         [[1, 2],
-    //          [3, 4],
-    //          [5, 6]]
-    //     );
-    //     let y = Matrix::from(
-    //         [[7, 8, 9, 10],
-    //          [9, 10, 11, 12]]
-    //     );
-    //     let res = Matrix::from(
-    //         [[25, 28, 31, 34],
-    //          [57, 64, 71, 78],
-    //          [89, 100, 111, 122]]
-    //     );
+    #[test]
+    fn matrix_multiply() {
+        let x = Matrix::from(
+            [[1, 2],
+             [3, 4],
+             [5, 6]]
+        );
+        let y = Matrix::from(
+            [[7, 8, 9, 10],
+             [9, 10, 11, 12]]
+        );
+        let res = Matrix::from(
+            [[25, 28, 31, 34],
+             [57, 64, 71, 78],
+             [89, 100, 111, 122]]
+        );
 
-    //     assert_eq!(x * y, res);
-    // }
+        assert_eq!(x * y, res);
+    }
 }
