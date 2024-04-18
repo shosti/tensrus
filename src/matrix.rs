@@ -31,11 +31,30 @@ where
     [(); M * N]:,
 {
     pub fn get(&self, i: usize, j: usize) -> Result<T, IndexError> {
-        if i >= M || j >= N {
+        if !self.in_bounds(i, j) {
             return Err(IndexError {});
         }
 
-        Ok(self.vals.get((i * N) + j))
+        Ok(self.vals.get(self.idx(i, j)))
+    }
+
+    pub fn set(&mut self, i: usize, j: usize, val: T) -> Result<(), IndexError> {
+        if !self.in_bounds(i, j) {
+            return Err(IndexError {});
+        }
+        let idx = self.idx(i, j);
+
+        self.vals.set(idx, val);
+
+        Ok(())
+    }
+
+    fn in_bounds(&self, i: usize, j: usize) -> bool {
+        i < M && j < N
+    }
+
+    fn idx(&self, i: usize, j: usize) -> usize {
+        (i * N) + j
     }
 }
 
@@ -74,8 +93,17 @@ where
     }
 }
 
-// impl<T: Num + Copy, const N: usize, const M: usize> PartialEq for Matrix<T, M, N> where [(); M * N]: {
+// impl<T: Num + Copy, const M: usize, const N: usize, const P: usize> Mul<Matrix<T, N, P>>
+//     for Matrix<T, M, N>
+// where
+//     [(); M * N]:,
+// {
+//     type Output = Matrix<T, M, P>;
 
+//     fn mul(self, rhs: Matrix<T, N, P>) -> Self::Output {
+//         let mut out = Storage::from_fn(|| T::zero());
+
+//     }
 // }
 
 impl<T: Num + Copy, const M: usize, const N: usize> Eq for Matrix<T, M, N> where [(); M * N]: {}
@@ -147,23 +175,23 @@ mod tests {
         assert_eq!(x, y);
     }
 
-    // #[test]
-    // fn matrix_multiply() {
-    //     let x = Matrix::from(
-    //         [[1, 2],
-    //          [3, 4],
-    //          [5, 6]]
-    //     );
-    //     let y = Matrix::from(
-    //         [[7, 8, 9],
-    //          [9, 10, 11]]
-    //     );
-    //     let res = Matrix::from(
-    //         [[25, 28, 31],
-    //          [57, 64, 71],
-    //          [89, 100, 111]]
-    //     );
+    #[test]
+    fn matrix_multiply() {
+        let x = Matrix::from(
+            [[1, 2],
+             [3, 4],
+             [5, 6]]
+        );
+        let y = Matrix::from(
+            [[7, 8, 9, 10],
+             [9, 10, 11, 12]]
+        );
+        let res = Matrix::from(
+            [[25, 28, 31, 34],
+             [57, 64, 71, 78],
+             [89, 100, 111, 122]]
+        );
 
-    //     assert_eq!(x * y, res);
-    // }
+        assert_eq!(x * y, res);
+    }
 }

@@ -40,6 +40,12 @@ impl<T: Num + Copy, const N: usize> Storage<T, N> {
             vals[i] = vals[i] * other;
         }
     }
+
+    pub fn set(&mut self, idx: usize, val: T) {
+        let mut vals = self.vals.borrow_mut();
+
+        vals[idx] = val;
+    }
 }
 
 impl<T: Num + Copy, const N: usize> From<[T; N]> for Storage<T, N> {
