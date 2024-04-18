@@ -16,7 +16,7 @@ pub struct Storage<T: Num + Copy, const N: usize> {
     vals: Rc<RefCell<[T; N]>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct IndexError {}
 
 impl<T: Num + Copy, const N: usize> Storage<T, N> {

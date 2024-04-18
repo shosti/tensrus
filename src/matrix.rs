@@ -44,7 +44,7 @@ where
     [(); N * M]:,
 {
     fn shape(&self) -> [usize; 2] {
-        [N, M]
+        [M, N]
     }
 }
 
@@ -56,6 +56,25 @@ where
         self.vals.elem_mul(other);
     }
 }
+
+impl<T: Num + Copy, const N: usize, const M: usize> PartialEq for Matrix<T, N, M>
+where
+    [(); N * M]:,
+{
+    fn eq(&self, other: &Self) -> bool {
+        for i in 0..M {
+            for j in 0..N {
+                if self.get(i, j).unwrap() != other.get(i, j).unwrap() {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+}
+
+impl<T: Num + Copy, const N: usize, const M: usize> Eq for Matrix<T, N, M> where [(); N * M]: {}
 
 impl<T: Num + Copy + Display, const N: usize, const M: usize> std::fmt::Debug for Matrix<T, N, M>
 where
@@ -73,5 +92,53 @@ where
         repr.push_str("]\n");
 
         write!(f, "{}", repr)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basics() {
+        let x = Matrix::from(
+            [[3, 4, 5],
+             [2, 7, 9],
+             [6, 5, 10],
+             [3, 7, 3]]
+        );
+
+        assert_eq!(x.shape(), [4, 3]);
+        assert_eq!(x.get(2, 1), Ok(5));
+        assert_eq!(x.get(3, 2), Ok(3));
+        assert_eq!(x.get(4, 1), Err(IndexError {}));
+    }
+
+    #[test]
+    fn equality() {
+        let x = Matrix::from(
+            [[1, 2, 3],
+             [4, 5, 6]]
+        );
+        let y = Matrix::from(
+            [[1, 2, 3], [4, 5, 6]]
+        );
+
+        assert_eq!(x, y);
+    }
+
+    #[test]
+    fn elem_mutiply() {
+        let mut x = Matrix::from(
+            [[2, 4, 6],
+             [8, 10, 12]]
+        );
+        let y = Matrix::from(
+            [[4, 8, 12],
+             [16, 20, 24]]
+        );
+
+        x *= 2;
+        assert_eq!(x, y);
     }
 }
