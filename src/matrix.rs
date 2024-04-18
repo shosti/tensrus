@@ -1,20 +1,15 @@
-use crate::tensor::{IndexError, Storage, Tensor};
+use crate::tensor::{IndexError, Tensor};
 use crate::vector::Vector;
 use num::Num;
 use std::fmt::Display;
 use std::ops::{Mul, MulAssign};
+use std::vec::Vec;
 
-pub struct Matrix<T: Num + Copy, const M: usize, const N: usize>
-where
-    [(); M * N]:,
-{
-    vals: Storage<T, { M * N }>,
+pub struct Matrix<T: Num + Copy, const M: usize, const N: usize> {
+    vals: Vec<T>,
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> Matrix<T, M, N>
-where
-    [(); M * N]:,
-{
+impl<T: Num + Copy, const M: usize, const N: usize> Matrix<T, M, N> {
     pub fn col(&self, j: usize) -> Result<Vector<T, M>, IndexError> {
         if j >= N {
             return Err(IndexError {});
@@ -40,33 +35,30 @@ where
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> From<[[T; N]; M]> for Matrix<T, M, N>
-where
-    [(); M * N]:,
-{
-    fn from(vals: [[T; N]; M]) -> Self {
-        Self {
-            vals: Storage::from_fn(|i| {
-                let row = i / N;
-                let col = i % N;
+impl<T: Num + Copy, const M: usize, const N: usize> From<[[T; N]; M]> for Matrix<T, M, N> {
+    fn from(arrs: [[T; N]; M]) -> Self {
+        let mut vals: Vec<T> = Vec::with_capacity(M * N);
+        for idx in 0..(M * N) {
+            let i = idx / N;
+            let j = idx % N;
 
-                vals[row][col]
-            }),
+            vals.push(arrs[i][j]);
         }
+
+        Self { vals }
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M, N>
-where
-    [(); M * N]:,
-{
+impl<T: Num + Copy, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M, N> {
     fn from_fn<F>(mut cb: F) -> Self
     where
         F: FnMut([usize; 2]) -> T,
     {
-        Self {
-            vals: Storage::from_fn(|idx| cb([idx / N, idx % N])),
+        let mut vals = Vec::with_capacity(M * N);
+        for idx in 0..(M * N) {
+            vals.push(cb([idx / N, idx % N]));
         }
+        Self { vals }
     }
 
     fn shape(&self) -> [usize; 2] {
@@ -79,7 +71,7 @@ where
             return Err(IndexError {});
         }
 
-        Ok(self.vals.get(Self::idx(i, j)))
+        Ok(self.vals[Self::idx(i, j)])
     }
 
     fn set(&mut self, idx: [usize; 2], val: T) -> Result<(), IndexError> {
@@ -89,25 +81,21 @@ where
         }
         let idx = Self::idx(i, j);
 
-        self.vals.set(idx, val);
+        self.vals[idx] = val;
 
         Ok(())
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> MulAssign<T> for Matrix<T, M, N>
-where
-    [(); M * N]:,
-{
+impl<T: Num + Copy, const M: usize, const N: usize> MulAssign<T> for Matrix<T, M, N> {
     fn mul_assign(&mut self, other: T) {
-        self.vals.elem_mul(other);
+        for idx in 0..(M * N) {
+            self.vals[idx] = self.vals[idx] * other;
+        }
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> PartialEq for Matrix<T, M, N>
-where
-    [(); M * N]:,
-{
+impl<T: Num + Copy, const M: usize, const N: usize> PartialEq for Matrix<T, M, N> {
     fn eq(&self, other: &Self) -> bool {
         for i in 0..M {
             for j in 0..N {
@@ -123,10 +111,6 @@ where
 
 impl<T: Num + Copy, const M: usize, const N: usize, const P: usize> Mul<Matrix<T, N, P>>
     for Matrix<T, M, N>
-where
-    [(); M * N]:,
-    [(); N * P]:,
-    [(); M * P]:,
 {
     type Output = Matrix<T, M, P>;
 
@@ -138,10 +122,7 @@ where
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> Mul<Vector<T, N>> for Matrix<T, M, N>
-where
-    [(); M * N]:,
-{
+impl<T: Num + Copy, const M: usize, const N: usize> Mul<Vector<T, N>> for Matrix<T, M, N> {
     type Output = Vector<T, M>;
 
     fn mul(self, other: Vector<T, N>) -> Self::Output {
@@ -149,12 +130,9 @@ where
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> Eq for Matrix<T, M, N> where [(); M * N]: {}
+impl<T: Num + Copy, const M: usize, const N: usize> Eq for Matrix<T, M, N> {}
 
-impl<T: Num + Copy + Display, const M: usize, const N: usize> std::fmt::Debug for Matrix<T, M, N>
-where
-    [(); M * N]:,
-{
+impl<T: Num + Copy + Display, const M: usize, const N: usize> std::fmt::Debug for Matrix<T, M, N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut repr = String::from(format!("{}x{} Matrix", M, N));
         repr.push_str(" {\n [");

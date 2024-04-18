@@ -1,10 +1,10 @@
-use crate::tensor::{IndexError, Storage, Tensor};
+use crate::tensor::{IndexError, Tensor};
 use num::Num;
 use std::ops::MulAssign;
 
 #[derive(Debug)]
 pub struct Vector<T: Num + Copy, const N: usize> {
-    vals: Storage<T, N>,
+    vals: Vec<T>,
 }
 
 impl<T: Num + Copy, const N: usize> Vector<T, N> {
@@ -21,7 +21,7 @@ impl<T: Num + Copy, const N: usize> Vector<T, N> {
 impl<T: Num + Copy, const N: usize> From<[T; N]> for Vector<T, N> {
     fn from(vals: [T; N]) -> Self {
         Vector {
-            vals: Storage::from(vals),
+            vals: Vec::from(vals),
         }
     }
 }
@@ -31,9 +31,11 @@ impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
     where
         F: FnMut([usize; 1]) -> T,
     {
-        Self {
-            vals: Storage::from_fn(|idx| cb([idx])),
+        let mut vals = Vec::with_capacity(N);
+        for idx in 0..N {
+            vals.push(cb([idx]));
         }
+        Self { vals }
     }
 
     fn shape(&self) -> [usize; 1] {
@@ -46,7 +48,7 @@ impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
             return Err(IndexError {});
         }
 
-        Ok(self.vals.get(idx[0]))
+        Ok(self.vals[i])
     }
 
     fn set(&mut self, idx: [usize; 1], val: T) -> Result<(), IndexError> {
@@ -54,7 +56,7 @@ impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
         if i >= N {
             return Err(IndexError {});
         }
-        self.vals.set(idx[0], val);
+        self.vals[i] = val;
 
         Ok(())
     }
@@ -62,7 +64,9 @@ impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
 
 impl<T: Num + Copy, const N: usize> MulAssign<T> for Vector<T, N> {
     fn mul_assign(&mut self, other: T) {
-        self.vals.elem_mul(other);
+        for i in 0..N {
+            self.vals[i] = self.vals[i] * other;
+        }
     }
 }
 
