@@ -1,7 +1,8 @@
 use crate::tensor::{IndexError, Tensor};
+use crate::matrix::Matrix;
 use num::Num;
 use std::cell::RefCell;
-use std::ops::MulAssign;
+use std::ops::{Mul, MulAssign};
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -152,6 +153,19 @@ impl<T: Num + Copy, const N: usize> PartialEq for RowVector<T, N> {
     }
 }
 
+impl<T: Num + Copy, const M: usize, const N: usize> Mul<Matrix<T, M, N>> for RowVector<T, M>
+{
+    type Output = RowVector<T, N>;
+
+    fn mul(self, other: Matrix<T, M, N>) -> Self::Output {
+        RowVector::from_fn(|idx| {
+            let [j] = idx;
+            self.transpose().dot(&other.col(j).unwrap())
+        })
+    }
+}
+
+
 impl<T: Num + Copy, const N: usize> Eq for RowVector<T, N> {}
 
 #[cfg(test)]
@@ -191,5 +205,13 @@ mod tests {
 
     #[test]
     fn row_vec_matrix_mul() {
+        let x = RowVector::from([1, 2, 3]);
+        let a = Matrix::from(
+            [[2, 4],
+             [3, 6],
+             [7, 8]]
+        );
+
+        assert_eq!(x * a, RowVector::from([29, 40]));
     }
 }
