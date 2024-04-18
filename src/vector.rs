@@ -1,6 +1,6 @@
-use std::ops::MulAssign;
+use crate::tensor::{IndexError, Storage, Tensor};
 use num::Num;
-use crate::tensor::{Storage, Tensor};
+use std::ops::MulAssign;
 
 #[derive(Debug)]
 pub struct Vector<T: Num + Copy, const N: usize> {
@@ -18,6 +18,25 @@ impl<T: Num + Copy, const N: usize> From<[T; N]> for Vector<T, N> {
 impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
     fn shape(&self) -> [usize; 1] {
         [N]
+    }
+
+    fn get(&self, idx: [usize; 1]) -> Result<T, IndexError> {
+        let [i] = idx;
+        if i >= N {
+            return Err(IndexError {});
+        }
+
+        Ok(self.vals.get(idx[0]))
+    }
+
+    fn set(&mut self, idx: [usize; 1], val: T) -> Result<(), IndexError> {
+        let [i] = idx;
+        if i >= N {
+            return Err(IndexError {});
+        }
+        self.vals.set(idx[0], val);
+
+        Ok(())
     }
 }
 

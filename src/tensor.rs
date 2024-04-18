@@ -9,6 +9,9 @@ pub trait Tensor<T: Num + Copy, const R: usize>: MulAssign<T> {
     }
 
     fn shape(&self) -> [usize; R];
+
+    fn get(&self, idx: [usize; R]) -> Result<T, IndexError>;
+    fn set(&mut self, idx: [usize; R], val: T) -> Result<(), IndexError>;
 }
 
 #[derive(Debug)]
