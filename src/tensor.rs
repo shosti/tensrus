@@ -4,7 +4,15 @@ use std::ops::{FnMut, MulAssign};
 use std::rc::Rc;
 
 pub trait Tensor<T: Num + Copy, const R: usize>: MulAssign<T> + Eq {
-    fn zeros() -> Self;
+    fn from_fn<F>(cb: F) -> Self
+    where
+        F: FnMut(usize) -> T;
+    fn zeros() -> Self
+    where
+        Self: Sized,
+    {
+        Self::from_fn(|_| T::zero())
+    }
 
     fn rank(&self) -> usize {
         R

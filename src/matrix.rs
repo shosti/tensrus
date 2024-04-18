@@ -1,4 +1,5 @@
 use crate::tensor::{IndexError, Storage, Tensor};
+use crate::vector::Vector;
 use num::Num;
 use std::fmt::Display;
 use std::ops::MulAssign;
@@ -8,6 +9,27 @@ where
     [(); M * N]:,
 {
     vals: Storage<T, { M * N }>,
+}
+
+impl<T: Num + Copy, const M: usize, const N: usize> Matrix<T, M, N>
+where
+    [(); M * N]:,
+{
+    pub fn column_vector(&self, j: usize) -> Result<Vector<T, M>, IndexError> {
+        Ok(Vector::zeros())
+    }
+
+    pub fn row_vector(&self, i: usize) -> Result<Vector<T, N>, IndexError> {
+        Ok(Vector::zeros())
+    }
+
+    fn in_bounds(&self, i: usize, j: usize) -> bool {
+        i < M && j < N
+    }
+
+    fn idx(&self, i: usize, j: usize) -> usize {
+        (i * N) + j
+    }
 }
 
 impl<T: Num + Copy, const M: usize, const N: usize> From<[[T; N]; M]> for Matrix<T, M, N>
@@ -26,26 +48,16 @@ where
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> Matrix<T, M, N>
-where
-    [(); M * N]:,
-{
-    fn in_bounds(&self, i: usize, j: usize) -> bool {
-        i < M && j < N
-    }
-
-    fn idx(&self, i: usize, j: usize) -> usize {
-        (i * N) + j
-    }
-}
-
 impl<T: Num + Copy, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M, N>
 where
     [(); M * N]:,
 {
-    fn zeros() -> Self {
+    fn from_fn<F>(cb: F) -> Self
+    where
+        F: FnMut(usize) -> T,
+    {
         Self {
-            vals: Storage::zeros()
+            vals: Storage::from_fn(cb),
         }
     }
 
@@ -73,7 +85,6 @@ where
 
         Ok(())
     }
-
 }
 
 impl<T: Num + Copy, const M: usize, const N: usize> MulAssign<T> for Matrix<T, M, N>
@@ -182,6 +193,26 @@ mod tests {
 
         x *= 2;
         assert_eq!(x, y);
+    }
+
+    #[test]
+    fn matrix_vector_conversions() {
+        let x = Matrix::from(
+            [[1, 2, 3],
+             [4, 5, 6],
+             [7, 8, 9],
+             [10, 11, 12]]
+        );
+
+        assert_eq!(x.column_vector(0), Ok(Vector::from([1, 4, 7, 10])));
+        assert_eq!(x.column_vector(1), Ok(Vector::from([2, 5, 8, 11])));
+        assert_eq!(x.column_vector(2), Ok(Vector::from([3, 6, 9, 12])));
+        assert_eq!(x.column_vector(3), Err(IndexError {}));
+        assert_eq!(x.row_vector(0), Ok(Vector::from([1, 2, 3])));
+        assert_eq!(x.row_vector(1), Ok(Vector::from([4, 5, 6])));
+        assert_eq!(x.row_vector(2), Ok(Vector::from([7, 8, 9])));
+        assert_eq!(x.row_vector(3), Ok(Vector::from([10, 11, 12])));
+        assert_eq!(x.row_vector(4), Err(IndexError {}));
     }
 
     // #[test]

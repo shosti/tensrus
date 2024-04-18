@@ -27,9 +27,12 @@ impl<T: Num + Copy, const N: usize> From<[T; N]> for Vector<T, N> {
 }
 
 impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
-    fn zeros() -> Self {
+    fn from_fn<F>(cb: F) -> Self
+    where
+        F: FnMut(usize) -> T,
+    {
         Self {
-            vals: Storage::zeros(),
+            vals: Storage::from_fn(cb),
         }
     }
 
