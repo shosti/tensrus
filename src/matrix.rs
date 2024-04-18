@@ -74,6 +74,10 @@ where
     }
 }
 
+// impl<T: Num + Copy, const N: usize, const M: usize> PartialEq for Matrix<T, N, M> where [(); N * M]: {
+
+// }
+
 impl<T: Num + Copy, const N: usize, const M: usize> Eq for Matrix<T, N, M> where [(); N * M]: {}
 
 impl<T: Num + Copy + Display, const N: usize, const M: usize> std::fmt::Debug for Matrix<T, N, M>
@@ -96,6 +100,7 @@ where
 }
 
 #[cfg(test)]
+#[rustfmt::skip]
 mod tests {
     use super::*;
 
@@ -141,4 +146,24 @@ mod tests {
         x *= 2;
         assert_eq!(x, y);
     }
+
+    // #[test]
+    // fn matrix_multiply() {
+    //     let x = Matrix::from(
+    //         [[1, 2],
+    //          [3, 4],
+    //          [5, 6]]
+    //     );
+    //     let y = Matrix::from(
+    //         [[7, 8, 9],
+    //          [9, 10, 11]]
+    //     );
+    //     let res = Matrix::from(
+    //         [[25, 28, 31],
+    //          [57, 64, 71],
+    //          [89, 100, 111]]
+    //     );
+
+    //     assert_eq!(x * y, res);
+    // }
 }
