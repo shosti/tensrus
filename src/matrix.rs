@@ -20,7 +20,7 @@ where
             return Err(IndexError {});
         }
 
-        Ok(Vector::from_fn(|idx| self.get([idx[0] * N, j]).unwrap()))
+        Ok(Vector::from_fn(|idx| self.get([idx[0], j]).unwrap()))
     }
 
     pub fn row_vector(&self, i: usize) -> Result<Vector<T, N>, IndexError> {
@@ -28,7 +28,7 @@ where
             return Err(IndexError {});
         }
 
-        Ok(Vector::from_fn(|idx| self.get([i, idx[0] * M]).unwrap()))
+        Ok(Vector::from_fn(|idx| self.get([i, idx[0]]).unwrap()))
     }
 
     fn in_bounds(i: usize, j: usize) -> bool {
