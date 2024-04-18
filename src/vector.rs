@@ -7,6 +7,17 @@ pub struct Vector<T: Num + Copy, const N: usize> {
     vals: Storage<T, N>,
 }
 
+impl<T: Num + Copy, const N: usize> Vector<T, N> {
+    pub fn dot(&self, other: &Self) -> T {
+        let mut res = T::zero();
+        for i in 0..N {
+            res = res + (self.get([i]).unwrap() * other.get([i]).unwrap());
+        }
+
+        res
+    }
+}
+
 impl<T: Num + Copy, const N: usize> From<[T; N]> for Vector<T, N> {
     fn from(vals: [T; N]) -> Self {
         Vector {
@@ -71,5 +82,13 @@ mod tests {
         assert_eq!(a.shape(), [5]);
         assert_eq!(a.get([3]), Ok(4));
         assert_eq!(a.get([5]), Err(IndexError {}));
+    }
+
+    #[test]
+    fn dot_product() {
+        let a = Vector::from([1, 2, 3]);
+        let b = Vector::from([4, 5, 6]);
+
+        assert_eq!(a.dot(&b), 32);
     }
 }
