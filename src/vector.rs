@@ -51,3 +51,17 @@ impl<T: Num + Copy, const N: usize> MulAssign<T> for Vector<T, N> {
         self.vals.elem_mul(other);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basics() {
+        let a = Vector::from([1, 2, 3, 4, 5]);
+
+        assert_eq!(a.shape(), [5]);
+        assert_eq!(a.get([3]), Ok(4));
+        assert_eq!(a.get([5]), Err(IndexError {}));
+    }
+}
