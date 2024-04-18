@@ -16,11 +16,19 @@ where
     [(); M * N]:,
 {
     pub fn column_vector(&self, j: usize) -> Result<Vector<T, M>, IndexError> {
-        Ok(Vector::zeros())
+        if j >= N {
+            return Err(IndexError {});
+        }
+
+        Ok(Vector::from_fn(|i| self.get([i * N, j]).unwrap()))
     }
 
     pub fn row_vector(&self, i: usize) -> Result<Vector<T, N>, IndexError> {
-        Ok(Vector::zeros())
+        if i >= M {
+            return Err(IndexError {});
+        }
+
+        Ok(Vector::from_fn(|j| self.get([i, j * M]).unwrap()))
     }
 
     fn in_bounds(&self, i: usize, j: usize) -> bool {
