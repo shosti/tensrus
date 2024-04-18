@@ -1,8 +1,8 @@
-use crate::tensor::{Storage, Tensor};
+use crate::tensor::{IndexError, Storage, Tensor};
 use num::Num;
+use std::fmt::Display;
 use std::ops::MulAssign;
 
-#[derive(Debug)]
 pub struct Matrix<T: Num + Copy, const N: usize, const M: usize>
 where
     [(); N * M]:,
@@ -26,6 +26,19 @@ where
     }
 }
 
+impl<T: Num + Copy, const N: usize, const M: usize> Matrix<T, N, M>
+where
+    [(); N * M]:,
+{
+    pub fn get(&self, i: usize, j: usize) -> Result<T, IndexError> {
+        if i >= M || j >= N {
+            return Err(IndexError {});
+        }
+
+        Ok(self.vals.get((i * N) + j))
+    }
+}
+
 impl<T: Num + Copy, const N: usize, const M: usize> Tensor<T, 2> for Matrix<T, N, M>
 where
     [(); N * M]:,
@@ -41,5 +54,24 @@ where
 {
     fn mul_assign(&mut self, other: T) {
         self.vals.elem_mul(other);
+    }
+}
+
+impl<T: Num + Copy + Display, const N: usize, const M: usize> std::fmt::Debug for Matrix<T, N, M>
+where
+    [(); N * M]:,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut repr = String::from(format!("{}x{} Matrix", N, M));
+        repr.push_str(" {\n [");
+        for i in 0..M {
+            for j in 0..N {
+                repr.push_str(&format!("{} ", self.get(i, j).unwrap()));
+            }
+            repr.push_str("\n");
+        }
+        repr.push_str("]\n");
+
+        write!(f, "{}", repr)
     }
 }
