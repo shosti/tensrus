@@ -1,3 +1,4 @@
+pub mod numeric;
 pub mod tensor;
 pub mod matrix;
 pub mod vector;

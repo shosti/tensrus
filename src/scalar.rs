@@ -1,19 +1,19 @@
+use crate::numeric::Numeric;
 use crate::tensor::{IndexError, Tensor};
-use num::Num;
 use std::ops::MulAssign;
 
 #[derive(Debug)]
-pub struct Scalar<T: Num + Copy> {
+pub struct Scalar<T: Numeric> {
     val: T,
 }
 
-impl<T: Num + Copy> From<T> for Scalar<T> {
+impl<T: Numeric> From<T> for Scalar<T> {
     fn from(val: T) -> Self {
         Scalar { val }
     }
 }
 
-impl<T: Num + Copy> Tensor<T, 0> for Scalar<T> {
+impl<T: Numeric> Tensor<T, 0> for Scalar<T> {
     type Transpose = Self;
 
     fn from_fn<F>(mut cb: F) -> Self
@@ -41,16 +41,16 @@ impl<T: Num + Copy> Tensor<T, 0> for Scalar<T> {
     }
 }
 
-impl<T: Num + Copy> PartialEq for Scalar<T> {
+impl<T: Numeric> PartialEq for Scalar<T> {
     fn eq(&self, other: &Self) -> bool {
         self.get([]) == other.get([])
     }
 }
 
-impl<T: Num + Copy> Eq for Scalar<T> {}
+impl<T: Numeric> Eq for Scalar<T> {}
 
-impl<T: Num + Copy> MulAssign<T> for Scalar<T> {
+impl<T: Numeric> MulAssign<T> for Scalar<T> {
     fn mul_assign(&mut self, other: T) {
-        self.val = self.val * other;
+        self.val *= other;
     }
 }

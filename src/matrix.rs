@@ -1,17 +1,16 @@
+use crate::numeric::Numeric;
 use crate::tensor::{IndexError, Tensor};
 use crate::vector::Vector;
-use num::Num;
 use std::cell::RefCell;
-use std::fmt::Display;
 use std::ops::{Mul, MulAssign};
 use std::rc::Rc;
 
-pub struct Matrix<T: Num + Copy, const M: usize, const N: usize> {
+pub struct Matrix<T: Numeric, const M: usize, const N: usize> {
     vals: Rc<RefCell<Vec<T>>>,
     transposed: bool,
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> Matrix<T, M, N> {
+impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N> {
     pub fn col(&self, j: usize) -> Result<Vector<T, M>, IndexError> {
         if j >= N {
             return Err(IndexError {});
@@ -41,7 +40,7 @@ impl<T: Num + Copy, const M: usize, const N: usize> Matrix<T, M, N> {
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> From<[[T; N]; M]> for Matrix<T, M, N> {
+impl<T: Numeric, const M: usize, const N: usize> From<[[T; N]; M]> for Matrix<T, M, N> {
     fn from(arrs: [[T; N]; M]) -> Self {
         let mut vals: Vec<T> = Vec::with_capacity(M * N);
         for idx in 0..(M * N) {
@@ -58,7 +57,7 @@ impl<T: Num + Copy, const M: usize, const N: usize> From<[[T; N]; M]> for Matrix
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M, N> {
+impl<T: Numeric, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M, N> {
     type Transpose = Matrix<T, N, M>;
 
     fn from_fn<F>(mut cb: F) -> Self
@@ -107,16 +106,16 @@ impl<T: Num + Copy, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> MulAssign<T> for Matrix<T, M, N> {
+impl<T: Numeric, const M: usize, const N: usize> MulAssign<T> for Matrix<T, M, N> {
     fn mul_assign(&mut self, other: T) {
         self.vals
             .borrow_mut()
             .iter_mut()
-            .for_each(|n| *n = *n * other);
+            .for_each(|n| *n *= other);
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> PartialEq for Matrix<T, M, N> {
+impl<T: Numeric, const M: usize, const N: usize> PartialEq for Matrix<T, M, N> {
     fn eq(&self, other: &Self) -> bool {
         for i in 0..M {
             for j in 0..N {
@@ -130,7 +129,7 @@ impl<T: Num + Copy, const M: usize, const N: usize> PartialEq for Matrix<T, M, N
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize, const P: usize> Mul<Matrix<T, N, P>>
+impl<T: Numeric, const M: usize, const N: usize, const P: usize> Mul<Matrix<T, N, P>>
     for Matrix<T, M, N>
 {
     type Output = Matrix<T, M, P>;
@@ -143,7 +142,7 @@ impl<T: Num + Copy, const M: usize, const N: usize, const P: usize> Mul<Matrix<T
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> Mul<Vector<T, N>> for Matrix<T, M, N> {
+impl<T: Numeric, const M: usize, const N: usize> Mul<Vector<T, N>> for Matrix<T, M, N> {
     type Output = Vector<T, M>;
 
     fn mul(self, other: Vector<T, N>) -> Self::Output {
@@ -151,9 +150,9 @@ impl<T: Num + Copy, const M: usize, const N: usize> Mul<Vector<T, N>> for Matrix
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> Eq for Matrix<T, M, N> {}
+impl<T: Numeric, const M: usize, const N: usize> Eq for Matrix<T, M, N> {}
 
-impl<T: Num + Copy + Display, const M: usize, const N: usize> std::fmt::Debug for Matrix<T, M, N> {
+impl<T: Numeric, const M: usize, const N: usize> std::fmt::Debug for Matrix<T, M, N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut repr = String::from(format!("{}x{} Matrix", M, N));
         repr.push_str(" {\n [");

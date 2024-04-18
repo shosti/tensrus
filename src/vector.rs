@@ -1,16 +1,16 @@
-use crate::tensor::{IndexError, Tensor};
 use crate::matrix::Matrix;
-use num::Num;
+use crate::numeric::Numeric;
+use crate::tensor::{IndexError, Tensor};
 use std::cell::RefCell;
 use std::ops::{Mul, MulAssign};
 use std::rc::Rc;
 
 #[derive(Debug)]
-pub struct Vector<T: Num + Copy, const N: usize> {
+pub struct Vector<T: Numeric, const N: usize> {
     vals: Rc<RefCell<Vec<T>>>,
 }
 
-impl<T: Num + Copy, const N: usize> Vector<T, N> {
+impl<T: Numeric, const N: usize> Vector<T, N> {
     pub fn dot(&self, other: &Self) -> T {
         let mut res = T::zero();
         for i in 0..N {
@@ -21,7 +21,7 @@ impl<T: Num + Copy, const N: usize> Vector<T, N> {
     }
 }
 
-impl<T: Num + Copy, const N: usize> From<[T; N]> for Vector<T, N> {
+impl<T: Numeric, const N: usize> From<[T; N]> for Vector<T, N> {
     fn from(vals: [T; N]) -> Self {
         Self {
             vals: Rc::new(RefCell::new(Vec::from(vals))),
@@ -29,7 +29,7 @@ impl<T: Num + Copy, const N: usize> From<[T; N]> for Vector<T, N> {
     }
 }
 
-impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
+impl<T: Numeric, const N: usize> Tensor<T, 1> for Vector<T, N> {
     type Transpose = RowVector<T, N>;
 
     fn from_fn<F>(mut cb: F) -> Self
@@ -70,35 +70,35 @@ impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
     }
 }
 
-impl<T: Num + Copy, const N: usize> MulAssign<T> for Vector<T, N> {
+impl<T: Numeric, const N: usize> MulAssign<T> for Vector<T, N> {
     fn mul_assign(&mut self, other: T) {
         self.vals
             .borrow_mut()
             .iter_mut()
-            .for_each(|n| *n = *n * other);
+            .for_each(|n| *n *= other);
     }
 }
 
-impl<T: Num + Copy, const N: usize> PartialEq for Vector<T, N> {
+impl<T: Numeric, const N: usize> PartialEq for Vector<T, N> {
     fn eq(&self, other: &Self) -> bool {
         (0..N).all(|i| self.get([i]) == other.get([i]))
     }
 }
 
-impl<T: Num + Copy, const N: usize> Eq for Vector<T, N> {}
+impl<T: Numeric, const N: usize> Eq for Vector<T, N> {}
 
 #[derive(Debug)]
-pub struct RowVector<T: Num + Copy, const N: usize> {
+pub struct RowVector<T: Numeric, const N: usize> {
     vals: Rc<RefCell<Vec<T>>>,
 }
 
-impl<T: Num + Copy, const N: usize> From<[T; N]> for RowVector<T, N> {
+impl<T: Numeric, const N: usize> From<[T; N]> for RowVector<T, N> {
     fn from(vals: [T; N]) -> Self {
         Vector::from(vals).transpose()
     }
 }
 
-impl<T: Num + Copy, const N: usize> Tensor<T, 1> for RowVector<T, N> {
+impl<T: Numeric, const N: usize> Tensor<T, 1> for RowVector<T, N> {
     type Transpose = Vector<T, N>;
 
     fn from_fn<F>(cb: F) -> Self
@@ -138,23 +138,22 @@ impl<T: Num + Copy, const N: usize> Tensor<T, 1> for RowVector<T, N> {
     }
 }
 
-impl<T: Num + Copy, const N: usize> MulAssign<T> for RowVector<T, N> {
+impl<T: Numeric, const N: usize> MulAssign<T> for RowVector<T, N> {
     fn mul_assign(&mut self, other: T) {
         self.vals
             .borrow_mut()
             .iter_mut()
-            .for_each(|n| *n = *n * other);
+            .for_each(|n| *n *= other);
     }
 }
 
-impl<T: Num + Copy, const N: usize> PartialEq for RowVector<T, N> {
+impl<T: Numeric, const N: usize> PartialEq for RowVector<T, N> {
     fn eq(&self, other: &Self) -> bool {
         (0..N).all(|i| self.get([i]) == other.get([i]))
     }
 }
 
-impl<T: Num + Copy, const M: usize, const N: usize> Mul<Matrix<T, M, N>> for RowVector<T, M>
-{
+impl<T: Numeric, const M: usize, const N: usize> Mul<Matrix<T, M, N>> for RowVector<T, M> {
     type Output = RowVector<T, N>;
 
     fn mul(self, other: Matrix<T, M, N>) -> Self::Output {
@@ -165,8 +164,7 @@ impl<T: Num + Copy, const M: usize, const N: usize> Mul<Matrix<T, M, N>> for Row
     }
 }
 
-
-impl<T: Num + Copy, const N: usize> Eq for RowVector<T, N> {}
+impl<T: Numeric, const N: usize> Eq for RowVector<T, N> {}
 
 #[cfg(test)]
 mod tests {
@@ -206,11 +204,7 @@ mod tests {
     #[test]
     fn row_vec_matrix_mul() {
         let x = RowVector::from([1, 2, 3]);
-        let a = Matrix::from(
-            [[2, 4],
-             [3, 6],
-             [7, 8]]
-        );
+        let a = Matrix::from([[2, 4], [3, 6], [7, 8]]);
 
         assert_eq!(x * a, RowVector::from([29, 40]));
     }

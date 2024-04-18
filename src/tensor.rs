@@ -1,7 +1,7 @@
-use num::Num;
+use crate::numeric::Numeric;
 use std::ops::{FnMut, MulAssign};
 
-pub trait Tensor<T: Num + Copy, const R: usize>: MulAssign<T> + Eq {
+pub trait Tensor<T: Numeric, const R: usize>: MulAssign<T> + Eq {
     type Transpose;
 
     fn from_fn<F>(cb: F) -> Self
