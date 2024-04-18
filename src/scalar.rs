@@ -16,6 +16,12 @@ impl<T: Num + Copy> From<T> for Scalar<T> {
 }
 
 impl<T: Num + Copy> Tensor<T, 0> for Scalar<T> {
+    fn zeros() -> Self {
+        Self {
+            val: Storage::zeros()
+        }
+    }
+
     fn shape(&self) -> [usize; 0] {
         []
     }

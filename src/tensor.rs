@@ -4,12 +4,12 @@ use std::ops::{FnMut, MulAssign};
 use std::rc::Rc;
 
 pub trait Tensor<T: Num + Copy, const R: usize>: MulAssign<T> {
+    fn zeros() -> Self;
+
     fn rank(&self) -> usize {
         R
     }
-
     fn shape(&self) -> [usize; R];
-
     fn get(&self, idx: [usize; R]) -> Result<T, IndexError>;
     fn set(&mut self, idx: [usize; R], val: T) -> Result<(), IndexError>;
 }
@@ -29,6 +29,12 @@ impl<T: Num + Copy, const N: usize> Storage<T, N> {
     {
         Self {
             vals: Rc::new(RefCell::new(std::array::from_fn(cb))),
+        }
+    }
+
+    pub fn zeros() -> Self {
+        Self {
+            vals: Rc::new(RefCell::new(std::array::from_fn(|_| T::zero()))),
         }
     }
 

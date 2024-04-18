@@ -16,6 +16,12 @@ impl<T: Num + Copy, const N: usize> From<[T; N]> for Vector<T, N> {
 }
 
 impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
+    fn zeros() -> Self {
+        Self {
+            vals: Storage::zeros()
+        }
+    }
+
     fn shape(&self) -> [usize; 1] {
         [N]
     }

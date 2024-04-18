@@ -43,6 +43,12 @@ impl<T: Num + Copy, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M
 where
     [(); M * N]:,
 {
+    fn zeros() -> Self {
+        Self {
+            vals: Storage::zeros()
+        }
+    }
+
     fn shape(&self) -> [usize; 2] {
         [M, N]
     }
