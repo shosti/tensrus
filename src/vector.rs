@@ -68,14 +68,20 @@ impl<T: Numeric, const N: usize> Tensor<T, 1> for Vector<T, N> {
             vals: self.vals.clone(),
         }
     }
+
+    fn next_idx(&self, idx: [usize; 1]) -> Option<[usize; 1]> {
+        let [i] = idx;
+        if i + 1 >= N {
+            None
+        } else {
+            Some([i + 1])
+        }
+    }
 }
 
 impl<T: Numeric, const N: usize> MulAssign<T> for Vector<T, N> {
     fn mul_assign(&mut self, other: T) {
-        self.vals
-            .borrow_mut()
-            .iter_mut()
-            .for_each(|n| *n *= other);
+        self.update(|n| n * other);
     }
 }
 
@@ -136,14 +142,20 @@ impl<T: Numeric, const N: usize> Tensor<T, 1> for RowVector<T, N> {
             vals: self.vals.clone(),
         }
     }
+
+    fn next_idx(&self, idx: [usize; 1]) -> Option<[usize; 1]> {
+        let [i] = idx;
+        if i + 1 >= N {
+            None
+        } else {
+            Some([i + 1])
+        }
+    }
 }
 
 impl<T: Numeric, const N: usize> MulAssign<T> for RowVector<T, N> {
     fn mul_assign(&mut self, other: T) {
-        self.vals
-            .borrow_mut()
-            .iter_mut()
-            .for_each(|n| *n *= other);
+        self.update(|n| n * other);
     }
 }
 
@@ -177,6 +189,14 @@ mod tests {
         assert_eq!(a.shape(), [5]);
         assert_eq!(a.get([3]), Ok(4));
         assert_eq!(a.get([5]), Err(IndexError {}));
+    }
+
+    #[test]
+    fn mul_assign() {
+        let mut a = Vector::from([2, 4, 6, 8]);
+        a *= 3;
+
+        assert_eq!(a, Vector::from([6, 12, 18, 24]));
     }
 
     #[test]

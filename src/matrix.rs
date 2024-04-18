@@ -104,14 +104,25 @@ impl<T: Numeric, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M, N
             transposed: true,
         }
     }
+
+    fn next_idx(&self, idx: [usize; 2]) -> Option<[usize; 2]> {
+        let [mut i, mut j] = idx;
+        j += 1;
+        if j >= N {
+            i += 1;
+            j = 0;
+        }
+        if i >= M {
+            None
+        } else {
+            Some([i, j])
+        }
+    }
 }
 
 impl<T: Numeric, const M: usize, const N: usize> MulAssign<T> for Matrix<T, M, N> {
     fn mul_assign(&mut self, other: T) {
-        self.vals
-            .borrow_mut()
-            .iter_mut()
-            .for_each(|n| *n *= other);
+        self.update(|n| n * other);
     }
 }
 

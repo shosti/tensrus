@@ -39,6 +39,10 @@ impl<T: Numeric> Tensor<T, 0> for Scalar<T> {
     fn transpose(&self) -> Self::Transpose {
         Self::Transpose { val: self.val }
     }
+
+    fn next_idx(&self, _idx: [usize; 0]) -> Option<[usize; 0]> {
+        None
+    }
 }
 
 impl<T: Numeric> PartialEq for Scalar<T> {
@@ -51,6 +55,6 @@ impl<T: Numeric> Eq for Scalar<T> {}
 
 impl<T: Numeric> MulAssign<T> for Scalar<T> {
     fn mul_assign(&mut self, other: T) {
-        self.val *= other;
+        self.update(|n| n * other);
     }
 }
