@@ -28,12 +28,16 @@ impl<T: Num + Copy, const M: usize, const N: usize> Matrix<T, M, N> {
         Ok(Vector::from_fn(|idx| self.get([i, idx[0]]).unwrap()))
     }
 
-    fn in_bounds(i: usize, j: usize) -> bool {
+    fn in_bounds(&self, i: usize, j: usize) -> bool {
         i < M && j < N
     }
 
-    fn idx(i: usize, j: usize) -> usize {
-        (i * N) + j
+    fn idx(&self, i: usize, j: usize) -> usize {
+        if self.transposed {
+            (j * M) + i
+        } else {
+            (i * N) + j
+        }
     }
 }
 
@@ -76,19 +80,19 @@ impl<T: Num + Copy, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M
 
     fn get(&self, idx: [usize; 2]) -> Result<T, IndexError> {
         let [i, j] = idx;
-        if !Self::in_bounds(i, j) {
+        if !self.in_bounds(i, j) {
             return Err(IndexError {});
         }
 
-        Ok(self.vals.borrow()[Self::idx(i, j)])
+        Ok(self.vals.borrow()[self.idx(i, j)])
     }
 
     fn set(&mut self, idx: [usize; 2], val: T) -> Result<(), IndexError> {
         let [i, j] = idx;
-        if !Self::in_bounds(i, j) {
+        if !self.in_bounds(i, j) {
             return Err(IndexError {});
         }
-        let idx = Self::idx(i, j);
+        let idx = self.idx(i, j);
 
         self.vals.borrow_mut()[idx] = val;
 
@@ -208,7 +212,8 @@ mod tests {
              [4, 5, 6]]
         );
         let y = Matrix::from(
-            [[1, 2, 3], [4, 5, 6]]
+            [[1, 2, 3],
+             [4, 5, 6]]
         );
 
         assert_eq!(x, y);
@@ -278,5 +283,20 @@ mod tests {
         let x = Vector::from([2, 1, 0]);
 
         assert_eq!(a * x, Vector::from([1, -3]));
+    }
+
+    #[test]
+    fn transpose() {
+        let x = Matrix::from(
+            [[1, 2, 3],
+             [4, 5, 6]]
+        );
+        let y = Matrix::from(
+            [[1, 4],
+             [2, 5],
+             [3, 6]]
+        );
+
+        assert_eq!(x.transpose(), y);
     }
 }
