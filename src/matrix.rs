@@ -1,12 +1,14 @@
 use crate::tensor::{IndexError, Tensor};
 use crate::vector::Vector;
 use num::Num;
+use std::cell::RefCell;
 use std::fmt::Display;
 use std::ops::{Mul, MulAssign};
-use std::vec::Vec;
+use std::rc::Rc;
 
 pub struct Matrix<T: Num + Copy, const M: usize, const N: usize> {
-    vals: Vec<T>,
+    vals: Rc<RefCell<Vec<T>>>,
+    transposed: bool,
 }
 
 impl<T: Num + Copy, const M: usize, const N: usize> Matrix<T, M, N> {
@@ -45,20 +47,27 @@ impl<T: Num + Copy, const M: usize, const N: usize> From<[[T; N]; M]> for Matrix
             vals.push(arrs[i][j]);
         }
 
-        Self { vals }
+        Self {
+            vals: Rc::new(RefCell::new(vals)),
+            transposed: false,
+        }
     }
 }
 
 impl<T: Num + Copy, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M, N> {
+    type Transpose = Matrix<T, N, M>;
+
     fn from_fn<F>(mut cb: F) -> Self
     where
         F: FnMut([usize; 2]) -> T,
     {
-        let mut vals = Vec::with_capacity(M * N);
-        for idx in 0..(M * N) {
-            vals.push(cb([idx / N, idx % N]));
+        let vals = Rc::new(RefCell::new(
+            (0..(M * N)).map(|idx| cb([idx / N, idx % N])).collect(),
+        ));
+        Self {
+            vals,
+            transposed: false,
         }
-        Self { vals }
     }
 
     fn shape(&self) -> [usize; 2] {
@@ -71,7 +80,7 @@ impl<T: Num + Copy, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M
             return Err(IndexError {});
         }
 
-        Ok(self.vals[Self::idx(i, j)])
+        Ok(self.vals.borrow()[Self::idx(i, j)])
     }
 
     fn set(&mut self, idx: [usize; 2], val: T) -> Result<(), IndexError> {
@@ -81,17 +90,25 @@ impl<T: Num + Copy, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M
         }
         let idx = Self::idx(i, j);
 
-        self.vals[idx] = val;
+        self.vals.borrow_mut()[idx] = val;
 
         Ok(())
+    }
+
+    fn transpose(&self) -> Self::Transpose {
+        Self::Transpose {
+            vals: self.vals.clone(),
+            transposed: true,
+        }
     }
 }
 
 impl<T: Num + Copy, const M: usize, const N: usize> MulAssign<T> for Matrix<T, M, N> {
     fn mul_assign(&mut self, other: T) {
-        for idx in 0..(M * N) {
-            self.vals[idx] = self.vals[idx] * other;
-        }
+        self.vals
+            .borrow_mut()
+            .iter_mut()
+            .for_each(|n| *n = *n * other);
     }
 }
 

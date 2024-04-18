@@ -1,10 +1,12 @@
 use crate::tensor::{IndexError, Tensor};
 use num::Num;
+use std::cell::RefCell;
 use std::ops::MulAssign;
+use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct Vector<T: Num + Copy, const N: usize> {
-    vals: Vec<T>,
+    vals: Rc<RefCell<Vec<T>>>,
 }
 
 impl<T: Num + Copy, const N: usize> Vector<T, N> {
@@ -21,20 +23,19 @@ impl<T: Num + Copy, const N: usize> Vector<T, N> {
 impl<T: Num + Copy, const N: usize> From<[T; N]> for Vector<T, N> {
     fn from(vals: [T; N]) -> Self {
         Vector {
-            vals: Vec::from(vals),
+            vals: Rc::new(RefCell::new(Vec::from(vals))),
         }
     }
 }
 
 impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
+    type Transpose = Vector<T, N>;
+
     fn from_fn<F>(mut cb: F) -> Self
     where
         F: FnMut([usize; 1]) -> T,
     {
-        let mut vals = Vec::with_capacity(N);
-        for idx in 0..N {
-            vals.push(cb([idx]));
-        }
+        let vals = Rc::new(RefCell::new((0..N).map(|idx| cb([idx])).collect()));
         Self { vals }
     }
 
@@ -48,7 +49,7 @@ impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
             return Err(IndexError {});
         }
 
-        Ok(self.vals[i])
+        Ok(self.vals.borrow()[i])
     }
 
     fn set(&mut self, idx: [usize; 1], val: T) -> Result<(), IndexError> {
@@ -56,17 +57,24 @@ impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
         if i >= N {
             return Err(IndexError {});
         }
-        self.vals[i] = val;
+        self.vals.borrow_mut()[i] = val;
 
         Ok(())
+    }
+
+    fn transpose(&self) -> Self::Transpose {
+        Self::Transpose {
+            vals: self.vals.clone(),
+        }
     }
 }
 
 impl<T: Num + Copy, const N: usize> MulAssign<T> for Vector<T, N> {
     fn mul_assign(&mut self, other: T) {
-        for i in 0..N {
-            self.vals[i] = self.vals[i] * other;
-        }
+        self.vals
+            .borrow_mut()
+            .iter_mut()
+            .for_each(|n| *n = *n * other);
     }
 }
 

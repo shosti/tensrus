@@ -14,6 +14,8 @@ impl<T: Num + Copy> From<T> for Scalar<T> {
 }
 
 impl<T: Num + Copy> Tensor<T, 0> for Scalar<T> {
+    type Transpose = Self;
+
     fn from_fn<F>(mut cb: F) -> Self
     where
         F: FnMut([usize; 0]) -> T,
@@ -32,6 +34,10 @@ impl<T: Num + Copy> Tensor<T, 0> for Scalar<T> {
     fn set(&mut self, _idx: [usize; 0], val: T) -> Result<(), IndexError> {
         self.val = val;
         Ok(())
+    }
+
+    fn transpose(&self) -> Self::Transpose {
+        Self::Transpose { val: self.val }
     }
 }
 
