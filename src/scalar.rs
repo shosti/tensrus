@@ -16,12 +16,12 @@ impl<T: Num + Copy> From<T> for Scalar<T> {
 }
 
 impl<T: Num + Copy> Tensor<T, 0> for Scalar<T> {
-    fn from_fn<F>(cb: F) -> Self
+    fn from_fn<F>(mut cb: F) -> Self
     where
-        F: FnMut(usize) -> T,
+        F: FnMut([usize; 0]) -> T,
     {
         Self {
-            val: Storage::from_fn(cb),
+            val: Storage::from_fn(|_| cb([])),
         }
     }
 

@@ -6,7 +6,7 @@ use std::rc::Rc;
 pub trait Tensor<T: Num + Copy, const R: usize>: MulAssign<T> + Eq {
     fn from_fn<F>(cb: F) -> Self
     where
-        F: FnMut(usize) -> T;
+        F: FnMut([usize; R]) -> T;
     fn zeros() -> Self
     where
         Self: Sized,

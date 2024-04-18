@@ -20,7 +20,7 @@ where
             return Err(IndexError {});
         }
 
-        Ok(Vector::from_fn(|i| self.get([i * N, j]).unwrap()))
+        Ok(Vector::from_fn(|idx| self.get([idx[0] * N, j]).unwrap()))
     }
 
     pub fn row_vector(&self, i: usize) -> Result<Vector<T, N>, IndexError> {
@@ -28,14 +28,14 @@ where
             return Err(IndexError {});
         }
 
-        Ok(Vector::from_fn(|j| self.get([i, j * M]).unwrap()))
+        Ok(Vector::from_fn(|idx| self.get([i, idx[0] * M]).unwrap()))
     }
 
-    fn in_bounds(&self, i: usize, j: usize) -> bool {
+    fn in_bounds(i: usize, j: usize) -> bool {
         i < M && j < N
     }
 
-    fn idx(&self, i: usize, j: usize) -> usize {
+    fn idx(i: usize, j: usize) -> usize {
         (i * N) + j
     }
 }
@@ -60,12 +60,12 @@ impl<T: Num + Copy, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M
 where
     [(); M * N]:,
 {
-    fn from_fn<F>(cb: F) -> Self
+    fn from_fn<F>(mut cb: F) -> Self
     where
-        F: FnMut(usize) -> T,
+        F: FnMut([usize; 2]) -> T,
     {
         Self {
-            vals: Storage::from_fn(cb),
+            vals: Storage::from_fn(|idx| cb([idx / N, idx % N])),
         }
     }
 
@@ -75,19 +75,19 @@ where
 
     fn get(&self, idx: [usize; 2]) -> Result<T, IndexError> {
         let [i, j] = idx;
-        if !self.in_bounds(i, j) {
+        if !Self::in_bounds(i, j) {
             return Err(IndexError {});
         }
 
-        Ok(self.vals.get(self.idx(i, j)))
+        Ok(self.vals.get(Self::idx(i, j)))
     }
 
     fn set(&mut self, idx: [usize; 2], val: T) -> Result<(), IndexError> {
         let [i, j] = idx;
-        if !self.in_bounds(i, j) {
+        if !Self::in_bounds(i, j) {
             return Err(IndexError {});
         }
-        let idx = self.idx(i, j);
+        let idx = Self::idx(i, j);
 
         self.vals.set(idx, val);
 
@@ -173,6 +173,22 @@ mod tests {
         assert_eq!(x.get([2, 1]), Ok(5));
         assert_eq!(x.get([3, 2]), Ok(3));
         assert_eq!(x.get([4, 1]), Err(IndexError {}));
+    }
+
+    #[test]
+    fn from_fn() {
+        let x: Matrix<_, 3, 4> = Matrix::from_fn(|idx| {
+            let [i, j] = idx;
+            let s = format!("{}{}", i, j);
+            s.parse().unwrap()
+        });
+        let y = Matrix::from(
+            [[00, 01, 02, 03],
+             [10, 11, 12, 13],
+             [20, 21, 22, 23]]
+        );
+
+        assert_eq!(x, y);
     }
 
     #[test]

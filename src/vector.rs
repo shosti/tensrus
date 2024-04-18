@@ -27,12 +27,12 @@ impl<T: Num + Copy, const N: usize> From<[T; N]> for Vector<T, N> {
 }
 
 impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
-    fn from_fn<F>(cb: F) -> Self
+    fn from_fn<F>(mut cb: F) -> Self
     where
-        F: FnMut(usize) -> T,
+        F: FnMut([usize; 1]) -> T,
     {
         Self {
-            vals: Storage::from_fn(cb),
+            vals: Storage::from_fn(|idx| cb([idx])),
         }
     }
 
@@ -85,6 +85,13 @@ mod tests {
         assert_eq!(a.shape(), [5]);
         assert_eq!(a.get([3]), Ok(4));
         assert_eq!(a.get([5]), Err(IndexError {}));
+    }
+
+    #[test]
+    fn from_fn() {
+        let a: Vector<_, 4> = Vector::from_fn(|idx| idx[0] * 2);
+
+        assert_eq!(a, Vector::from([0, 2, 4, 6]));
     }
 
     #[test]
