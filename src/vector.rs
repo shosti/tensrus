@@ -18,7 +18,7 @@ impl<T: Num + Copy, const N: usize> From<[T; N]> for Vector<T, N> {
 impl<T: Num + Copy, const N: usize> Tensor<T, 1> for Vector<T, N> {
     fn zeros() -> Self {
         Self {
-            vals: Storage::zeros()
+            vals: Storage::zeros(),
         }
     }
 
@@ -51,6 +51,14 @@ impl<T: Num + Copy, const N: usize> MulAssign<T> for Vector<T, N> {
         self.vals.elem_mul(other);
     }
 }
+
+impl<T: Num + Copy, const N: usize> PartialEq for Vector<T, N> {
+    fn eq(&self, other: &Self) -> bool {
+        (0..N).all(|i| self.get([i]) == other.get([i]))
+    }
+}
+
+impl<T: Num + Copy, const N: usize> Eq for Vector<T, N> {}
 
 #[cfg(test)]
 mod tests {

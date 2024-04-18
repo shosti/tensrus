@@ -36,6 +36,14 @@ impl<T: Num + Copy> Tensor<T, 0> for Scalar<T> {
     }
 }
 
+impl<T: Num + Copy> PartialEq for Scalar<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.get([]) == other.get([])
+    }
+}
+
+impl<T: Num + Copy> Eq for Scalar<T> {}
+
 impl<T: Num + Copy> MulAssign<T> for Scalar<T> {
     fn mul_assign(&mut self, other: T) {
         self.val.elem_mul(other);

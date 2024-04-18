@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::ops::{FnMut, MulAssign};
 use std::rc::Rc;
 
-pub trait Tensor<T: Num + Copy, const R: usize>: MulAssign<T> {
+pub trait Tensor<T: Num + Copy, const R: usize>: MulAssign<T> + Eq {
     fn zeros() -> Self;
 
     fn rank(&self) -> usize {
