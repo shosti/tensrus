@@ -133,10 +133,19 @@ where
     fn mul(self, other: Matrix<T, N, P>) -> Self::Output {
         Matrix::from_fn(|idx| {
             let [i, j] = idx;
-            self.row(i)
-                .unwrap()
-                .dot(&other.col(j).unwrap())
+            self.row(i).unwrap().dot(&other.col(j).unwrap())
         })
+    }
+}
+
+impl<T: Num + Copy, const M: usize, const N: usize> Mul<Vector<T, N>> for Matrix<T, M, N>
+where
+    [(); M * N]:,
+{
+    type Output = Vector<T, M>;
+
+    fn mul(self, other: Vector<T, N>) -> Self::Output {
+        Vector::from_fn(|idx| self.row(idx[0]).unwrap().dot(&other))
     }
 }
 
@@ -263,5 +272,16 @@ mod tests {
         );
 
         assert_eq!(x * y, res);
+    }
+
+    #[test]
+    fn matrix_vector_multiply() {
+        let a = Matrix::from(
+            [[1, -1, 2],
+             [0, -3, 1]]
+        );
+        let x = Vector::from([2, 1, 0]);
+
+        assert_eq!(a * x, Vector::from([1, -3]));
     }
 }
