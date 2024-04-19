@@ -18,7 +18,7 @@ struct ValueInner<T: Numeric> {
     op: String,
 }
 
-impl<T: Numeric> Value<T> {
+impl<T: Numeric + 'static> Value<T> {
     pub fn new(val: T) -> Self {
         let inner = Rc::new(RefCell::new(ValueInner {
             id: random(),
@@ -31,11 +31,10 @@ impl<T: Numeric> Value<T> {
         Self { inner }
     }
 
-    pub fn add(&mut self, other: &mut Self) -> Self {
+    pub fn add(&self, other: &Self) -> Self {
         let self_ref = self.clone();
         let other_ref = other.clone();
-
-        let inner = Rc::new(RefCell::new(ValueInner {
+        let out = Rc::new(RefCell::new(ValueInner {
             id: random(),
             data: self.inner.borrow().data + other.inner.borrow().data,
             grad: 0.0,
@@ -44,9 +43,19 @@ impl<T: Numeric> Value<T> {
             op: "+".to_string(),
         }));
 
-        Self {
-            inner
-        }
+        let self_grad = self.clone();
+        let other_grad = other.clone();
+        let out_grad = out.clone();
+        let backward = move || {
+            let mut self_inner = self_grad.inner.borrow_mut();
+            let mut other_inner = other_grad.inner.borrow_mut();
+            let grad = out_grad.borrow().grad;
+            self_inner.grad += grad;
+            other_inner.grad += grad;
+        };
+        out.borrow_mut().backward = Some(Box::new(backward));
+
+        Self { inner: out }
     }
 }
 
