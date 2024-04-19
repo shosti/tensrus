@@ -5,7 +5,6 @@ use std::collections::hash_set::HashSet;
 use std::hash::{Hash, Hasher};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::rc::Rc;
-use num::pow;
 
 pub struct Value<T: Numeric> {
     inner: Rc<RefCell<ValueInner<T>>>,
@@ -14,8 +13,8 @@ pub struct Value<T: Numeric> {
 struct ValueInner<T: Numeric> {
     id: u64,
     data: T,
-    grad: f64,
-    backward: Option<Box<dyn FnMut(f64) -> ()>>,
+    grad: T,
+    backward: Option<Box<dyn FnMut(T) -> ()>>,
     prev: HashSet<Value<T>>,
     op: String,
 }
@@ -25,7 +24,7 @@ impl<T: Numeric + 'static> Value<T> {
         let inner = Rc::new(RefCell::new(ValueInner {
             id: random(),
             data: val,
-            grad: 0.0,
+            grad: T::zero(),
             backward: None,
             prev: HashSet::new(),
             op: "".to_string(),
@@ -37,7 +36,7 @@ impl<T: Numeric + 'static> Value<T> {
         let inner = Rc::new(RefCell::new(ValueInner {
             id: random(),
             data,
-            grad: 0.0,
+            grad: T::zero(),
             backward: None,
             prev,
             op,
@@ -52,7 +51,7 @@ impl<T: Numeric + 'static> Value<T> {
 
         Self::build_topo(self, &mut topo, &mut visited);
 
-        self.inner.borrow_mut().grad = 1.0;
+        self.inner.borrow_mut().grad = T::one();
         for val in topo.iter().rev() {
             let grad;
             {
@@ -77,20 +76,20 @@ impl<T: Numeric + 'static> Value<T> {
         topo.push(cur.clone());
     }
 
-    // fn pow(self, other: T) -> Self {
-    //     let data = pow(self.inner.borrow().data, other);
-    //     let children = HashSet::from([self.clone()]);
-    //     let out = Self::new_from_op(data, children, "**".to_string());
+    fn pow(self, n: T) -> Self {
+        let data = self.inner.borrow().data.powf(n);
+        let children = HashSet::from([self.clone()]);
+        let out = Self::new_from_op(data, children, "^".to_string());
 
-    //     let self_grad = self.clone();
-    //     let backward = move |grad| {
-    //         let mut self_inner = self_grad.inner.borrow_mut();
-    //         self_inner.grad += (other * pow(data, other - 1)) * grad;
-    //     };
-    //     out.inner.borrow_mut().backward = Some(Box::new(backward));
+        let self_grad = self.clone();
+        let backward = move |grad| {
+            let mut self_inner = self_grad.inner.borrow_mut();
+            self_inner.grad = self_inner.grad + (n * data.powf(n - T::one())) * grad;
+        };
+        out.inner.borrow_mut().backward = Some(Box::new(backward));
 
-    //     out
-    // }
+        out
+    }
 }
 
 impl<T: Numeric + 'static> Add for Value<T> {
@@ -123,13 +122,15 @@ impl<T: Numeric + 'static> Sub for Value<T> {
     }
 }
 
-// impl<T: Numeric + 'static> Div for Value<T> {
-//     type Output = Self;
+impl<T: Numeric + 'static> Div for Value<T> {
+    type Output = Self;
 
-//     fn div(self, other: Self) -> Self::Output {
-//         self + other.pow(Value::from(-T::one()))
-//     }
-// }
+    fn div(self, other: Self) -> Self::Output {
+        let inv = other.pow(-T::one());
+
+        self * inv
+    }
+}
 
 impl<T: Numeric + 'static> Mul for Value<T> {
     type Output = Self;
