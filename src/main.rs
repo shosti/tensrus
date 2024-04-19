@@ -9,6 +9,9 @@ pub use tensor::Tensor;
 use value::Value;
 
 fn main() {
-    let x = Value::new(3.0);
-    println!("X: {:#?}", x);
+    let mut x = Value::new(3.0);
+    let mut y = Value::new(2.5);
+    let z = x.add(&mut y);
+
+    println!("Z: {:#?}", z);
 }

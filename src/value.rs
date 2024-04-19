@@ -31,18 +31,31 @@ impl<T: Numeric> Value<T> {
         Self { inner }
     }
 
-    // pub fn add(&mut self, other: &mut Self) -> Self {
-    //     let out = Self {
-    //         id: random(),
-    //         data: self.data + other.data,
-    //         grad: 0.0,
-    //         backward: None,
-    //         prev: HashSet::from([self, other]),
-    //         op: "+".to_string(),
-    //     };
+    pub fn add(&mut self, other: &mut Self) -> Self {
+        let self_ref = self.clone();
+        let other_ref = other.clone();
 
-    //     out
-    // }
+        let inner = Rc::new(RefCell::new(ValueInner {
+            id: random(),
+            data: self.inner.borrow().data + other.inner.borrow().data,
+            grad: 0.0,
+            backward: None,
+            prev: HashSet::from([self_ref, other_ref]),
+            op: "+".to_string(),
+        }));
+
+        Self {
+            inner
+        }
+    }
+}
+
+impl<T: Numeric> Clone for Value<T> {
+    fn clone(&self) -> Self {
+        Value {
+            inner: self.inner.clone(),
+        }
+    }
 }
 
 impl<T: Numeric> PartialEq for Value<T> {
@@ -64,8 +77,8 @@ impl<T: Numeric> std::fmt::Debug for Value<T> {
         let val = self.inner.borrow();
         write!(
             f,
-            "Value(id={}, data={}, grad={}, op={})",
-            val.id, val.data, val.grad, val.op
+            "Value(id={}, data={}, grad={}, op={}, prev={:?})",
+            val.id, val.data, val.grad, val.op, val.prev
         )
     }
 }
