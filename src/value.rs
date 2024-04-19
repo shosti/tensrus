@@ -14,7 +14,7 @@ struct ValueInner<T: Numeric> {
     id: u64,
     data: T,
     grad: T,
-    backward: Option<Box<dyn FnMut(T) -> ()>>,
+    backward: Option<Box<dyn FnMut(T, T) -> ()>>,
     prev: HashSet<Value<T>>,
     op: String,
 }
@@ -54,11 +54,14 @@ impl<T: Numeric + 'static> Value<T> {
         self.inner.borrow_mut().grad = T::one();
         for val in topo.iter().rev() {
             let grad;
+            let data;
             {
-                grad = val.inner.borrow().grad;
+                let inner = val.inner.borrow();
+                grad = inner.grad;
+                data = inner.data;
             }
             if let Some(backward) = &mut val.inner.borrow_mut().backward {
-                backward(grad);
+                backward(grad, data);
             }
         }
     }
@@ -82,9 +85,25 @@ impl<T: Numeric + 'static> Value<T> {
         let out = Self::new_from_op(data, children, "^".to_string());
 
         let self_grad = self.clone();
-        let backward = move |grad| {
+        let backward = move |grad, _| {
             let mut self_inner = self_grad.inner.borrow_mut();
-            self_inner.grad = self_inner.grad + (n * data.powf(n - T::one())) * grad;
+            self_inner.grad +=  (n * data.powf(n - T::one())) * grad;
+        };
+        out.inner.borrow_mut().backward = Some(Box::new(backward));
+
+        out
+    }
+
+    fn relu(self) -> Self {
+        let data = self.inner.borrow().data;
+        let outval = if data.is_sign_negative() { T::zero() } else { data };
+        let children = HashSet::from([self.clone()]);
+        let out = Self::new_from_op(outval, children, "ReLU".to_string());
+
+        let self_grad = self.clone();
+        let backward = move |grad, data: T| {
+            let mut self_inner = self_grad.inner.borrow_mut();
+            self_inner.grad += if data.is_sign_positive() { grad } else { T::zero() };
         };
         out.inner.borrow_mut().backward = Some(Box::new(backward));
 
@@ -102,7 +121,7 @@ impl<T: Numeric + 'static> Add for Value<T> {
 
         let self_grad = self.clone();
         let other_grad = other.clone();
-        let backward = move |grad| {
+        let backward = move |grad, _| {
             let mut self_inner = self_grad.inner.borrow_mut();
             let mut other_inner = other_grad.inner.borrow_mut();
             self_inner.grad += grad;
@@ -142,7 +161,7 @@ impl<T: Numeric + 'static> Mul for Value<T> {
 
         let self_grad = self.clone();
         let other_grad = other.clone();
-        let backward = move |grad| {
+        let backward = move |grad, _| {
             let mut self_inner = self_grad.inner.borrow_mut();
             let mut other_inner = other_grad.inner.borrow_mut();
             self_inner.grad += other_inner.grad * grad;
