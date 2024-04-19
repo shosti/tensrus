@@ -3,8 +3,9 @@ use rand::random;
 use std::cell::RefCell;
 use std::collections::hash_set::HashSet;
 use std::hash::{Hash, Hasher};
-use std::ops::{Add, Mul, Neg};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::rc::Rc;
+use num::pow;
 
 pub struct Value<T: Numeric> {
     inner: Rc<RefCell<ValueInner<T>>>,
@@ -75,6 +76,21 @@ impl<T: Numeric + 'static> Value<T> {
         }
         topo.push(cur.clone());
     }
+
+    // fn pow(self, other: T) -> Self {
+    //     let data = pow(self.inner.borrow().data, other);
+    //     let children = HashSet::from([self.clone()]);
+    //     let out = Self::new_from_op(data, children, "**".to_string());
+
+    //     let self_grad = self.clone();
+    //     let backward = move |grad| {
+    //         let mut self_inner = self_grad.inner.borrow_mut();
+    //         self_inner.grad += (other * pow(data, other - 1)) * grad;
+    //     };
+    //     out.inner.borrow_mut().backward = Some(Box::new(backward));
+
+    //     out
+    // }
 }
 
 impl<T: Numeric + 'static> Add for Value<T> {
@@ -98,6 +114,22 @@ impl<T: Numeric + 'static> Add for Value<T> {
         out
     }
 }
+
+impl<T: Numeric + 'static> Sub for Value<T> {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self::Output {
+        self + (-other)
+    }
+}
+
+// impl<T: Numeric + 'static> Div for Value<T> {
+//     type Output = Self;
+
+//     fn div(self, other: Self) -> Self::Output {
+//         self + other.pow(Value::from(-T::one()))
+//     }
+// }
 
 impl<T: Numeric + 'static> Mul for Value<T> {
     type Output = Self;
@@ -156,8 +188,8 @@ impl<T: Numeric> std::fmt::Debug for Value<T> {
         let val = self.inner.borrow();
         write!(
             f,
-            "Value(id={}, data={}, grad={}, op={}, prev={:?})",
-            val.id, val.data, val.grad, val.op, val.prev
+            "Value(id={}, data={}, grad={}, op={})",
+            val.id, val.data, val.grad, val.op
         )
     }
 }

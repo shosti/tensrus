@@ -29,6 +29,13 @@ impl<T: Numeric, const N: usize> From<[T; N]> for Vector<T, N> {
     }
 }
 
+impl<const N: usize> From<[i32; N]> for Vector<f32, N> {
+    fn from(vals: [i32; N]) -> Self {
+        let cast: [f32; N] = std::array::from_fn(|i| vals[i] as f32);
+        Self::from(cast)
+    }
+}
+
 impl<T: Numeric, const N: usize> Tensor<T, 1> for Vector<T, N> {
     type Transpose = RowVector<T, N>;
 
@@ -100,6 +107,12 @@ pub struct RowVector<T: Numeric, const N: usize> {
 
 impl<T: Numeric, const N: usize> From<[T; N]> for RowVector<T, N> {
     fn from(vals: [T; N]) -> Self {
+        Vector::from(vals).transpose()
+    }
+}
+
+impl<const N: usize> From<[i32; N]> for RowVector<f32, N> {
+    fn from(vals: [i32; N]) -> Self {
         Vector::from(vals).transpose()
     }
 }
@@ -187,45 +200,45 @@ mod tests {
         let a = Vector::from([1, 2, 3, 4, 5]);
 
         assert_eq!(a.shape(), [5]);
-        assert_eq!(a.get([3]), Ok(4));
+        assert_eq!(a.get([3]), Ok(4.0));
         assert_eq!(a.get([5]), Err(IndexError {}));
     }
 
-    #[test]
-    fn mul_assign() {
-        let mut a = Vector::from([2, 4, 6, 8]);
-        a *= 3;
+        #[test]
+        fn mul_assign() {
+            let mut a = Vector::from([2, 4, 6, 8]);
+            a *= 3.0;
 
-        assert_eq!(a, Vector::from([6, 12, 18, 24]));
-    }
+            assert_eq!(a, Vector::from([6, 12, 18, 24]));
+        }
 
-    #[test]
-    fn from_fn() {
-        let a: Vector<_, 4> = Vector::from_fn(|idx| idx[0] * 2);
+        #[test]
+        fn from_fn() {
+            let a: Vector<_, 4> = Vector::from_fn(|idx| idx[0] as f32 * 2.0);
 
-        assert_eq!(a, Vector::from([0, 2, 4, 6]));
-    }
+            assert_eq!(a, Vector::from([0, 2, 4, 6]));
+        }
 
-    #[test]
-    fn dot_product() {
-        let a = Vector::from([1, 2, 3]);
-        let b = Vector::from([4, 5, 6]);
+        #[test]
+        fn dot_product() {
+            let a = Vector::from([1, 2, 3]);
+            let b = Vector::from([4, 5, 6]);
 
-        assert_eq!(a.dot(&b), 32);
-    }
+            assert_eq!(a.dot(&b), 32.0);
+        }
 
-    #[test]
-    fn transpose() {
-        let x = Vector::from([1, 2, 3]);
+        #[test]
+        fn transpose() {
+            let x = Vector::from([1, 2, 3]);
 
-        assert_eq!(x.transpose(), RowVector::from([1, 2, 3]));
-    }
+            assert_eq!(x.transpose(), RowVector::from([1, 2, 3]));
+        }
 
-    #[test]
-    fn row_vec_matrix_mul() {
-        let x = RowVector::from([1, 2, 3]);
-        let a = Matrix::from([[2, 4], [3, 6], [7, 8]]);
+        #[test]
+        fn row_vec_matrix_mul() {
+            let x = RowVector::from([1, 2, 3]);
+            let a = Matrix::from([[2, 4], [3, 6], [7, 8]]);
 
-        assert_eq!(x * a, RowVector::from([29, 40]));
-    }
+            assert_eq!(x * a, RowVector::from([29, 40]));
+        }
 }

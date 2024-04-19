@@ -57,6 +57,13 @@ impl<T: Numeric, const M: usize, const N: usize> From<[[T; N]; M]> for Matrix<T,
     }
 }
 
+impl<const M: usize, const N: usize> From<[[i32; N]; M]> for Matrix<f32, M, N> {
+    fn from(arrs: [[i32; N]; M]) -> Self {
+        let cast = std::array::from_fn(|i| std::array::from_fn(|j| arrs[i][j] as f32));
+        Self::from(cast)
+    }
+}
+
 impl<T: Numeric, const M: usize, const N: usize> Tensor<T, 2> for Matrix<T, M, N> {
     type Transpose = Matrix<T, N, M>;
 
@@ -194,8 +201,8 @@ mod tests {
         );
 
         assert_eq!(x.shape(), [4, 3]);
-        assert_eq!(x.get([2, 1]), Ok(5));
-        assert_eq!(x.get([3, 2]), Ok(3));
+        assert_eq!(x.get([2, 1]), Ok(5.0));
+        assert_eq!(x.get([3, 2]), Ok(3.0));
         assert_eq!(x.get([4, 1]), Err(IndexError {}));
     }
 
@@ -240,7 +247,7 @@ mod tests {
              [16, 20, 24]]
         );
 
-        x *= 2;
+        x *= 2.0;
         assert_eq!(x, y);
     }
 
