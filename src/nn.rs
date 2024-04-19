@@ -90,3 +90,44 @@ impl<T: Numeric> Module<T> for Layer<T> {
         res
     }
 }
+
+pub struct MLP<T: Numeric> {
+    layers: Vec<Layer<T>>,
+}
+
+impl<T: Numeric> MLP<T> {
+    pub fn new(nin: usize, nouts: Vec<usize>) -> Self {
+        let mut sizes = vec![nin];
+        sizes.extend(nouts.iter());
+        let mut layers = Vec::new();
+        for i in 0..(nouts.len()) {
+            let nonlinear = i != nouts.len() - 1;
+            let layer = Layer::new(sizes[i], sizes[i+1], nonlinear);
+            layers.push(layer);
+        }
+
+        MLP { layers }
+    }
+
+    pub fn call(&self, x: Vec<Value<T>>) -> Vec<Value<T>> {
+        let mut res = x;
+        for layer in self.layers.iter() {
+            res = layer.call(&res);
+        }
+
+        res
+    }
+}
+
+impl<T: Numeric> Module<T> for MLP<T> {
+    fn parameters(&self) -> Vec<Value<T>> {
+        let mut res = Vec::new();
+        for layer in self.layers.iter() {
+            for p in layer.parameters().iter() {
+                res.push(p.clone());
+            }
+        }
+
+        res
+    }
+}
