@@ -3,6 +3,7 @@ use rand::random;
 use std::cell::RefCell;
 use std::collections::hash_set::HashSet;
 use std::hash::{Hash, Hasher};
+use std::ops::Add;
 use std::rc::Rc;
 
 pub struct Value<T: Numeric> {
@@ -30,8 +31,12 @@ impl<T: Numeric + 'static> Value<T> {
         }));
         Self { inner }
     }
+}
 
-    pub fn add(&self, other: &Self) -> Self {
+impl<T: Numeric + 'static> Add for Value<T> {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
         let self_ref = self.clone();
         let other_ref = other.clone();
         let out = Rc::new(RefCell::new(ValueInner {
