@@ -3,7 +3,7 @@ use rand::random;
 use std::cell::RefCell;
 use std::collections::hash_set::HashSet;
 use std::hash::{Hash, Hasher};
-use std::ops::Add;
+use std::ops::{Add, Mul};
 use std::rc::Rc;
 
 pub struct Value<T: Numeric> {
@@ -29,6 +29,19 @@ impl<T: Numeric + 'static> Value<T> {
             prev: HashSet::new(),
             op: "".to_string(),
         }));
+        Self { inner }
+    }
+
+    fn new_from_op(data: T, prev: HashSet<Value<T>>, op: String) -> Self {
+        let inner = Rc::new(RefCell::new(ValueInner {
+            id: random(),
+            data,
+            grad: 0.0,
+            backward: None,
+            prev,
+            op,
+        }));
+
         Self { inner }
     }
 
@@ -68,16 +81,9 @@ impl<T: Numeric + 'static> Add for Value<T> {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
-        let self_ref = self.clone();
-        let other_ref = other.clone();
-        let out = Rc::new(RefCell::new(ValueInner {
-            id: random(),
-            data: self.inner.borrow().data + other.inner.borrow().data,
-            grad: 0.0,
-            backward: None,
-            prev: HashSet::from([self_ref, other_ref]),
-            op: "+".to_string(),
-        }));
+        let data = self.inner.borrow().data + other.inner.borrow().data;
+        let children = HashSet::from([self.clone(), other.clone()]);
+        let out = Self::new_from_op(data, children, "+".to_string());
 
         let self_grad = self.clone();
         let other_grad = other.clone();
@@ -87,9 +93,31 @@ impl<T: Numeric + 'static> Add for Value<T> {
             self_inner.grad += grad;
             other_inner.grad += grad;
         };
-        out.borrow_mut().backward = Some(Box::new(backward));
+        out.inner.borrow_mut().backward = Some(Box::new(backward));
 
-        Self { inner: out }
+        out
+    }
+}
+
+impl<T: Numeric + 'static> Mul for Value<T> {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        let data = self.inner.borrow().data * other.inner.borrow().data;
+        let children = HashSet::from([self.clone(), other.clone()]);
+        let out = Self::new_from_op(data, children, "*".to_string());
+
+        let self_grad = self.clone();
+        let other_grad = other.clone();
+        let backward = move |grad| {
+            let mut self_inner = self_grad.inner.borrow_mut();
+            let mut other_inner = other_grad.inner.borrow_mut();
+            self_inner.grad += other_inner.grad * grad;
+            other_inner.grad += self_inner.grad * grad;
+        };
+        out.inner.borrow_mut().backward = Some(Box::new(backward));
+
+        out
     }
 }
 
