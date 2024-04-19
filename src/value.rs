@@ -19,7 +19,7 @@ struct ValueInner<T: Numeric> {
     op: String,
 }
 
-impl<T: Numeric + 'static> Value<T> {
+impl<T: Numeric> Value<T> {
     pub fn new(val: T) -> Self {
         let inner = Rc::new(RefCell::new(ValueInner {
             id: random(),
@@ -123,7 +123,7 @@ impl<T: Numeric + 'static> Value<T> {
     }
 }
 
-impl<T: Numeric + 'static> Add for Value<T> {
+impl<T: Numeric> Add for Value<T> {
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
@@ -145,7 +145,7 @@ impl<T: Numeric + 'static> Add for Value<T> {
     }
 }
 
-impl<T: Numeric + 'static> Sub for Value<T> {
+impl<T: Numeric> Sub for Value<T> {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self::Output {
@@ -153,7 +153,7 @@ impl<T: Numeric + 'static> Sub for Value<T> {
     }
 }
 
-impl<T: Numeric + 'static> Div for Value<T> {
+impl<T: Numeric> Div for Value<T> {
     type Output = Self;
 
     fn div(self, other: Self) -> Self::Output {
@@ -163,7 +163,7 @@ impl<T: Numeric + 'static> Div for Value<T> {
     }
 }
 
-impl<T: Numeric + 'static> Mul for Value<T> {
+impl<T: Numeric> Mul for Value<T> {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self::Output {
@@ -185,7 +185,7 @@ impl<T: Numeric + 'static> Mul for Value<T> {
     }
 }
 
-impl<T: Numeric + 'static> Neg for Value<T> {
+impl<T: Numeric> Neg for Value<T> {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
@@ -215,7 +215,7 @@ impl<T: Numeric> Hash for Value<T> {
     }
 }
 
-impl<T: Numeric + 'static> std::iter::Sum for Value<T> {
+impl<T: Numeric> std::iter::Sum for Value<T> {
     fn sum<I: Iterator<Item = Value<T>>>(mut iter: I) -> Self {
         let first = iter.next();
         if first.is_none() {

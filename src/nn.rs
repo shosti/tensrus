@@ -2,7 +2,7 @@ use crate::numeric::Numeric;
 use crate::value::Value;
 use rand::distributions::{Distribution, Uniform};
 
-pub trait Module<T: Numeric + 'static> {
+pub trait Module<T: Numeric> {
     fn zero_grad(&self) {
         for p in self.parameters().iter() {
             p.zero_grad();
@@ -17,7 +17,7 @@ pub struct Neuron<T: Numeric> {
     nonlin: bool,
 }
 
-impl<T: Numeric + 'static> Neuron<T> {
+impl<T: Numeric> Neuron<T> {
     pub fn new(nin: usize, nonlin: bool) -> Self {
         let mut w = Vec::new();
         let between = Uniform::from(-T::one()..T::one());
@@ -45,7 +45,7 @@ impl<T: Numeric + 'static> Neuron<T> {
     }
 }
 
-impl<T: Numeric + 'static> Module<T> for Neuron<T> {
+impl<T: Numeric> Module<T> for Neuron<T> {
     fn parameters(&self) -> Vec<Value<T>> {
         let mut p = self.w.clone();
         p.push(self.b.clone());
@@ -58,7 +58,7 @@ pub struct Layer<T: Numeric> {
     neurons: Vec<Neuron<T>>,
 }
 
-impl<T: Numeric + 'static> Layer<T> {
+impl<T: Numeric> Layer<T> {
     pub fn new(nin: usize, nout: usize, nonlin: bool) -> Self {
         let mut neurons = Vec::new();
         for _ in 0..nout {
@@ -78,7 +78,7 @@ impl<T: Numeric + 'static> Layer<T> {
     }
 }
 
-impl<T: Numeric + 'static> Module<T> for Layer<T> {
+impl<T: Numeric> Module<T> for Layer<T> {
     fn parameters(&self) -> Vec<Value<T>> {
         let mut res = Vec::new();
         for n in self.neurons.iter() {

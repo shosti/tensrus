@@ -5,6 +5,7 @@ pub trait Numeric:
     + std::ops::MulAssign
     + std::ops::AddAssign
     + rand::distributions::uniform::SampleUniform
+    + 'static
 {
 }
 
