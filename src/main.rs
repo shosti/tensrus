@@ -4,6 +4,7 @@ pub mod scalar;
 pub mod tensor;
 pub mod value;
 pub mod vector;
+pub mod nn;
 
 pub use tensor::Tensor;
 use value::Value;

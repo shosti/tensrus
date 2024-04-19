@@ -79,7 +79,7 @@ impl<T: Numeric + 'static> Value<T> {
         topo.push(cur.clone());
     }
 
-    fn pow(self, n: T) -> Self {
+    fn pow(&self, n: T) -> Self {
         let data = self.inner.borrow().data.powf(n);
         let children = HashSet::from([self.clone()]);
         let out = Self::new_from_op(data, children, "^".to_string());
@@ -87,27 +87,39 @@ impl<T: Numeric + 'static> Value<T> {
         let self_grad = self.clone();
         let backward = move |grad, _| {
             let mut self_inner = self_grad.inner.borrow_mut();
-            self_inner.grad +=  (n * data.powf(n - T::one())) * grad;
+            self_inner.grad += (n * data.powf(n - T::one())) * grad;
         };
         out.inner.borrow_mut().backward = Some(Box::new(backward));
 
         out
     }
 
-    fn relu(self) -> Self {
+    pub fn relu(&self) -> Self {
         let data = self.inner.borrow().data;
-        let outval = if data.is_sign_negative() { T::zero() } else { data };
+        let outval = if data.is_sign_negative() {
+            T::zero()
+        } else {
+            data
+        };
         let children = HashSet::from([self.clone()]);
         let out = Self::new_from_op(outval, children, "ReLU".to_string());
 
         let self_grad = self.clone();
         let backward = move |grad, data: T| {
             let mut self_inner = self_grad.inner.borrow_mut();
-            self_inner.grad += if data.is_sign_positive() { grad } else { T::zero() };
+            self_inner.grad += if data.is_sign_positive() {
+                grad
+            } else {
+                T::zero()
+            };
         };
         out.inner.borrow_mut().backward = Some(Box::new(backward));
 
         out
+    }
+
+    pub fn zero_grad(&self) {
+        self.inner.borrow_mut().grad = T::zero();
     }
 }
 
@@ -200,6 +212,22 @@ impl<T: Numeric> Eq for Value<T> {}
 impl<T: Numeric> Hash for Value<T> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.inner.borrow().id.hash(state);
+    }
+}
+
+impl<T: Numeric + 'static> std::iter::Sum for Value<T> {
+    fn sum<I: Iterator<Item = Value<T>>>(mut iter: I) -> Self {
+        let first = iter.next();
+        if first.is_none() {
+            return Value::new(T::zero());
+        }
+        let mut res = first.unwrap();
+
+        while let Some(next) = iter.next() {
+            res = res + next;
+        }
+
+        res
     }
 }
 

@@ -1,5 +1,10 @@
 pub trait Numeric:
-    num::Float + Copy + std::fmt::Display + std::ops::MulAssign + std::ops::AddAssign + std::ops::Neg
+    num::Float
+    + Copy
+    + std::fmt::Display
+    + std::ops::MulAssign
+    + std::ops::AddAssign
+    + rand::distributions::uniform::SampleUniform
 {
 }
 
