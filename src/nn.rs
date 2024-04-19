@@ -33,8 +33,10 @@ impl<T: Numeric + 'static> Neuron<T> {
         }
     }
 
-    pub fn call(&self, x: Vec<Value<T>>) -> Value<T> {
-        let act: Value<T> = std::iter::zip(self.w.clone(), x).map(|(wi, xi)| wi * xi).sum();
+    pub fn call(&self, x: &Vec<Value<T>>) -> Value<T> {
+        let act: Value<T> = std::iter::zip(self.w.clone(), x)
+            .map(|(wi, xi)| (wi * xi.clone()))
+            .sum();
         if self.nonlin {
             act.relu()
         } else {
@@ -49,5 +51,42 @@ impl<T: Numeric + 'static> Module<T> for Neuron<T> {
         p.push(self.b.clone());
 
         p
+    }
+}
+
+pub struct Layer<T: Numeric> {
+    neurons: Vec<Neuron<T>>,
+}
+
+impl<T: Numeric + 'static> Layer<T> {
+    pub fn new(nin: usize, nout: usize, nonlin: bool) -> Self {
+        let mut neurons = Vec::new();
+        for _ in 0..nout {
+            neurons.push(Neuron::new(nin, nonlin));
+        }
+
+        Self { neurons }
+    }
+
+    pub fn call(&self, x: &Vec<Value<T>>) -> Vec<Value<T>> {
+        let mut out = Vec::new();
+        for n in self.neurons.iter() {
+            out.push(n.call(x));
+        }
+
+        out
+    }
+}
+
+impl<T: Numeric + 'static> Module<T> for Layer<T> {
+    fn parameters(&self) -> Vec<Value<T>> {
+        let mut res = Vec::new();
+        for n in self.neurons.iter() {
+            for p in n.parameters().iter() {
+                res.push(p.clone());
+            }
+        }
+
+        res
     }
 }
