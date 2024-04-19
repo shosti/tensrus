@@ -14,7 +14,7 @@ struct ValueInner<T: Numeric> {
     id: u64,
     data: T,
     grad: f64,
-    backward: Option<Box<dyn FnMut() -> ()>>,
+    backward: Option<Box<dyn FnMut(f64) -> ()>>,
     prev: HashSet<Value<T>>,
     op: String,
 }
@@ -30,6 +30,37 @@ impl<T: Numeric + 'static> Value<T> {
             op: "".to_string(),
         }));
         Self { inner }
+    }
+
+    pub fn backward(&self) {
+        let mut topo = Vec::new();
+        let mut visited = HashSet::new();
+
+        Self::build_topo(self, &mut topo, &mut visited);
+
+        self.inner.borrow_mut().grad = 1.0;
+        for val in topo.iter().rev() {
+            let grad;
+            {
+                grad = val.inner.borrow().grad;
+            }
+            if let Some(backward) = &mut val.inner.borrow_mut().backward {
+                backward(grad);
+            }
+        }
+    }
+
+    fn build_topo(cur: &Value<T>, topo: &mut Vec<Self>, visited: &mut HashSet<u64>) {
+        let val = cur.inner.borrow();
+        if visited.contains(&val.id) {
+            return;
+        }
+
+        visited.insert(val.id);
+        for child in val.prev.iter() {
+            Self::build_topo(child, topo, visited);
+        }
+        topo.push(cur.clone());
     }
 }
 
@@ -50,11 +81,9 @@ impl<T: Numeric + 'static> Add for Value<T> {
 
         let self_grad = self.clone();
         let other_grad = other.clone();
-        let out_grad = out.clone();
-        let backward = move || {
+        let backward = move |grad| {
             let mut self_inner = self_grad.inner.borrow_mut();
             let mut other_inner = other_grad.inner.borrow_mut();
-            let grad = out_grad.borrow().grad;
             self_inner.grad += grad;
             other_inner.grad += grad;
         };
