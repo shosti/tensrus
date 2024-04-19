@@ -3,7 +3,7 @@ use rand::random;
 use std::cell::RefCell;
 use std::collections::hash_set::HashSet;
 use std::hash::{Hash, Hasher};
-use std::ops::{Add, Mul};
+use std::ops::{Add, Mul, Neg};
 use std::rc::Rc;
 
 pub struct Value<T: Numeric> {
@@ -80,7 +80,7 @@ impl<T: Numeric + 'static> Value<T> {
 impl<T: Numeric + 'static> Add for Value<T> {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self {
+    fn add(self, other: Self) -> Self::Output {
         let data = self.inner.borrow().data + other.inner.borrow().data;
         let children = HashSet::from([self.clone(), other.clone()]);
         let out = Self::new_from_op(data, children, "+".to_string());
@@ -102,7 +102,7 @@ impl<T: Numeric + 'static> Add for Value<T> {
 impl<T: Numeric + 'static> Mul for Value<T> {
     type Output = Self;
 
-    fn mul(self, other: Self) -> Self {
+    fn mul(self, other: Self) -> Self::Output {
         let data = self.inner.borrow().data * other.inner.borrow().data;
         let children = HashSet::from([self.clone(), other.clone()]);
         let out = Self::new_from_op(data, children, "*".to_string());
@@ -118,6 +118,14 @@ impl<T: Numeric + 'static> Mul for Value<T> {
         out.inner.borrow_mut().backward = Some(Box::new(backward));
 
         out
+    }
+}
+
+impl<T: Numeric + 'static> Neg for Value<T> {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        self * Value::new(-T::one())
     }
 }
 
