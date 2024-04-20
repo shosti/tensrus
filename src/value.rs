@@ -45,6 +45,10 @@ impl<T: Numeric> Value<T> {
         Self { inner }
     }
 
+    pub fn val(&self) -> T {
+        self.inner.borrow().data
+    }
+
     pub fn backward(&self) {
         let mut topo = Vec::new();
         let mut visited = HashSet::new();
@@ -60,10 +64,25 @@ impl<T: Numeric> Value<T> {
                 grad = inner.grad;
                 data = inner.data;
             }
+            println!("\n\nBEFORE! {:#?}", val);
+            for c in val.inner.borrow().prev.iter() {
+                println!("C: {:#?}", c);
+            }
             if let Some(backward) = &mut val.inner.borrow_mut().backward {
                 backward(grad, data);
             }
+            println!("AFTER!");
+            for c in val.inner.borrow().prev.iter() {
+                println!("C: {:#?}", c);
+            }
         }
+    }
+
+    pub fn update_from_grad(&self, epsilon: T) {
+        let mut inner = self.inner.borrow_mut();
+        let grad = inner.grad;
+
+        inner.data += -epsilon * grad;
     }
 
     fn build_topo(cur: &Value<T>, topo: &mut Vec<Self>, visited: &mut HashSet<u64>) {
@@ -79,7 +98,7 @@ impl<T: Numeric> Value<T> {
         topo.push(cur.clone());
     }
 
-    fn pow(&self, n: T) -> Self {
+    pub fn pow(&self, n: T) -> Self {
         let data = self.inner.borrow().data.powf(n);
         let children = HashSet::from([self.clone()]);
         let out = Self::new_from_op(data, children, "^".to_string());
@@ -120,6 +139,12 @@ impl<T: Numeric> Value<T> {
 
     pub fn zero_grad(&self) {
         self.inner.borrow_mut().grad = T::zero();
+    }
+}
+
+impl<T: Numeric> From<T> for Value<T> {
+    fn from(val: T) -> Self {
+        Self::new(val)
     }
 }
 
@@ -236,8 +261,8 @@ impl<T: Numeric> std::fmt::Debug for Value<T> {
         let val = self.inner.borrow();
         write!(
             f,
-            "Value(id={}, data={}, grad={}, op={})",
-            val.id, val.data, val.grad, val.op
+            "Value(data={}, grad={}, op={})",
+            val.data, val.grad, val.op
         )
     }
 }
