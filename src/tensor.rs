@@ -27,25 +27,15 @@ pub const fn matrix_shape(m: usize, n: usize) -> TensorShape {
 pub type Matrix<T, const M: usize, const N: usize> = Tensor<T, 2, { matrix_shape(M, N) }>;
 
 const fn num_elems(r: usize, s: TensorShape) -> usize {
-    let [mut s0, mut s1, mut s2, mut s3, mut s4] = s;
+    let mut dim = 0;
+    let mut n = 1;
 
-    if r < 1 {
-        s0 = 1;
-    }
-    if r < 2 {
-        s1 = 1;
-    }
-    if r < 3 {
-        s2 = 1;
-    }
-    if r < 4 {
-        s3 = 1;
-    }
-    if r < 5 {
-        s4 = 1;
+    while dim < r {
+        n *= s[dim];
+        dim += 1;
     }
 
-    s0 * s1 * s2 * s3 * s4
+    n
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> {
