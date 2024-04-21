@@ -25,36 +25,37 @@ fn main() {
     .map(|row| row.iter().map(|&n| Value::from(n)).collect())
     .collect();
 
-    let ys: Vec<Value<f64>> = [1.0, -1.0, 1.0, 1.0]
+    let ys: Vec<Value<f64>> = [1.0, -1.0, -1.0, 1.0]
         .iter()
         .map(|&n| Value::from(n))
         .collect();
 
     let n: MLP<f64> = MLP::new(3, vec![4, 4, 1]);
 
-    for i in 0..10 {
-        let ypred: Vec<Value<f64>> = xs.iter().map(|x| n.call(x.to_vec())[0].clone()).collect();
-        let loss = n.loss(&ys, &ypred);
 
+    let mut ypred;
+    for i in 0..5 {
+        println!("\n\nROUND {}", i);
+        ypred = xs.iter().map(|x| n.call(x.to_vec())[0].clone()).collect();
+        let loss = n.loss(&ys, &ypred);
         n.zero_grad();
         loss.backward();
         for p in n.parameters() {
-            p.update_from_grad(0.01);
+            p.update_from_grad(0.1);
+            println!("P {}: {:#?}", p.id(), p);
         }
-
-        println!("{}: Loss: {:#?}", i, loss);
     }
 }
 
-// fn render_graph(x: Value<f64>, id: usize) {
-//     let g = Graph::new(x.clone());
-//     let dotfile = format!("/tmp/{}.dot", id);
-//     let mut f = File::create(&dotfile).unwrap();
-//     g.render_to(&mut f);
-//     let pdffile = format!("/tmp/{}.pdf", id);
-//     Command::new("dot")
-//         .args(["-Tpdf", format!("-o{}", pdffile).as_ref(), &dotfile])
-//         .output()
-//         .unwrap();
-//     println!("rendered {}", pdffile);
-// }
+fn render_graph(x: Value<f64>, id: usize) {
+    let g = Graph::new(x.clone());
+    let dotfile = format!("/tmp/{}.dot", id);
+    let mut f = File::create(&dotfile).unwrap();
+    g.render_to(&mut f);
+    let pdffile = format!("/tmp/{}.pdf", id);
+    Command::new("dot")
+        .args(["-Tpdf", format!("-o{}", pdffile).as_ref(), &dotfile])
+        .output()
+        .unwrap();
+    println!("rendered {}", pdffile);
+}

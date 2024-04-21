@@ -1,6 +1,7 @@
 use crate::numeric::Numeric;
 use crate::value::Value;
 use rand::distributions::{Distribution, Uniform};
+use rand::SeedableRng;
 
 pub trait Module<T: Numeric> {
     fn zero_grad(&self) {
@@ -21,7 +22,7 @@ impl<T: Numeric> Neuron<T> {
     pub fn new(nin: usize, nonlin: bool) -> Self {
         let mut w = Vec::new();
         let between = Uniform::from(-T::one()..T::one());
-        let mut rng = rand::thread_rng();
+        let mut rng =  rand::rngs::StdRng::seed_from_u64(42);
         for _ in 0..nin {
             w.push(Value::new(between.sample(&mut rng)));
         }
