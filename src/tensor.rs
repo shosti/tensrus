@@ -5,6 +5,9 @@ use std::rc::Rc;
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
 
+#[derive(Debug, PartialEq)]
+pub struct ShapeError {}
+
 type TensorShape = [usize; 5];
 
 #[derive(Debug)]
@@ -109,6 +112,18 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> {
         }
 
         Ok(i)
+    }
+
+    pub fn reshape<const R2: usize, const S2: TensorShape>(
+        &self,
+    ) -> Result<Tensor<T, R2, S2>, ShapeError> {
+        if num_elems(R, S) != num_elems(R2, S2) {
+            return Err(ShapeError {});
+        }
+
+        Ok(Tensor {
+            storage: self.storage.clone(),
+        })
     }
 }
 
@@ -232,5 +247,23 @@ mod tests {
         assert_eq!(a.shape(), [5]);
         assert_eq!(a.get(&[3]), Ok(4.0));
         assert_eq!(a.get(&[5]), Err(IndexError {}));
+    }
+
+    #[test]
+    fn reshape() {
+        let x: Matrix<f64, 3, 2> = Matrix::from([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]);
+        let y: Matrix<f64, 2, 3> = Matrix::from([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        let x_reshaped: Matrix<f64, 2, 3> = x.reshape().unwrap();
+
+        assert_eq!(x_reshaped, y);
+
+        let bad_reshape: Result<Matrix<f64, 2, 4>, ShapeError> = x.reshape();
+        assert_eq!(bad_reshape, Err(ShapeError {}));
+
+        let vec: Vector<f64, 4> = Vector::from([2.0; 4]);
+        let matrix: Matrix<f64, 4, 1> = vec.reshape().unwrap();
+        let expected: Matrix<f64, 4, 1> = Matrix::from([2.0; 4]);
+
+        assert_eq!(matrix, expected);
     }
 }
