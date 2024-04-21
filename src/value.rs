@@ -1,10 +1,11 @@
 use crate::numeric::Numeric;
-use rand::random;
 use std::cell::RefCell;
 use std::collections::hash_set::HashSet;
 use std::hash::{Hash, Hasher};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::rc::Rc;
+
+thread_local!(static NEXT_ID: RefCell<u64> = RefCell::new(1));
 
 pub struct Value<T: Numeric> {
     inner: Rc<RefCell<ValueInner<T>>>,
@@ -22,7 +23,7 @@ struct ValueInner<T: Numeric> {
 impl<T: Numeric> Value<T> {
     pub fn new(val: T) -> Self {
         let inner = Rc::new(RefCell::new(ValueInner {
-            id: random(),
+            id: Self::next_id(),
             data: val,
             grad: T::zero(),
             backward: None,
@@ -34,7 +35,7 @@ impl<T: Numeric> Value<T> {
 
     fn new_from_op(data: T, prev: HashSet<Value<T>>, op: String) -> Self {
         let inner = Rc::new(RefCell::new(ValueInner {
-            id: random(),
+            id: Self::next_id(),
             data,
             grad: T::zero(),
             backward: None,
@@ -43,6 +44,16 @@ impl<T: Numeric> Value<T> {
         }));
 
         Self { inner }
+    }
+
+    fn next_id() -> u64 {
+        let mut id = 0;
+        NEXT_ID.with(|n| {
+            id = *n.borrow();
+            *n.borrow_mut() = id + 1;
+        });
+
+        id
     }
 
     pub fn id(&self) -> u64 {
