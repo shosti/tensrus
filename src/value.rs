@@ -173,11 +173,13 @@ impl<T: Numeric> Value<T> {
         let self_grad = self.clone();
         let backward = move |grad, data: T| {
             let mut self_inner = self_grad.inner.borrow_mut();
-            self_inner.grad += if data.is_sign_positive() {
+            let diff = if data.is_sign_positive() && !data.is_zero() {
                 grad
             } else {
                 T::zero()
             };
+
+            self_inner.grad += diff;
         };
         out.inner.borrow_mut().backward = Some(Box::new(backward));
 

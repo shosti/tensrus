@@ -16,7 +16,7 @@ fn value_sanity_test() {
     render_graph(y.clone(), "thing".to_string());
 
     assert_eq!(y.val(), -20.0);
-    assert_eq!(x.grad(), -4.0);
+    assert_eq!(x.grad(), 46.0);
 }
 
 fn render_graph(x: Value<f64>, id: String) {
