@@ -5,10 +5,47 @@ use std::rc::Rc;
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
 
-pub type TensorShape = [usize; 5];
+type TensorShape = [usize; 5];
 
 pub struct Tensor<T: Numeric, const R: usize, const S: TensorShape> {
     storage: Rc<RefCell<Vec<T>>>,
+}
+
+// Useful type definitions for scalar/vector/matrix
+pub type Scalar<T> = Tensor<T, 0, { [0; 5] }>;
+
+pub const fn vector_shape(n: usize) -> TensorShape {
+    [n; 5]
+}
+
+pub type Vector<T, const N: usize> = Tensor<T, 1, { vector_shape(N) }>;
+
+pub const fn matrix_shape(m: usize, n: usize) -> TensorShape {
+    [m, n, 0, 0, 0]
+}
+
+pub type Matrix<T, const M: usize, const N: usize> = Tensor<T, 2, { matrix_shape(M, N) }>;
+
+const fn num_elems(r: usize, s: TensorShape) -> usize {
+    let [mut s0, mut s1, mut s2, mut s3, mut s4] = s;
+
+    if r < 1 {
+        s0 = 1;
+    }
+    if r < 2 {
+        s1 = 1;
+    }
+    if r < 3 {
+        s2 = 1;
+    }
+    if r < 4 {
+        s3 = 1;
+    }
+    if r < 5 {
+        s4 = 1;
+    }
+
+    s0 * s1 * s2 * s3 * s4
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> {
@@ -18,6 +55,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> {
             storage: Rc::new(RefCell::new(vals)),
         }
     }
+
+    // fn from_fn<F>(mut cb: F) -> Self
+    // where
+    //     F: FnMut([usize; R]) -> T,
+    // {
+    //     let vals = vec![T::zer(); Self::storage_size()];
+    // }
 
     pub fn rank(&self) -> usize {
         R
@@ -51,8 +95,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> {
     }
 
     fn storage_size() -> usize {
-        S[..R].iter().product()
+        num_elems(R, S)
     }
+
+    //     fn idx_for_storage_idx(idx: usize) -> Result<[usize; R], IndexError> {
+
+    // //             (0..(M * N)).map(|idx| cb([idx / N, idx % N])).collect(),
+    //     }
 
     fn storage_idx(idx: &[usize; R]) -> Result<usize, IndexError> {
         if R == 0 {
@@ -76,7 +125,17 @@ const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-// Matrix helpers
+impl<T: Numeric, const R: usize, const S: TensorShape> From<[T; num_elems(R, S)]>
+    for Tensor<T, R, S>
+{
+    fn from(arr: [T; num_elems(R, S)]) -> Self {
+        let vals: Vec<T> = arr.into_iter().collect();
+        Self {
+            storage: Rc::new(RefCell::new(vals)),
+        }
+    }
+}
+
 impl<T: Numeric, const S: TensorShape> From<[[T; shape_dim(S, 1)]; shape_dim(S, 0)]>
     for Tensor<T, 2, S>
 {
@@ -131,17 +190,17 @@ mod tests {
 
     #[test]
     fn rank_and_shape() {
-        let scalar: Tensor<f64, 0, { [0; 5] }> = Tensor::zeros();
+        let scalar: Scalar<f64> = Scalar::zeros();
 
         assert_eq!(scalar.rank(), 0);
         assert_eq!(scalar.shape(), []);
 
-        let vector: Tensor<f64, 1, { [7; 5] }> = Tensor::zeros();
+        let vector: Vector<f64, 7> = Vector::zeros();
 
         assert_eq!(vector.rank(), 1);
         assert_eq!(vector.shape(), [7]);
 
-        let matrix: Tensor<f64, 2, { [3, 2, 0, 0, 0] }> = Tensor::zeros();
+        let matrix: Matrix<f64, 3, 2> = Matrix::zeros();
 
         assert_eq!(matrix.rank(), 2);
         assert_eq!(matrix.shape(), [3, 2]);
@@ -150,6 +209,9 @@ mod tests {
         assert_eq!(tensor3.rank(), 3);
         assert_eq!(tensor3.shape(), [7, 8, 2]);
     }
+
+    #[test]
+    fn from_vec() {}
 
     #[test]
     fn get_and_set() {
@@ -172,5 +234,29 @@ mod tests {
             t.set(&idx, val).unwrap();
             assert_eq!(t.get(&idx).unwrap(), val);
         }
+    }
+
+    #[test]
+    fn matrix_basics() {
+        let x: Matrix<f64, 4, 3> = Matrix::from([
+            [3.0, 4.0, 5.0],
+            [2.0, 7.0, 9.0],
+            [6.0, 5.0, 10.0],
+            [3.0, 7.0, 3.0],
+        ]);
+
+        assert_eq!(x.shape(), [4, 3]);
+        assert_eq!(x.get(&[2, 1]), Ok(5.0));
+        assert_eq!(x.get(&[3, 2]), Ok(3.0));
+        assert_eq!(x.get(&[4, 1]), Err(IndexError {}));
+    }
+
+    #[test]
+    fn vector_basics() {
+        let a: Vector<f64, 5> = Vector::from([1.0, 2.0, 3.0, 4.0, 5.0]);
+
+        assert_eq!(a.shape(), [5]);
+        assert_eq!(a.get(&[3]), Ok(4.0));
+        assert_eq!(a.get(&[5]), Err(IndexError {}));
     }
 }

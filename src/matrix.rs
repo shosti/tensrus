@@ -192,20 +192,6 @@ mod tests {
     use super::*;
     use crate::tensor::IndexError;
 
-    #[test]
-    fn basics() {
-        let x: Matrix<f64, 4, 3> = Matrix::from([
-            [3.0, 4.0, 5.0],
-            [2.0, 7.0, 9.0],
-            [6.0, 5.0, 10.0],
-            [3.0, 7.0, 3.0],
-        ]);
-
-        assert_eq!(x.shape(), [4, 3]);
-        assert_eq!(x.get(&[2, 1]), Ok(5.0));
-        assert_eq!(x.get(&[3, 2]), Ok(3.0));
-        assert_eq!(x.get(&[4, 1]), Err(IndexError {}));
-    }
 
     // #[test]
     // fn from_fn() {
@@ -214,11 +200,11 @@ mod tests {
     //         let s = format!("{}{}", i, j);
     //         s.parse().unwrap()
     //     });
-    //     let y = Matrix::from(
-    //         [[00, 01, 02, 03],
-    //          [10, 11, 12, 13],
-    //          [20, 21, 22, 23]]
-    //     );
+    //     let y = Matrix::from([
+    //         [0.0, 1.0, 2.0, 3.0],
+    //         [10.0, 11.0, 12.0, 13.0],
+    //         [20.0, 21.0, 22.0, 23.0],
+    //     ]);
 
     //     assert_eq!(x, y);
     // }
