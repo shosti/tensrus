@@ -1,11 +1,13 @@
-pub mod matrix;
+#![feature(adt_const_params)]
+#![allow(incomplete_features)]
+// pub mod matrix;
 pub mod nn;
 pub mod numeric;
 pub mod render;
-pub mod scalar;
+// pub mod scalar;
 pub mod tensor;
 pub mod value;
-pub mod vector;
+// pub mod vector;
 
 // use nn::{Module, MLP};
 // use render::Graph;
