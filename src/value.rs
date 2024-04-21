@@ -112,7 +112,9 @@ impl<T: Numeric> Value<T> {
                 grad = inner.grad;
                 data = inner.data;
             }
+            let id = val.id();
             if let Some(backward) = &mut val.inner.borrow_mut().backward {
+                println!("calling backward on {}", id);
                 backward(grad, data);
             }
         }
@@ -240,10 +242,16 @@ impl<T: Numeric> Mul for Value<T> {
         let self_grad = self.clone();
         let other_grad = other.clone();
         let backward = move |grad, _| {
-            let mut self_inner = self_grad.inner.borrow_mut();
-            let mut other_inner = other_grad.inner.borrow_mut();
-            self_inner.grad += other_inner.data * grad;
-            other_inner.grad += self_inner.data * grad;
+            let self_data = self_grad.inner.borrow().data;
+            let other_data = other_grad.inner.borrow().data;
+            {
+                let mut self_inner = self_grad.inner.borrow_mut();
+                self_inner.grad += other_data * grad;
+            }
+            {
+                let mut other_inner = other_grad.inner.borrow_mut();
+                other_inner.grad += self_data * grad;
+            }
         };
         out.inner.borrow_mut().backward = Some(Box::new(backward));
 

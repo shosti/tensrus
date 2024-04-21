@@ -69,6 +69,10 @@ impl<'a> Labeller<'a, Nd, Ed> for Graph {
     fn node_shape(&'a self, _: &Nd) -> Option<LabelText<'a>> {
         Some(LabelText::LabelStr(Cow::Owned("record".to_string())))
     }
+
+    fn rank_dir(&'a self) -> Option<RankDir> {
+        Some(RankDir::LeftRight)
+    }
 }
 
 impl<'a> GraphWalk<'a, Nd, Ed> for Graph {
