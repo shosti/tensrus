@@ -16,7 +16,7 @@ struct ValueInner<T: Numeric> {
     data: T,
     grad: T,
     backward: Option<Box<dyn FnMut(T, T) -> ()>>,
-    prev: HashSet<Value<T>>,
+    prev: Vec<Value<T>>,
     op: String,
 }
 
@@ -27,19 +27,25 @@ impl<T: Numeric> Value<T> {
             data: val,
             grad: T::zero(),
             backward: None,
-            prev: HashSet::new(),
+            prev: Vec::new(),
             op: "".to_string(),
         }));
         Self { inner }
     }
 
     fn new_from_op(data: T, prev: HashSet<Value<T>>, op: String) -> Self {
+        let mut children: Vec<Value<T>> = prev.into_iter().collect();
+        children.sort_by(|v, t| {
+            v.val()
+                .partial_cmp(&t.val())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         let inner = Rc::new(RefCell::new(ValueInner {
             id: Self::next_id(),
             data,
             grad: T::zero(),
             backward: None,
-            prev,
+            prev: children,
             op,
         }));
 
@@ -112,9 +118,7 @@ impl<T: Numeric> Value<T> {
                 grad = inner.grad;
                 data = inner.data;
             }
-            let id = val.id();
             if let Some(backward) = &mut val.inner.borrow_mut().backward {
-                println!("calling backward on {}", id);
                 backward(grad, data);
             }
         }
