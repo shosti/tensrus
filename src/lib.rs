@@ -1,11 +1,12 @@
 #![feature(adt_const_params)]
 #![feature(generic_const_exprs)]
 #![allow(incomplete_features)]
-// pub mod matrix;
+pub mod matrix;
 pub mod nn;
 pub mod numeric;
 pub mod render;
 // pub mod scalar;
+pub mod generic_tensor;
 pub mod tensor;
 pub mod value;
 // pub mod vector;
@@ -14,7 +15,7 @@ pub mod value;
 // use render::Graph;
 // use std::fs::File;
 // use std::process::Command;
-pub use tensor::Tensor;
+// pub use tensor::GenericTensor;
 // use value::Value;
 
 // fn main() {
