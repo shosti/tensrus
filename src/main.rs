@@ -34,16 +34,15 @@ fn main() {
 
 
     let mut ypred;
-    for i in 0..5 {
-        println!("\n\nROUND {}", i);
+    for i in 0..50 {
         ypred = xs.iter().map(|x| n.call(x.to_vec())[0].clone()).collect();
         let loss = n.loss(&ys, &ypred);
         n.zero_grad();
         loss.backward();
         for p in n.parameters() {
             p.update_from_grad(0.1);
-            println!("P {}: {:#?}", p.id(), p);
         }
+        println!("LOSS: {:#?}", loss);
     }
 }
 

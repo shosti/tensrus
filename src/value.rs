@@ -139,12 +139,13 @@ impl<T: Numeric> Value<T> {
     }
 
     pub fn pow(&self, n: T) -> Self {
-        let data = self.inner.borrow().data.powf(n);
+        let val = self.inner.borrow().data.powf(n);
         let children = HashSet::from([self.clone()]);
-        let out = Self::new_from_op(data, children, "^".to_string());
+        let out = Self::new_from_op(val, children, "^".to_string());
 
         let self_grad = self.clone();
         let backward = move |grad, _| {
+            let data = self_grad.inner.borrow().data;
             let mut self_inner = self_grad.inner.borrow_mut();
             self_inner.grad += (n * data.powf(n - T::one())) * grad;
         };
