@@ -7,6 +7,7 @@ pub struct IndexError {}
 
 type TensorShape = [usize; 5];
 
+#[derive(Debug)]
 pub struct Tensor<T: Numeric, const R: usize, const S: TensorShape> {
     storage: Rc<RefCell<Vec<T>>>,
 }
@@ -138,6 +139,20 @@ impl<T: Numeric, const S: TensorShape> From<[[T; shape_dim(S, 1)]; shape_dim(S, 
     }
 }
 
+impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for Tensor<T, R, S> {
+    fn eq(&self, other: &Self) -> bool {
+        for i in 0..Self::storage_size() {
+            // TODO: use helpers once they're there
+            if self.storage.borrow()[i] != other.storage.borrow()[i] {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> Eq for Tensor<T, R, S> {}
+
 // pub trait Tensor<T: Numeric, const R: usize>: MulAssign<T> + Eq {
 //     type Transpose;
 
@@ -239,6 +254,10 @@ mod tests {
         assert_eq!(x.get(&[2, 1]), Ok(5.0));
         assert_eq!(x.get(&[3, 2]), Ok(3.0));
         assert_eq!(x.get(&[4, 1]), Err(IndexError {}));
+
+        let y: Matrix<f64, 4, 3> =
+            Matrix::from([3.0, 4.0, 5.0, 2.0, 7.0, 9.0, 6.0, 5.0, 10.0, 3.0, 7.0, 3.0]);
+        assert_eq!(x, y);
     }
 
     #[test]
