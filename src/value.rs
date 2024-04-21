@@ -119,6 +119,7 @@ impl<T: Numeric> Value<T> {
     }
 
     pub fn update_from_grad(&self, epsilon: T) {
+        println!("updating {}", self.id());
         let mut inner = self.inner.borrow_mut();
         let grad = inner.grad;
 
@@ -241,8 +242,8 @@ impl<T: Numeric> Mul for Value<T> {
         let backward = move |grad, _| {
             let mut self_inner = self_grad.inner.borrow_mut();
             let mut other_inner = other_grad.inner.borrow_mut();
-            self_inner.grad += other_inner.grad * grad;
-            other_inner.grad += self_inner.grad * grad;
+            self_inner.grad += other_inner.data * grad;
+            other_inner.grad += self_inner.data * grad;
         };
         out.inner.borrow_mut().backward = Some(Box::new(backward));
 
