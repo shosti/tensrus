@@ -34,9 +34,10 @@ impl<T: Numeric> Neuron<T> {
     }
 
     pub fn call(&self, x: &Vec<Value<T>>) -> Value<T> {
-        let act: Value<T> = std::iter::zip(self.w.clone(), x)
+        let wx: Value<T> = std::iter::zip(self.w.clone(), x)
             .map(|(wi, xi)| (wi * xi.clone()))
             .sum();
+        let act = wx + self.b.clone();
         if self.nonlin {
             act.relu()
         } else {
