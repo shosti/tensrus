@@ -3,20 +3,12 @@ use crate::value::Value;
 use dot::{render, Edges, GraphWalk, Id, LabelText, Labeller, Nodes, RankDir};
 use std::borrow::Cow;
 use std::collections::hash_map::HashMap;
-use std::collections::hash_set::HashSet;
 use std::io::Write;
-
-#[derive(Clone)]
-enum NodeType {
-    Value,
-    Op,
-}
 
 #[derive(Clone)]
 struct Nd {
     id: String,
     label: String,
-    t: NodeType,
 }
 type Ed = (String, String);
 
@@ -26,7 +18,9 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub fn new<T: Numeric>(nodes: HashSet<Value<T>>, edges: HashSet<(Value<T>, Value<T>)>) -> Self {
+    pub fn new<T: Numeric>(val: Value<T>) -> Self {
+        let (nodes, edges) = val.trace();
+
         let mut ns = HashMap::new();
         let mut es = Vec::new();
 
@@ -39,7 +33,6 @@ impl Graph {
             let node = Nd {
                 id: id.clone(),
                 label,
-                t: NodeType::Value,
             };
             ns.insert(id, node);
         }
@@ -73,11 +66,8 @@ impl<'a> Labeller<'a, Nd, Ed> for Graph {
         LabelText::LabelStr(Cow::Owned(n.label.clone()))
     }
 
-    fn node_shape(&'a self, n: &Nd) -> Option<LabelText<'a>> {
-        match n.t {
-            NodeType::Op => None,
-            NodeType::Value => Some(LabelText::LabelStr(Cow::Owned("record".to_string()))),
-        }
+    fn node_shape(&'a self, _: &Nd) -> Option<LabelText<'a>> {
+        Some(LabelText::LabelStr(Cow::Owned("record".to_string())))
     }
 
     fn rank_dir(&'a self) -> Option<RankDir> {

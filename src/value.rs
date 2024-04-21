@@ -101,16 +101,8 @@ impl<T: Numeric> Value<T> {
                 grad = inner.grad;
                 data = inner.data;
             }
-            println!("\n\nBEFORE! {:#?}", val);
-            for c in val.inner.borrow().prev.iter() {
-                println!("C: {:#?}", c);
-            }
             if let Some(backward) = &mut val.inner.borrow_mut().backward {
                 backward(grad, data);
-            }
-            println!("AFTER!");
-            for c in val.inner.borrow().prev.iter() {
-                println!("C: {:#?}", c);
             }
         }
     }

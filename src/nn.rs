@@ -102,7 +102,7 @@ impl<T: Numeric> MLP<T> {
         let mut layers = Vec::new();
         for i in 0..(nouts.len()) {
             let nonlinear = i != nouts.len() - 1;
-            let layer = Layer::new(sizes[i], sizes[i+1], nonlinear);
+            let layer = Layer::new(sizes[i], sizes[i + 1], nonlinear);
             layers.push(layer);
         }
 
@@ -116,6 +116,18 @@ impl<T: Numeric> MLP<T> {
         }
 
         res
+    }
+
+    pub fn zero_grad(&self) {
+        for p in self.parameters().iter() {
+            p.zero_grad();
+        }
+    }
+
+    pub fn loss(&self, ys: &Vec<Value<T>>, ypred: &Vec<Value<T>>) -> Value<T> {
+        std::iter::zip(ys.iter(), ypred.iter())
+            .map(|(ygt, yout)| (yout.clone() - ygt.clone()).pow(T::from(2.0).unwrap()))
+            .sum()
     }
 }
 
