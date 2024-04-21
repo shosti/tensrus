@@ -1,5 +1,6 @@
 use crate::numeric::Numeric;
 
+
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
 
@@ -24,13 +25,17 @@ pub const fn num_elems(r: usize, s: TensorShape) -> usize {
     n
 }
 
-// pub struct Scalar<T: Numeric>(GenericTensor<T, 0, { [0; 5] }>);
+pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
+    s[i]
+}
 
-// pub struct Vector<T: Numeric, const N: usize>(GenericTensor<T, 1, { vector_shape(N) }>)
-// where
-//     [(); num_elems(1, vector_shape(N))]:;
-
-
+pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
+    fn rank(&self) -> usize {
+        R
+    }
+    fn shape(&self) -> [usize; R];
+    fn get(&self, idx: &[usize; R]) -> Result<T, IndexError>;
+}
 
 // #[cfg(test)]
 // mod tests {

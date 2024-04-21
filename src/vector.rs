@@ -1,244 +1,249 @@
-use crate::matrix::Matrix;
+use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{IndexError, Tensor};
-use std::cell::RefCell;
-use std::ops::{Mul, MulAssign};
-use std::rc::Rc;
+use crate::tensor::{num_elems, TensorShape};
 
-#[derive(Debug)]
-pub struct Vector<T: Numeric, const N: usize> {
-    vals: Rc<RefCell<Vec<T>>>,
+pub const fn vector_shape(n: usize) -> TensorShape {
+    [n; 5]
 }
 
-impl<T: Numeric, const N: usize> Vector<T, N> {
-    pub fn dot(&self, other: &Self) -> T {
-        let mut res = T::zero();
-        for i in 0..N {
-            res = res + (self.get([i]).unwrap() * other.get([i]).unwrap());
-        }
+pub struct Vector<T: Numeric, const N: usize>(GenericTensor<T, 1, { vector_shape(N) }>)
+where
+    [(); num_elems(1, vector_shape(N))]:;
 
-        res
-    }
-}
+// #[derive(Debug)]
+// pub struct Vector<T: Numeric, const N: usize> {
+//     vals: Rc<RefCell<Vec<T>>>,
+// }
 
-impl<T: Numeric, const N: usize> From<[T; N]> for Vector<T, N> {
-    fn from(vals: [T; N]) -> Self {
-        Self {
-            vals: Rc::new(RefCell::new(Vec::from(vals))),
-        }
-    }
-}
+// impl<T: Numeric, const N: usize> Vector<T, N> {
+//     pub fn dot(&self, other: &Self) -> T {
+//         let mut res = T::zero();
+//         for i in 0..N {
+//             res = res + (self.get([i]).unwrap() * other.get([i]).unwrap());
+//         }
 
-impl<const N: usize> From<[i32; N]> for Vector<f32, N> {
-    fn from(vals: [i32; N]) -> Self {
-        let cast: [f32; N] = std::array::from_fn(|i| vals[i] as f32);
-        Self::from(cast)
-    }
-}
+//         res
+//     }
+// }
 
-impl<T: Numeric, const N: usize> Tensor<T, 1> for Vector<T, N> {
-    type Transpose = RowVector<T, N>;
+// impl<T: Numeric, const N: usize> From<[T; N]> for Vector<T, N> {
+//     fn from(vals: [T; N]) -> Self {
+//         Self {
+//             vals: Rc::new(RefCell::new(Vec::from(vals))),
+//         }
+//     }
+// }
 
-    fn from_fn<F>(mut cb: F) -> Self
-    where
-        F: FnMut([usize; 1]) -> T,
-    {
-        let vals = Rc::new(RefCell::new((0..N).map(|idx| cb([idx])).collect()));
-        Self { vals }
-    }
+// impl<const N: usize> From<[i32; N]> for Vector<f32, N> {
+//     fn from(vals: [i32; N]) -> Self {
+//         let cast: [f32; N] = std::array::from_fn(|i| vals[i] as f32);
+//         Self::from(cast)
+//     }
+// }
 
-    fn shape(&self) -> [usize; 1] {
-        [N]
-    }
+// impl<T: Numeric, const N: usize> Tensor<T, 1> for Vector<T, N> {
+//     type Transpose = RowVector<T, N>;
 
-    fn get(&self, idx: [usize; 1]) -> Result<T, IndexError> {
-        let [i] = idx;
-        if i >= N {
-            return Err(IndexError {});
-        }
+//     fn from_fn<F>(mut cb: F) -> Self
+//     where
+//         F: FnMut([usize; 1]) -> T,
+//     {
+//         let vals = Rc::new(RefCell::new((0..N).map(|idx| cb([idx])).collect()));
+//         Self { vals }
+//     }
 
-        Ok(self.vals.borrow()[i])
-    }
+//     fn shape(&self) -> [usize; 1] {
+//         [N]
+//     }
 
-    fn set(&mut self, idx: [usize; 1], val: T) -> Result<(), IndexError> {
-        let [i] = idx;
-        if i >= N {
-            return Err(IndexError {});
-        }
-        self.vals.borrow_mut()[i] = val;
+//     fn get(&self, idx: [usize; 1]) -> Result<T, IndexError> {
+//         let [i] = idx;
+//         if i >= N {
+//             return Err(IndexError {});
+//         }
 
-        Ok(())
-    }
+//         Ok(self.vals.borrow()[i])
+//     }
 
-    fn transpose(&self) -> Self::Transpose {
-        Self::Transpose {
-            vals: self.vals.clone(),
-        }
-    }
+//     fn set(&mut self, idx: [usize; 1], val: T) -> Result<(), IndexError> {
+//         let [i] = idx;
+//         if i >= N {
+//             return Err(IndexError {});
+//         }
+//         self.vals.borrow_mut()[i] = val;
 
-    fn next_idx(&self, idx: [usize; 1]) -> Option<[usize; 1]> {
-        let [i] = idx;
-        if i + 1 >= N {
-            None
-        } else {
-            Some([i + 1])
-        }
-    }
-}
+//         Ok(())
+//     }
 
-impl<T: Numeric, const N: usize> MulAssign<T> for Vector<T, N> {
-    fn mul_assign(&mut self, other: T) {
-        self.update(|n| n * other);
-    }
-}
+//     fn transpose(&self) -> Self::Transpose {
+//         Self::Transpose {
+//             vals: self.vals.clone(),
+//         }
+//     }
 
-impl<T: Numeric, const N: usize> PartialEq for Vector<T, N> {
-    fn eq(&self, other: &Self) -> bool {
-        (0..N).all(|i| self.get([i]) == other.get([i]))
-    }
-}
+//     fn next_idx(&self, idx: [usize; 1]) -> Option<[usize; 1]> {
+//         let [i] = idx;
+//         if i + 1 >= N {
+//             None
+//         } else {
+//             Some([i + 1])
+//         }
+//     }
+// }
 
-impl<T: Numeric, const N: usize> Eq for Vector<T, N> {}
+// impl<T: Numeric, const N: usize> MulAssign<T> for Vector<T, N> {
+//     fn mul_assign(&mut self, other: T) {
+//         self.update(|n| n * other);
+//     }
+// }
 
-#[derive(Debug)]
-pub struct RowVector<T: Numeric, const N: usize> {
-    vals: Rc<RefCell<Vec<T>>>,
-}
+// impl<T: Numeric, const N: usize> PartialEq for Vector<T, N> {
+//     fn eq(&self, other: &Self) -> bool {
+//         (0..N).all(|i| self.get([i]) == other.get([i]))
+//     }
+// }
 
-impl<T: Numeric, const N: usize> From<[T; N]> for RowVector<T, N> {
-    fn from(vals: [T; N]) -> Self {
-        Vector::from(vals).transpose()
-    }
-}
+// impl<T: Numeric, const N: usize> Eq for Vector<T, N> {}
 
-impl<const N: usize> From<[i32; N]> for RowVector<f32, N> {
-    fn from(vals: [i32; N]) -> Self {
-        Vector::from(vals).transpose()
-    }
-}
+// #[derive(Debug)]
+// pub struct RowVector<T: Numeric, const N: usize> {
+//     vals: Rc<RefCell<Vec<T>>>,
+// }
 
-impl<T: Numeric, const N: usize> Tensor<T, 1> for RowVector<T, N> {
-    type Transpose = Vector<T, N>;
+// impl<T: Numeric, const N: usize> From<[T; N]> for RowVector<T, N> {
+//     fn from(vals: [T; N]) -> Self {
+//         Vector::from(vals).transpose()
+//     }
+// }
 
-    fn from_fn<F>(cb: F) -> Self
-    where
-        F: FnMut([usize; 1]) -> T,
-    {
-        Vector::from_fn(cb).transpose()
-    }
+// impl<const N: usize> From<[i32; N]> for RowVector<f32, N> {
+//     fn from(vals: [i32; N]) -> Self {
+//         Vector::from(vals).transpose()
+//     }
+// }
 
-    fn shape(&self) -> [usize; 1] {
-        [N]
-    }
+// impl<T: Numeric, const N: usize> Tensor<T, 1> for RowVector<T, N> {
+//     type Transpose = Vector<T, N>;
 
-    fn get(&self, idx: [usize; 1]) -> Result<T, IndexError> {
-        let [i] = idx;
-        if i >= N {
-            return Err(IndexError {});
-        }
+//     fn from_fn<F>(cb: F) -> Self
+//     where
+//         F: FnMut([usize; 1]) -> T,
+//     {
+//         Vector::from_fn(cb).transpose()
+//     }
 
-        Ok(self.vals.borrow()[i])
-    }
+//     fn shape(&self) -> [usize; 1] {
+//         [N]
+//     }
 
-    fn set(&mut self, idx: [usize; 1], val: T) -> Result<(), IndexError> {
-        let [i] = idx;
-        if i >= N {
-            return Err(IndexError {});
-        }
-        self.vals.borrow_mut()[i] = val;
+//     fn get(&self, idx: [usize; 1]) -> Result<T, IndexError> {
+//         let [i] = idx;
+//         if i >= N {
+//             return Err(IndexError {});
+//         }
 
-        Ok(())
-    }
+//         Ok(self.vals.borrow()[i])
+//     }
 
-    fn transpose(&self) -> Self::Transpose {
-        Self::Transpose {
-            vals: self.vals.clone(),
-        }
-    }
+//     fn set(&mut self, idx: [usize; 1], val: T) -> Result<(), IndexError> {
+//         let [i] = idx;
+//         if i >= N {
+//             return Err(IndexError {});
+//         }
+//         self.vals.borrow_mut()[i] = val;
 
-    fn next_idx(&self, idx: [usize; 1]) -> Option<[usize; 1]> {
-        let [i] = idx;
-        if i + 1 >= N {
-            None
-        } else {
-            Some([i + 1])
-        }
-    }
-}
+//         Ok(())
+//     }
 
-impl<T: Numeric, const N: usize> MulAssign<T> for RowVector<T, N> {
-    fn mul_assign(&mut self, other: T) {
-        self.update(|n| n * other);
-    }
-}
+//     fn transpose(&self) -> Self::Transpose {
+//         Self::Transpose {
+//             vals: self.vals.clone(),
+//         }
+//     }
 
-impl<T: Numeric, const N: usize> PartialEq for RowVector<T, N> {
-    fn eq(&self, other: &Self) -> bool {
-        (0..N).all(|i| self.get([i]) == other.get([i]))
-    }
-}
+//     fn next_idx(&self, idx: [usize; 1]) -> Option<[usize; 1]> {
+//         let [i] = idx;
+//         if i + 1 >= N {
+//             None
+//         } else {
+//             Some([i + 1])
+//         }
+//     }
+// }
 
-impl<T: Numeric, const M: usize, const N: usize> Mul<Matrix<T, M, N>> for RowVector<T, M> {
-    type Output = RowVector<T, N>;
+// impl<T: Numeric, const N: usize> MulAssign<T> for RowVector<T, N> {
+//     fn mul_assign(&mut self, other: T) {
+//         self.update(|n| n * other);
+//     }
+// }
 
-    fn mul(self, other: Matrix<T, M, N>) -> Self::Output {
-        RowVector::from_fn(|idx| {
-            let [j] = idx;
-            self.transpose().dot(&other.col(j).unwrap())
-        })
-    }
-}
+// impl<T: Numeric, const N: usize> PartialEq for RowVector<T, N> {
+//     fn eq(&self, other: &Self) -> bool {
+//         (0..N).all(|i| self.get([i]) == other.get([i]))
+//     }
+// }
 
-impl<T: Numeric, const N: usize> Eq for RowVector<T, N> {}
+// impl<T: Numeric, const M: usize, const N: usize> Mul<Matrix<T, M, N>> for RowVector<T, M> {
+//     type Output = RowVector<T, N>;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+//     fn mul(self, other: Matrix<T, M, N>) -> Self::Output {
+//         RowVector::from_fn(|idx| {
+//             let [j] = idx;
+//             self.transpose().dot(&other.col(j).unwrap())
+//         })
+//     }
+// }
 
-    #[test]
-    fn basics() {
-        let a = Vector::from([1, 2, 3, 4, 5]);
+// impl<T: Numeric, const N: usize> Eq for RowVector<T, N> {}
 
-        assert_eq!(a.shape(), [5]);
-        assert_eq!(a.get([3]), Ok(4.0));
-        assert_eq!(a.get([5]), Err(IndexError {}));
-    }
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-        #[test]
-        fn mul_assign() {
-            let mut a = Vector::from([2, 4, 6, 8]);
-            a *= 3.0;
+//     #[test]
+//     fn basics() {
+//         let a = Vector::from([1, 2, 3, 4, 5]);
 
-            assert_eq!(a, Vector::from([6, 12, 18, 24]));
-        }
+//         assert_eq!(a.shape(), [5]);
+//         assert_eq!(a.get([3]), Ok(4.0));
+//         assert_eq!(a.get([5]), Err(IndexError {}));
+//     }
 
-        #[test]
-        fn from_fn() {
-            let a: Vector<_, 4> = Vector::from_fn(|idx| idx[0] as f32 * 2.0);
+//         #[test]
+//         fn mul_assign() {
+//             let mut a = Vector::from([2, 4, 6, 8]);
+//             a *= 3.0;
 
-            assert_eq!(a, Vector::from([0, 2, 4, 6]));
-        }
+//             assert_eq!(a, Vector::from([6, 12, 18, 24]));
+//         }
 
-        #[test]
-        fn dot_product() {
-            let a = Vector::from([1, 2, 3]);
-            let b = Vector::from([4, 5, 6]);
+//         #[test]
+//         fn from_fn() {
+//             let a: Vector<_, 4> = Vector::from_fn(|idx| idx[0] as f32 * 2.0);
 
-            assert_eq!(a.dot(&b), 32.0);
-        }
+//             assert_eq!(a, Vector::from([0, 2, 4, 6]));
+//         }
 
-        #[test]
-        fn transpose() {
-            let x = Vector::from([1, 2, 3]);
+//         #[test]
+//         fn dot_product() {
+//             let a = Vector::from([1, 2, 3]);
+//             let b = Vector::from([4, 5, 6]);
 
-            assert_eq!(x.transpose(), RowVector::from([1, 2, 3]));
-        }
+//             assert_eq!(a.dot(&b), 32.0);
+//         }
 
-        #[test]
-        fn row_vec_matrix_mul() {
-            let x = RowVector::from([1, 2, 3]);
-            let a = Matrix::from([[2, 4], [3, 6], [7, 8]]);
+//         #[test]
+//         fn transpose() {
+//             let x = Vector::from([1, 2, 3]);
 
-            assert_eq!(x * a, RowVector::from([29, 40]));
-        }
-}
+//             assert_eq!(x.transpose(), RowVector::from([1, 2, 3]));
+//         }
+
+//         #[test]
+//         fn row_vec_matrix_mul() {
+//             let x = RowVector::from([1, 2, 3]);
+//             let a = Matrix::from([[2, 4], [3, 6], [7, 8]]);
+
+//             assert_eq!(x * a, RowVector::from([29, 40]));
+//         }
+// }

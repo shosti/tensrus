@@ -1,16 +1,24 @@
-use crate::numeric::Numeric;
-use crate::tensor::{num_elems, TensorShape};
 use crate::generic_tensor::GenericTensor;
+use crate::numeric::Numeric;
+use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
+use brainy_macro::Tensor;
 
 pub const fn matrix_shape(m: usize, n: usize) -> TensorShape {
     [m, n, 0, 0, 0]
 }
 
-pub struct Matrix<T: Numeric, const M: usize, const N: usize>(
-    GenericTensor<T, 2, { matrix_shape(M, N) }>,
-)
-where
-    [(); num_elems(2, matrix_shape(M, N))]:;
+pub type Matrix<T, const M: usize, const N: usize> = MatrixTensor<T, 2, { matrix_shape(M, N) }>;
+
+#[derive(Tensor, PartialEq, Debug)]
+pub struct MatrixTensor<T: Numeric, const R: usize, const S: TensorShape>(GenericTensor<T, R, S>);
+
+impl<T: Numeric, const R: usize, const S: TensorShape> From<[T; num_elems(R, S)]>
+    for MatrixTensor<T, R, S>
+{
+    fn from(arr: [T; num_elems(R, S)]) -> Self {
+        Self(GenericTensor::from(arr))
+    }
+}
 
 impl<T: Numeric, const M: usize, const N: usize> From<[[T; N]; M]> for Matrix<T, M, N>
 where
@@ -26,24 +34,24 @@ mod tests {
     use super::*;
     use crate::tensor::IndexError;
 
-    // #[test]
-    // fn matrix_basics() {
-    //     let x: Matrix<f64, 4, 3> = Matrix::from([
-    //         [3.0, 4.0, 5.0],
-    //         [2.0, 7.0, 9.0],
-    //         [6.0, 5.0, 10.0],
-    //         [3.0, 7.0, 3.0],
-    //     ]);
+    #[test]
+    fn matrix_basics() {
+        let x: Matrix<f64, 4, 3> = Matrix::from([
+            [3.0, 4.0, 5.0],
+            [2.0, 7.0, 9.0],
+            [6.0, 5.0, 10.0],
+            [3.0, 7.0, 3.0],
+        ]);
 
-    //     assert_eq!(x.shape(), [4, 3]);
-    //     assert_eq!(x.get(&[2, 1]), Ok(5.0));
-    //     assert_eq!(x.get(&[3, 2]), Ok(3.0));
-    //     assert_eq!(x.get(&[4, 1]), Err(IndexError {}));
+        assert_eq!(x.shape(), [4, 3]);
+        assert_eq!(x.get(&[2, 1]), Ok(5.0));
+        assert_eq!(x.get(&[3, 2]), Ok(3.0));
+        assert_eq!(x.get(&[4, 1]), Err(IndexError {}));
 
-    //     let y: Matrix<f64, 4, 3> =
-    //         Matrix::from([3.0, 4.0, 5.0, 2.0, 7.0, 9.0, 6.0, 5.0, 10.0, 3.0, 7.0, 3.0]);
-    //     assert_eq!(x, y);
-    // }
+        let y: Matrix<f64, 4, 3> =
+            Matrix::from([3.0, 4.0, 5.0, 2.0, 7.0, 9.0, 6.0, 5.0, 10.0, 3.0, 7.0, 3.0]);
+        assert_eq!(x, y);
+    }
 
     // #[test]
     // fn from_fn() {
