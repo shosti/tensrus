@@ -22,6 +22,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> {
     pub fn rank(&self) -> usize {
         R
     }
+
     pub fn shape(&self) -> [usize; R] {
         let mut s = [0; R];
         for i in 0..R {
@@ -50,11 +51,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> {
     }
 
     fn storage_size() -> usize {
-        let mut size = 1;
-        for i in 0..R {
-            size *= S[i];
-        }
-        size
+        S[..R].iter().product()
     }
 
     fn storage_idx(idx: &[usize; R]) -> Result<usize, IndexError> {
@@ -62,16 +59,33 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> {
             return Ok(0);
         }
 
-        let mut i = idx[0];
-        for dim in 1..R {
-            let dim_idx = idx[dim];
-            if dim_idx >= S[dim] {
+        let mut i = 0;
+        for dim in 0..R {
+            if idx[dim] >= S[dim] {
                 return Err(IndexError {});
             }
-            i += idx[dim] * S[dim - 1];
+            let offset: usize = S[(dim + 1)..R].iter().product();
+            i += offset * idx[dim];
         }
 
         Ok(i)
+    }
+}
+
+const fn shape_dim(s: TensorShape, i: usize) -> usize {
+    s[i]
+}
+
+// Matrix helpers
+impl<T: Numeric, const S: TensorShape> From<[[T; shape_dim(S, 1)]; shape_dim(S, 0)]>
+    for Tensor<T, 2, S>
+{
+    fn from(arrs: [[T; shape_dim(S, 1)]; shape_dim(S, 0)]) -> Self {
+        let vals: Vec<T> = arrs.into_iter().flatten().collect();
+
+        Self {
+            storage: Rc::new(RefCell::new(vals)),
+        }
     }
 }
 
