@@ -12,6 +12,7 @@ checksum = "f1fdabc7756949593fe60f30ec81974b613357de856987752631dea1e3394c80"
 name = "brainy"
 version = "0.1.0"
 dependencies = [
+ "dot",
  "num",
  "rand",
 ]
@@ -21,6 +22,11 @@ name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
+
+[[package]]
+name = "dot"
+version = "0.1.4-dev"
+source = "git+https://github.com/przygienda/dot-rust.git#1155635e5505befef179bca1b9ccacb98a103b04"
 
 [[package]]
 name = "getrandom"

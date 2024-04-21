@@ -45,8 +45,45 @@ impl<T: Numeric> Value<T> {
         Self { inner }
     }
 
+    pub fn id(&self) -> u64 {
+        self.inner.borrow().id
+    }
+
     pub fn val(&self) -> T {
         self.inner.borrow().data
+    }
+
+    pub fn grad(&self) -> T {
+        self.inner.borrow().grad
+    }
+
+    pub fn op(&self) -> Option<String> {
+        let op = self.inner.borrow().op.clone();
+        if op == "" {
+            None
+        } else {
+            Some(op)
+        }
+    }
+
+    // returns (nodes, edges)
+    pub fn trace(&self) -> (HashSet<Self>, HashSet<(Self, Self)>) {
+        let mut nodes = HashSet::new();
+        let mut edges = HashSet::new();
+
+        Self::build_trace(self, &mut nodes, &mut edges);
+
+        return (nodes, edges);
+    }
+
+    fn build_trace(val: &Self, nodes: &mut HashSet<Self>, edges: &mut HashSet<(Self, Self)>) {
+        if !nodes.contains(val) {
+            nodes.insert(val.clone());
+            for child in val.inner.borrow().prev.iter() {
+                edges.insert((child.clone(), val.clone()));
+                Self::build_trace(child, nodes, edges);
+            }
+        }
     }
 
     pub fn backward(&self) {

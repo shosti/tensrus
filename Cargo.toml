@@ -9,5 +9,6 @@ edition = "2021"
 # path = "src/lib.rs"
 
 [dependencies]
+dot = { git = "https://github.com/przygienda/dot-rust.git" }
 num = "0.4"
 rand = "0.8"
