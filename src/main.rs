@@ -30,34 +30,31 @@ fn main() {
         .map(|&n| Value::from(n))
         .collect();
 
-    let n: MLP<f64> = MLP::new(3, vec![1]);
+    let n: MLP<f64> = MLP::new(3, vec![4, 4, 1]);
 
-    for i in 0..1 {
+    for i in 0..10 {
         let ypred: Vec<Value<f64>> = xs.iter().map(|x| n.call(x.to_vec())[0].clone()).collect();
         let loss = n.loss(&ys, &ypred);
-        render_graph(loss.clone(), 1);
 
         n.zero_grad();
         loss.backward();
-        render_graph(loss.clone(), 2);
         for p in n.parameters() {
             p.update_from_grad(0.01);
         }
-        render_graph(loss.clone(), 3);
 
         println!("{}: Loss: {:#?}", i, loss);
     }
 }
 
-fn render_graph(x: Value<f64>, id: usize) {
-    let g = Graph::new(x.clone());
-    let dotfile = format!("/tmp/{}.dot", id);
-    let mut f = File::create(&dotfile).unwrap();
-    g.render_to(&mut f);
-    let pngfile = format!("/tmp/{}.png", id);
-    Command::new("dot")
-        .args(["-Tpng", format!("-o{}", pngfile).as_ref(), &dotfile])
-        .output()
-        .unwrap();
-    println!("rendered {}", pngfile);
-}
+// fn render_graph(x: Value<f64>, id: usize) {
+//     let g = Graph::new(x.clone());
+//     let dotfile = format!("/tmp/{}.dot", id);
+//     let mut f = File::create(&dotfile).unwrap();
+//     g.render_to(&mut f);
+//     let pdffile = format!("/tmp/{}.pdf", id);
+//     Command::new("dot")
+//         .args(["-Tpdf", format!("-o{}", pdffile).as_ref(), &dotfile])
+//         .output()
+//         .unwrap();
+//     println!("rendered {}", pdffile);
+// }

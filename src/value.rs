@@ -119,7 +119,6 @@ impl<T: Numeric> Value<T> {
     }
 
     pub fn update_from_grad(&self, epsilon: T) {
-        println!("updating {}", self.id());
         let mut inner = self.inner.borrow_mut();
         let grad = inner.grad;
 
