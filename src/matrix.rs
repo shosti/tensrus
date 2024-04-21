@@ -70,20 +70,6 @@ mod tests {
     // }
 
     // #[test]
-    // fn equality() {
-    //     let x = Matrix::from(
-    //         [[1, 2, 3],
-    //          [4, 5, 6]]
-    //     );
-    //     let y = Matrix::from(
-    //         [[1, 2, 3],
-    //          [4, 5, 6]]
-    //     );
-
-    //     assert_eq!(x, y);
-    // }
-
-    // #[test]
     // fn elem_mutiply() {
     //     let mut x = Matrix::from(
     //         [[2, 4, 6],

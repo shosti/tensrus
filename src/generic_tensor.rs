@@ -138,3 +138,32 @@ impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTens
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Eq for GenericTensor<T, R, S> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::prelude::*;
+
+    #[test]
+    fn get_and_set() {
+        test_get_and_set(GenericTensor::<f64, 0, { [0; 5] }>::zeros());
+        test_get_and_set(GenericTensor::<f64, 1, { [24; 5] }>::zeros());
+        test_get_and_set(GenericTensor::<f64, 2, { [8, 72, 0, 0, 0] }>::zeros());
+        test_get_and_set(GenericTensor::<f64, 3, { [243, 62, 101, 0, 0] }>::zeros());
+        test_get_and_set(GenericTensor::<f64, 4, { [1, 99, 232, 8, 0] }>::zeros());
+    }
+
+    fn test_get_and_set<const R: usize, const S: TensorShape>(t: GenericTensor<f64, R, S>) {
+        let mut rng = rand::thread_rng();
+        for _ in 0..10 {
+            let mut idx = [0; R];
+            for dim in 0..R {
+                idx[dim] = rng.gen_range(0..S[dim]);
+            }
+            let val: f64 = rng.gen();
+
+            t.set(&idx, val).unwrap();
+            assert_eq!(t.get(&idx).unwrap(), val);
+        }
+    }
+}
