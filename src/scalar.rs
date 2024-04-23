@@ -1,6 +1,6 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{IndexError, Tensor, TensorShape};
+use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
 use num::ToPrimitive;
 
 pub const fn scalar_shape() -> TensorShape {
@@ -10,7 +10,18 @@ pub const fn scalar_shape() -> TensorShape {
 #[derive(Tensor, PartialEq, Debug)]
 pub struct ScalarTensor<T: Numeric, const R: usize, const S: TensorShape>(GenericTensor<T, R, S>);
 
-pub type Scalar<T> = ScalarTensor<T, 1, { scalar_shape() }>;
+pub type Scalar<T> = ScalarTensor<T, 0, { scalar_shape() }>;
+
+impl<T: Numeric, const R: usize, const S: TensorShape, F> From<F> for ScalarTensor<T, R, S>
+where
+    F: ToPrimitive + Copy,
+    [(); num_elems(R, S)]:,
+{
+    fn from(val: F) -> Self {
+        let t: GenericTensor<T, R, S> = GenericTensor::from([val; num_elems(R, S)]);
+        Self(t)
+    }
+}
 
 // #[derive(Debug)]
 // pub struct Scalar<T: Numeric> {
@@ -68,3 +79,16 @@ pub type Scalar<T> = ScalarTensor<T, 1, { scalar_shape() }>;
 //         self.update(|n| n * other);
 //     }
 // }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basics() {
+        let a: Scalar<f64> = Scalar::from(42);
+
+        assert_eq!(a.shape(), []);
+        assert_eq!(a.get(&[]), Ok(42.0));
+    }
+}
