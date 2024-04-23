@@ -4,13 +4,13 @@ use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
 use num::ToPrimitive;
 
 pub const fn vector_shape(n: usize) -> TensorShape {
-    [n; 5]
+    [n, 0, 0, 0, 0]
 }
-
-pub type Vector<T, const N: usize> = VectorTensor<T, 1, { vector_shape(N) }>;
 
 #[derive(Tensor, PartialEq, Debug)]
 pub struct VectorTensor<T: Numeric, const R: usize, const S: TensorShape>(GenericTensor<T, R, S>);
+
+pub type Vector<T, const N: usize> = VectorTensor<T, 1, { vector_shape(N) }>;
 
 impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
     for VectorTensor<T, R, S>

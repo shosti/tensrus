@@ -4,12 +4,12 @@
 #[macro_use]
 extern crate brainy_derive;
 
+pub mod generic_tensor;
 pub mod matrix;
 pub mod nn;
 pub mod numeric;
 pub mod render;
-// pub mod scalar;
-pub mod generic_tensor;
+pub mod scalar;
 pub mod tensor;
 pub mod value;
 pub mod vector;
