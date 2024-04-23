@@ -1,6 +1,7 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
 use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
+use num::ToPrimitive;
 
 pub const fn matrix_shape(m: usize, n: usize) -> TensorShape {
     [m, n, 0, 0, 0]
@@ -11,19 +12,22 @@ pub type Matrix<T, const M: usize, const N: usize> = MatrixTensor<T, 2, { matrix
 #[derive(Tensor, PartialEq, Debug)]
 pub struct MatrixTensor<T: Numeric, const R: usize, const S: TensorShape>(GenericTensor<T, R, S>);
 
-impl<T: Numeric, const R: usize, const S: TensorShape> From<[T; num_elems(R, S)]>
+impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
     for MatrixTensor<T, R, S>
+where
+    F: num::ToPrimitive,
 {
-    fn from(arr: [T; num_elems(R, S)]) -> Self {
+    fn from(arr: [F; num_elems(R, S)]) -> Self {
         Self(GenericTensor::from(arr))
     }
 }
 
-impl<T: Numeric, const M: usize, const N: usize> From<[[T; N]; M]> for Matrix<T, M, N>
+impl<T: Numeric, const M: usize, const N: usize, F> From<[[F; N]; M]> for Matrix<T, M, N>
 where
     [(); num_elems(2, matrix_shape(M, N))]:,
+    F: num::ToPrimitive,
 {
-    fn from(arrs: [[T; N]; M]) -> Self {
+    fn from(arrs: [[F; N]; M]) -> Self {
         Self(arrs.into_iter().flatten().collect())
     }
 }
@@ -34,12 +38,13 @@ mod tests {
     use crate::tensor::IndexError;
 
     #[test]
+    #[rustfmt::skip]
     fn matrix_basics() {
         let x: Matrix<f64, 4, 3> = Matrix::from([
-            [3.0, 4.0, 5.0],
-            [2.0, 7.0, 9.0],
-            [6.0, 5.0, 10.0],
-            [3.0, 7.0, 3.0],
+            [3, 4, 5],
+            [2, 7, 9],
+            [6, 5, 10],
+            [3, 7, 3],
         ]);
 
         assert_eq!(x.shape(), [4, 3]);
@@ -47,8 +52,12 @@ mod tests {
         assert_eq!(x.get(&[3, 2]), Ok(3.0));
         assert_eq!(x.get(&[4, 1]), Err(IndexError {}));
 
-        let y: Matrix<f64, 4, 3> =
-            Matrix::from([3.0, 4.0, 5.0, 2.0, 7.0, 9.0, 6.0, 5.0, 10.0, 3.0, 7.0, 3.0]);
+        let y: Matrix<f64, 4, 3> = Matrix::from([
+            3.0, 4.0, 5.0,
+            2.0, 7.0, 9.0,
+            6.0, 5.0, 10.0,
+            3.0, 7.0, 3.0
+        ]);
         assert_eq!(x, y);
     }
 

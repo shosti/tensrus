@@ -1,5 +1,6 @@
 use crate::numeric::Numeric;
 use crate::tensor::{num_elems, IndexError, ShapeError, Tensor, TensorShape};
+use num::ToPrimitive;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -98,20 +99,19 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for Gener
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> From<[T; num_elems(R, S)]>
+impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
     for GenericTensor<T, R, S>
+where
+    F: ToPrimitive,
 {
-    fn from(arr: [T; num_elems(R, S)]) -> Self {
-        let vals: Vec<T> = arr.into_iter().collect();
-        Self {
-            storage: Rc::new(RefCell::new(vals)),
-        }
+    fn from(arr: [F; num_elems(R, S)]) -> Self {
+        arr.into_iter().collect()
     }
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape, F> FromIterator<F> for GenericTensor<T, R, S>
 where
-    F: num::Num + num::ToPrimitive,
+    F: ToPrimitive,
 {
     fn from_iter<I>(iter: I) -> Self
     where
