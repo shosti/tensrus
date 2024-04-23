@@ -22,6 +22,18 @@ fn impl_tensor_macro(ast: &syn::DeriveInput) -> TokenStream {
                 self.0.get(idx)
             }
         }
+
+        impl<T: Numeric, const R: usize, const S: TensorShape, F> FromIterator<F> for #name<T, R, S>
+        where
+            F: ToPrimitive,
+        {
+            fn from_iter<I>(iter: I) -> Self
+            where
+                I: IntoIterator<Item = F>,
+            {
+                Self(iter.into_iter().collect())
+            }
+        }
     };
     gen.into()
 }

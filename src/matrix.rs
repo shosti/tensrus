@@ -61,6 +61,18 @@ mod tests {
         assert_eq!(x, y);
     }
 
+    #[test]
+    #[rustfmt::skip]
+    fn from_iter() {
+        let x: Matrix<f64, 3, 2> = [1, 2, 3].iter().cycle().map(|x| *x).collect();
+        let y: Matrix<f64, 3, 2> = Matrix::from([
+            [1.0, 2.0],
+            [3.0, 1.0],
+            [2.0, 3.0],
+        ]);
+        assert_eq!(x, y);
+    }
+
     // #[test]
     // fn from_fn() {
     //     let x: Matrix<_, 3, 4> = Matrix::from_fn(|idx| {
