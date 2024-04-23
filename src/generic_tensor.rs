@@ -109,13 +109,17 @@ impl<T: Numeric, const R: usize, const S: TensorShape> From<[T; num_elems(R, S)]
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> FromIterator<T> for GenericTensor<T, R, S> {
-    fn from_iter<A>(iter: A) -> Self
+impl<T: Numeric, const R: usize, const S: TensorShape, F> FromIterator<F> for GenericTensor<T, R, S>
+where
+    F: num::Num + num::ToPrimitive,
+{
+    fn from_iter<I>(iter: I) -> Self
     where
-        A: IntoIterator<Item = T>,
+        I: IntoIterator<Item = F>,
     {
         let vals: Vec<T> = iter
             .into_iter()
+            .map(|v| T::from(v).unwrap())
             .chain(std::iter::repeat(T::zero()))
             .take(Self::storage_size())
             .collect();
@@ -143,6 +147,31 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Eq for GenericTensor<T, R
 mod tests {
     use super::*;
     use rand::prelude::*;
+
+    #[test]
+    fn from_iterator() {
+        let xs: [i64; 3] = [1, 2, 3];
+        let iter = xs.iter().cycle().map(|x| *x);
+
+        let t1: GenericTensor<f64, 0, { [0; 5] }> = iter.clone().collect();
+        assert_eq!(t1, GenericTensor::<f64, 0, { [0; 5] }>::from([1.0]));
+
+        let t2: GenericTensor<f64, 2, { [4, 2, 0, 0, 0] }> = iter.clone().collect();
+        assert_eq!(
+            t2,
+            GenericTensor::<f64, 2, { [4, 2, 0, 0, 0] }>::from([
+                1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0
+            ])
+        );
+
+        let t3: GenericTensor<f64, 2, { [4, 2, 0, 0, 0] }> = xs.iter().map(|x| *x).collect();
+        assert_eq!(
+            t3,
+            GenericTensor::<f64, 2, { [4, 2, 0, 0, 0] }>::from([
+                1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0
+            ])
+        );
+    }
 
     #[test]
     fn get_and_set() {
