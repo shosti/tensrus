@@ -12,14 +12,14 @@ checksum = "f1fdabc7756949593fe60f30ec81974b613357de856987752631dea1e3394c80"
 name = "brainy"
 version = "0.1.0"
 dependencies = [
- "brainy_macro",
+ "brainy-derive",
  "dot",
  "num",
  "rand",
 ]
 
 [[package]]
-name = "brainy_macro"
+name = "brainy-derive"
 version = "0.1.0"
 dependencies = [
  "quote",

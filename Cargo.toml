@@ -12,4 +12,4 @@ path = "src/lib.rs"
 dot = { git = "https://github.com/przygienda/dot-rust.git" }
 num = "0.4"
 rand = "0.8"
-brainy_macro = { path = "../brainy_macro" }
+brainy-derive = { path = "brainy-derive" }
