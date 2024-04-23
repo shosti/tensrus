@@ -15,7 +15,7 @@ pub struct MatrixTensor<T: Numeric, const R: usize, const S: TensorShape>(Generi
 impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
     for MatrixTensor<T, R, S>
 where
-    F: num::ToPrimitive,
+    F: ToPrimitive,
 {
     fn from(arr: [F; num_elems(R, S)]) -> Self {
         Self(GenericTensor::from(arr))
@@ -25,7 +25,7 @@ where
 impl<T: Numeric, const M: usize, const N: usize, F> From<[[F; N]; M]> for Matrix<T, M, N>
 where
     [(); num_elems(2, matrix_shape(M, N))]:,
-    F: num::ToPrimitive,
+    F: ToPrimitive,
 {
     fn from(arrs: [[F; N]; M]) -> Self {
         Self(arrs.into_iter().flatten().collect())

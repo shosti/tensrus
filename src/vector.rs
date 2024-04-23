@@ -1,14 +1,15 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{num_elems, TensorShape};
+use crate::tensor::{Tensor, TensorShape, IndexError};
 
 pub const fn vector_shape(n: usize) -> TensorShape {
     [n; 5]
 }
 
-pub struct Vector<T: Numeric, const N: usize>(GenericTensor<T, 1, { vector_shape(N) }>)
-where
-    [(); num_elems(1, vector_shape(N))]:;
+pub type Vector<T, const N: usize> = VectorTensor<T, 1, { vector_shape(N) }>;
+
+#[derive(Tensor, PartialEq, Debug)]
+pub struct VectorTensor<T: Numeric, const R: usize, const S: TensorShape>(GenericTensor<T, R, S>);
 
 // #[derive(Debug)]
 // pub struct Vector<T: Numeric, const N: usize> {
