@@ -17,12 +17,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         }
     }
 
-    // fn from_fn<F>(mut cb: F) -> Self
-    // where
-    //     F: FnMut([usize; R]) -> T,
-    // {
-    //     let vals = vec![T::zer(); Self::storage_size()];
-    // }
+    pub fn from_fn<F>(mut cb: F) -> Self
+    where
+        F: FnMut([usize; R]) -> T,
+    {
+        (0..Self::storage_size()).into_iter().map(|i| cb(Self::idx_from_storage_idx(i).unwrap())).collect()
+    }
+
     pub fn shape(&self) -> [usize; R] {
         let mut s = [0; R];
         for i in 0..R {
@@ -46,10 +47,25 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         num_elems(R, S)
     }
 
-    //     fn idx_for_storage_idx(idx: usize) -> Result<[usize; R], IndexError> {
+    fn idx_from_storage_idx(idx: usize) -> Result<[usize; R], IndexError> {
+        if idx >= Self::storage_size() {
+            return Err(IndexError {});
+        }
 
-    // //             (0..(M * N)).map(|idx| cb([idx / N, idx % N])).collect(),
-    //     }
+        let mut res = [0; R];
+        let mut i = idx;
+
+        for dim in 0..R {
+            let offset: usize = S[(dim + 1)..R].iter().product();
+            let cur = i / offset;
+            res[dim] = cur;
+            i -= cur * offset;
+        }
+        debug_assert!(i == 0);
+        debug_assert!(Self::storage_idx(&res).unwrap() == idx);
+
+        Ok(res)
+    }
 
     fn storage_idx(idx: &[usize; R]) -> Result<usize, IndexError> {
         if R == 0 {
@@ -170,6 +186,38 @@ mod tests {
             GenericTensor::<f64, 2, { [4, 2, 0, 0, 0] }>::from([
                 1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0
             ])
+        );
+    }
+
+    #[test]
+    fn from_fn() {
+        let f = |idx| {
+            let [i, j, k] = idx;
+            let s = format!("{}{}{}", i, j, k);
+            s.parse().unwrap()
+        };
+        let t1: GenericTensor<f64, 3, { [2; 5] }> = GenericTensor::from_fn(f);
+        assert_eq!(
+            t1,
+            GenericTensor::<f64, 3, { [2; 5] }>::from([000, 001, 010, 011, 100, 101, 110, 111]),
+        );
+
+        let t2: GenericTensor<f64, 3, { [1, 2, 3, 0, 0] }> = GenericTensor::from_fn(f);
+        assert_eq!(
+            t2,
+            GenericTensor::<f64, 3, { [1, 2, 3, 0, 0] }>::from([000, 001, 002, 010, 011, 012]),
+        );
+
+        let t3: GenericTensor<f64, 3, { [3, 2, 1, 0, 0] }> = GenericTensor::from_fn(f);
+        assert_eq!(
+            t3,
+            GenericTensor::<f64, 3, { [3, 2, 1, 0, 0] }>::from([000, 010, 100, 110, 200, 210]),
+        );
+
+        let t4: GenericTensor<f64, 3, { [2, 3, 1, 0, 0] }> = GenericTensor::from_fn(f);
+        assert_eq!(
+            t4,
+            GenericTensor::<f64, 3, { [2, 3, 1, 0, 0] }>::from([000, 010, 020, 100, 110, 120]),
         );
     }
 
