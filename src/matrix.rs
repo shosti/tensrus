@@ -75,21 +75,21 @@ mod tests {
         assert_eq!(x, y);
     }
 
-    // #[test]
-    // fn from_fn() {
-    //     let x: Matrix<_, 3, 4> = Matrix::from_fn(|idx| {
-    //         let [i, j] = idx;
-    //         let s = format!("{}{}", i, j);
-    //         s.parse().unwrap()
-    //     });
-    //     let y = Matrix::from([
-    //         [0.0, 1.0, 2.0, 3.0],
-    //         [10.0, 11.0, 12.0, 13.0],
-    //         [20.0, 21.0, 22.0, 23.0],
-    //     ]);
+    #[test]
+    fn from_fn() {
+        let x: Matrix<f64, 3, 4> = Matrix::from_fn(|idx| {
+            let [i, j] = idx;
+            let s = format!("{}{}", i, j);
+            s.parse().unwrap()
+        });
+        let y = Matrix::from([
+            [00, 01, 02, 03],
+            [10, 11, 12, 13],
+            [20, 21, 22, 23],
+        ]);
 
-    //     assert_eq!(x, y);
-    // }
+        assert_eq!(x, y);
+    }
 
     // #[test]
     // fn elem_mutiply() {
