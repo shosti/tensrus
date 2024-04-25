@@ -14,6 +14,13 @@ fn impl_tensor_macro(ast: &syn::DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let gen = quote! {
         impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for #name<T, R, S> {
+            fn from_fn<F>(cb: F) -> Self
+            where
+                F: FnMut([usize; R]) -> T,
+            {
+                Self(GenericTensor::from_fn(cb))
+            }
+
             fn shape(&self) -> [usize; R] {
                 self.0.shape()
             }

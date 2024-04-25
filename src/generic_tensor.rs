@@ -17,13 +17,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         }
     }
 
-    pub fn from_fn<F>(mut cb: F) -> Self
-    where
-        F: FnMut([usize; R]) -> T,
-    {
-        (0..Self::storage_size()).into_iter().map(|i| cb(Self::idx_from_storage_idx(i).unwrap())).collect()
-    }
-
     pub fn shape(&self) -> [usize; R] {
         let mut s = [0; R];
         for i in 0..R {
@@ -98,6 +91,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for GenericTensor<T, R, S> {
+    fn from_fn<F>(mut cb: F) -> Self
+    where
+        F: FnMut([usize; R]) -> T,
+    {
+        (0..Self::storage_size()).into_iter().map(|i| cb(Self::idx_from_storage_idx(i).unwrap())).collect()
+    }
+
     fn shape(&self) -> [usize; R] {
         let mut s = [0; R];
         for i in 0..R {

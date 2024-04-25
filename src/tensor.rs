@@ -1,6 +1,5 @@
 use crate::numeric::Numeric;
 
-
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
 
@@ -30,6 +29,10 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
 }
 
 pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
+    fn from_fn<F>(cb: F) -> Self
+    where
+        F: FnMut([usize; R]) -> T;
+
     fn rank(&self) -> usize {
         R
     }
