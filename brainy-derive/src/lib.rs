@@ -28,6 +28,10 @@ fn impl_tensor_macro(ast: &syn::DeriveInput) -> TokenStream {
             fn get(&self, idx: &[usize; R]) -> Result<T, IndexError> {
                 self.0.get(idx)
             }
+
+            fn get_at_idx(&self, i: usize) -> Result<T, IndexError> {
+                self.0.get_at_idx(i)
+            }
         }
 
         impl<T: Numeric, const R: usize, const S: TensorShape, F> FromIterator<F> for #name<T, R, S>
@@ -42,11 +46,26 @@ fn impl_tensor_macro(ast: &syn::DeriveInput) -> TokenStream {
             }
         }
 
+        impl<T: Numeric, const R: usize, const S: TensorShape> IntoIterator for #name<T, R, S> {
+            type Item = T;
+            type IntoIter = TensorIterator<T, R, S, Self>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                Self::IntoIter::new(self.clone())
+            }
+        }
+
         impl<T: Numeric, const R: usize, const S: TensorShape> Mul<Scalar<T>> for #name<T, R, S> {
             type Output = Self;
 
             fn mul(self, other: Scalar<T>) -> Self::Output {
                 Self(self.0 * other)
+            }
+        }
+
+        impl<T: Numeric, const R: usize, const S: TensorShape> Clone for #name<T, R, S> {
+            fn clone(&self) -> Self {
+                Self(self.0.clone())
             }
         }
     };

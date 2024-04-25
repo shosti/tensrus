@@ -1,6 +1,6 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use crate::tensor::{num_elems, IndexError, ShapeError, Tensor, TensorShape};
+use crate::tensor::{num_elems, IndexError, ShapeError, Tensor, TensorShape, TensorIterator};
 use num::ToPrimitive;
 use std::cell::RefCell;
 use std::ops::Mul;
@@ -118,6 +118,14 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for Gener
             Err(e) => Err(e),
         }
     }
+
+    fn get_at_idx(&self, i: usize) -> Result<T, IndexError> {
+        if i >= Self::storage_size() {
+            return Err(IndexError {});
+        }
+
+        Ok(self.storage.borrow()[i])
+    }
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
@@ -150,6 +158,12 @@ where
     }
 }
 
+impl<T: Numeric, const R: usize, const S: TensorShape> Clone for GenericTensor<T, R, S> {
+    fn clone(&self) -> Self {
+        Self { storage: self.storage.clone() }
+    }
+}
+
 impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTensor<T, R, S> {
     fn eq(&self, other: &Self) -> bool {
         for i in 0..Self::storage_size() {
@@ -159,6 +173,15 @@ impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTens
             }
         }
         true
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> IntoIterator for GenericTensor<T, R, S> {
+    type Item = T;
+    type IntoIter = TensorIterator<T, R, S, Self>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter::new(self.clone())
     }
 }
 
@@ -232,6 +255,13 @@ mod tests {
             t4,
             GenericTensor::<f64, 3, { [2, 3, 1, 0, 0] }>::from([000, 010, 020, 100, 110, 120]),
         );
+    }
+
+    #[test]
+    fn to_iter() {
+        let t: GenericTensor<f64, 2, { [2; 5] }> = (0..4).into_iter().collect();
+        let vals: Vec<f64> = t.into_iter().collect();
+        assert_eq!(vals, vec![0.0, 1.0, 2.0, 3.0]);
     }
 
     #[test]

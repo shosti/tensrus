@@ -1,6 +1,4 @@
 use crate::numeric::Numeric;
-use crate::scalar::Scalar;
-use std::ops::Mul;
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
@@ -30,9 +28,7 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
-    Mul<Scalar<T>, Output = Self>
-{
+pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>: Clone {
     fn from_fn<F>(cb: F) -> Self
     where
         F: FnMut([usize; R]) -> T;
@@ -42,40 +38,39 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
     }
     fn shape(&self) -> [usize; R];
     fn get(&self, idx: &[usize; R]) -> Result<T, IndexError>;
+    fn get_at_idx(&self, i: usize) -> Result<T, IndexError>;
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use rand::prelude::*;
-//     #[test]
-//     fn from_vec() {}
+pub struct TensorIterator<T: Numeric, const R: usize, const S: TensorShape, Tn: Tensor<T, R, S>> {
+    t: Tn,
+    cur: usize,
+    _ignored: std::marker::PhantomData<T>,
+}
 
-//     #[test]
-//     // #[test]
-//     // fn vector_basics() {
-//     //     let a: Vector<f64, 5> = Vector::from([1.0, 2.0, 3.0, 4.0, 5.0]);
+impl<T: Numeric, const R: usize, const S: TensorShape, Tn: Tensor<T, R, S>>
+    TensorIterator<T, R, S, Tn>
+{
+    pub fn new(t: Tn) -> Self {
+        Self {
+            t,
+            cur: 0,
+            _ignored: std::marker::PhantomData,
+        }
+    }
+}
 
-//     //     assert_eq!(a.shape(), [5]);
-//     //     assert_eq!(a.get(&[3]), Ok(4.0));
-//     //     assert_eq!(a.get(&[5]), Err(IndexError {}));
-//     // }
+impl<T: Numeric, const R: usize, const S: TensorShape, Tn: Tensor<T, R, S>> Iterator
+    for TensorIterator<T, R, S, Tn>
+{
+    type Item = T;
 
-//     // #[test]
-//     // fn reshape() {
-//     //     let x: Matrix<f64, 3, 2> = Matrix::from([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]);
-//     //     let y: Matrix<f64, 2, 3> = Matrix::from([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
-//     //     let x_reshaped: Matrix<f64, 2, 3> = x.reshape().unwrap();
-
-//     //     assert_eq!(x_reshaped, y);
-
-//     //     let bad_reshape: Result<Matrix<f64, 2, 4>, ShapeError> = x.reshape();
-//     //     assert_eq!(bad_reshape, Err(ShapeError {}));
-
-//     //     let vec: Vector<f64, 4> = Vector::from([2.0; 4]);
-//     //     let matrix: Matrix<f64, 4, 1> = vec.reshape().unwrap();
-//     //     let expected: Matrix<f64, 4, 1> = Matrix::from([2.0; 4]);
-
-//     //     assert_eq!(matrix, expected);
-//     // }
-// }
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.t.get_at_idx(self.cur) {
+            Ok(val) => {
+                self.cur += 1;
+                Some(val)
+            }
+            Err(_) => None,
+        }
+    }
+}

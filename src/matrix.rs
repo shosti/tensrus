@@ -1,7 +1,7 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
+use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, TensorShape};
 use num::ToPrimitive;
 use std::ops::Mul;
 
