@@ -21,6 +21,15 @@ where
         Self(GenericTensor::from(arr))
     }
 }
+
+impl<T: Numeric, const R: usize, const S: TensorShape> Into<GenericTensor<T, R, S>>
+    for VectorTensor<T, R, S>
+{
+    fn into(self) -> GenericTensor<T, R, S> {
+        self.0
+    }
+}
+
 // #[derive(Debug)]
 // pub struct Vector<T: Numeric, const N: usize> {
 //     vals: Rc<RefCell<Vec<T>>>,
