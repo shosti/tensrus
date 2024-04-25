@@ -1,4 +1,5 @@
 #![feature(adt_const_params)]
+#![feature(generic_arg_infer)]
 #![feature(generic_const_exprs)]
 #![allow(incomplete_features)]
 #[macro_use]

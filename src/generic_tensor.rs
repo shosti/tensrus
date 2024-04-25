@@ -1,7 +1,9 @@
 use crate::numeric::Numeric;
+use crate::scalar::Scalar;
 use crate::tensor::{num_elems, IndexError, ShapeError, Tensor, TensorShape};
 use num::ToPrimitive;
 use std::cell::RefCell;
+use std::ops::Mul;
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -95,7 +97,10 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for Gener
     where
         F: FnMut([usize; R]) -> T,
     {
-        (0..Self::storage_size()).into_iter().map(|i| cb(Self::idx_from_storage_idx(i).unwrap())).collect()
+        (0..Self::storage_size())
+            .into_iter()
+            .map(|i| cb(Self::idx_from_storage_idx(i).unwrap()))
+            .collect()
     }
 
     fn shape(&self) -> [usize; R] {
@@ -158,6 +163,14 @@ impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTens
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Eq for GenericTensor<T, R, S> {}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> Mul<Scalar<T>> for GenericTensor<T, R, S> {
+    type Output = Self;
+
+    fn mul(self, other: Scalar<T>) -> Self::Output {
+        Self::from_fn(|idx| self.get(&idx).unwrap() * other.val())
+    }
+}
 
 #[cfg(test)]
 mod tests {

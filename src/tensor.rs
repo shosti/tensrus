@@ -1,4 +1,6 @@
 use crate::numeric::Numeric;
+use crate::scalar::Scalar;
+use std::ops::Mul;
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
@@ -28,7 +30,9 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
+pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
+    Mul<Scalar<T>, Output = Self>
+{
     fn from_fn<F>(cb: F) -> Self
     where
         F: FnMut([usize; R]) -> T;

@@ -2,6 +2,8 @@ use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
 use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
 use num::ToPrimitive;
+use std::ops::Mul;
+use crate::scalar::Scalar;
 
 pub const fn vector_shape(n: usize) -> TensorShape {
     [n, 0, 0, 0, 0]

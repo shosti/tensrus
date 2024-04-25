@@ -41,6 +41,14 @@ fn impl_tensor_macro(ast: &syn::DeriveInput) -> TokenStream {
                 Self(iter.into_iter().collect())
             }
         }
+
+        impl<T: Numeric, const R: usize, const S: TensorShape> Mul<Scalar<T>> for #name<T, R, S> {
+            type Output = Self;
+
+            fn mul(self, other: Scalar<T>) -> Self::Output {
+                Self(self.0 * other)
+            }
+        }
     };
     gen.into()
 }
