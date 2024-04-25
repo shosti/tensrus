@@ -46,12 +46,12 @@ fn impl_tensor_macro(ast: &syn::DeriveInput) -> TokenStream {
             }
         }
 
-        impl<T: Numeric, const R: usize, const S: TensorShape> IntoIterator for #name<T, R, S> {
+        impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator for &'a #name<T, R, S> {
             type Item = T;
-            type IntoIter = TensorIterator<T, R, S, Self>;
+            type IntoIter = TensorIterator<'a, T, R, S>;
 
             fn into_iter(self) -> Self::IntoIter {
-                Self::IntoIter::new(self.clone())
+                Self::IntoIter::new(self)
             }
         }
 

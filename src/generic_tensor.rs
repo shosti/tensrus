@@ -1,6 +1,6 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use crate::tensor::{num_elems, IndexError, ShapeError, Tensor, TensorShape, TensorIterator};
+use crate::tensor::{num_elems, IndexError, ShapeError, Tensor, TensorIterator, TensorShape};
 use num::ToPrimitive;
 use std::cell::RefCell;
 use std::ops::Mul;
@@ -160,7 +160,9 @@ where
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Clone for GenericTensor<T, R, S> {
     fn clone(&self) -> Self {
-        Self { storage: self.storage.clone() }
+        Self {
+            storage: self.storage.clone(),
+        }
     }
 }
 
@@ -176,12 +178,12 @@ impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTens
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> IntoIterator for GenericTensor<T, R, S> {
+impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator for &'a GenericTensor<T, R, S> {
     type Item = T;
-    type IntoIter = TensorIterator<T, R, S, Self>;
+    type IntoIter = TensorIterator<'a, T, R, S>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter::new(self.clone())
+        Self::IntoIter::new(self)
     }
 }
 

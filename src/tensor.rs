@@ -28,10 +28,11 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>: Clone {
+pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
     fn from_fn<F>(cb: F) -> Self
     where
-        F: FnMut([usize; R]) -> T;
+        F: FnMut([usize; R]) -> T,
+        Self: Sized;
 
     fn rank(&self) -> usize {
         R
@@ -41,26 +42,19 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>: Clone {
     fn get_at_idx(&self, i: usize) -> Result<T, IndexError>;
 }
 
-pub struct TensorIterator<T: Numeric, const R: usize, const S: TensorShape, Tn: Tensor<T, R, S>> {
-    t: Tn,
+pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape> {
+    t: &'a dyn Tensor<T, R, S>,
     cur: usize,
-    _ignored: std::marker::PhantomData<T>,
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn: Tensor<T, R, S>>
-    TensorIterator<T, R, S, Tn>
-{
-    pub fn new(t: Tn) -> Self {
-        Self {
-            t,
-            cur: 0,
-            _ignored: std::marker::PhantomData,
-        }
+impl<'a, T: Numeric, const R: usize, const S: TensorShape> TensorIterator<'a, T, R, S> {
+    pub fn new(t: &'a dyn Tensor<T, R, S>) -> Self {
+        Self { t, cur: 0 }
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn: Tensor<T, R, S>> Iterator
-    for TensorIterator<T, R, S, Tn>
+impl<'a, T: Numeric, const R: usize, const S: TensorShape> Iterator
+    for TensorIterator<'a, T, R, S>
 {
     type Item = T;
 
