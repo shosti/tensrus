@@ -2,6 +2,7 @@ use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
 use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
 use num::ToPrimitive;
+use std::ops::Mul;
 
 pub const fn scalar_shape() -> TensorShape {
     [0; 5]
@@ -12,73 +13,33 @@ pub struct ScalarTensor<T: Numeric, const R: usize, const S: TensorShape>(Generi
 
 pub type Scalar<T> = ScalarTensor<T, 0, { scalar_shape() }>;
 
-impl<T: Numeric, const R: usize, const S: TensorShape, F> From<F> for ScalarTensor<T, R, S>
+impl<T: Numeric> Scalar<T> {
+    pub fn val(self) -> T {
+        self.get(&[]).unwrap()
+    }
+}
+
+impl<T: Numeric, F> From<F> for Scalar<T>
 where
     F: ToPrimitive + Copy,
-    [(); num_elems(R, S)]:,
 {
-    fn from(val: F) -> Self {
-        let t: GenericTensor<T, R, S> = GenericTensor::from([val; num_elems(R, S)]);
+    fn from(val: F) -> Self
+where {
+        let t: GenericTensor<T, 0, { scalar_shape() }> = std::iter::once(val).collect();
         Self(t)
     }
 }
 
-// #[derive(Debug)]
-// pub struct Scalar<T: Numeric> {
-//     val: T,
-// }
+impl<T: Numeric> Mul<Scalar<T>> for Scalar<T>
+where
+    [(); num_elems(0, scalar_shape())]:,
+{
+    type Output = Scalar<T>;
 
-// impl<T: Numeric> From<T> for Scalar<T> {
-//     fn from(val: T) -> Self {
-//         Scalar { val }
-//     }
-// }
-
-// impl<T: Numeric> Tensor<T, 0> for Scalar<T> {
-//     type Transpose = Self;
-
-//     fn from_fn<F>(mut cb: F) -> Self
-//     where
-//         F: FnMut([usize; 0]) -> T,
-//     {
-//         Self { val: cb([]) }
-//     }
-
-//     fn shape(&self) -> [usize; 0] {
-//         []
-//     }
-
-//     fn get(&self, _idx: [usize; 0]) -> Result<T, IndexError> {
-//         Ok(self.val)
-//     }
-
-//     fn set(&mut self, _idx: [usize; 0], val: T) -> Result<(), IndexError> {
-//         self.val = val;
-//         Ok(())
-//     }
-
-//     fn transpose(&self) -> Self::Transpose {
-//         Self::Transpose { val: self.val }
-//     }
-
-//     fn next_idx(&self, _idx: [usize; 0]) -> Option<[usize; 0]> {
-//         None
-//     }
-// }
-
-// impl<T: Numeric> PartialEq for Scalar<T> {
-//     fn eq(&self, other: &Self) -> bool {
-//         self.get([]) == other.get([])
-//     }
-// }
-
-// impl<T: Numeric> Eq for Scalar<T> {}
-
-// impl<T: Numeric> MulAssign<T> for Scalar<T> {
-//     fn mul_assign(&mut self, other: T) {
-//         self.update(|n| n * other);
-//     }
-// }
+    fn mul(self, other: Scalar<T>) -> Self::Output {
+        Scalar::from(self.val() * other.val())
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -90,5 +51,14 @@ mod tests {
 
         assert_eq!(a.shape(), []);
         assert_eq!(a.get(&[]), Ok(42.0));
+        assert_eq!(a.val(), 42.0);
+    }
+
+    #[test]
+    fn multiplication() {
+        assert_eq!(
+            Scalar::<f64>::from(6) * Scalar::<f64>::from(7),
+            Scalar::<f64>::from(42)
+        );
     }
 }
