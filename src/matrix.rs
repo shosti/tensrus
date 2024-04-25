@@ -42,7 +42,7 @@ mod tests {
     #[test]
     #[rustfmt::skip]
     fn matrix_basics() {
-        let x: Matrix<f64, 4, 3> = Matrix::from([
+        let x: Matrix<f64, _, _> = Matrix::from([
             [3, 4, 5],
             [2, 7, 9],
             [6, 5, 10],
@@ -67,7 +67,7 @@ mod tests {
     #[rustfmt::skip]
     fn from_iter() {
         let x: Matrix<f64, 3, 2> = [1, 2, 3].iter().cycle().map(|x| *x).collect();
-        let y: Matrix<f64, 3, 2> = Matrix::from([
+        let y: Matrix<f64, _, _> = Matrix::from([
             [1.0, 2.0],
             [3.0, 1.0],
             [2.0, 3.0],
