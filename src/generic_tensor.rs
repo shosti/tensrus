@@ -3,7 +3,7 @@ use crate::scalar::Scalar;
 use crate::tensor::{num_elems, IndexError, ShapeError, Tensor, TensorIterator, TensorShape};
 use num::ToPrimitive;
 use std::cell::RefCell;
-use std::ops::Mul;
+use std::ops::{Mul, MulAssign};
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -196,11 +196,25 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Eq for GenericTensor<T, R, S> {}
 
+impl<T: Numeric, const R: usize, const S: TensorShape> Mul<T> for GenericTensor<T, R, S> {
+    type Output = Self;
+
+    fn mul(self, other: T) -> Self::Output {
+        Self::from_fn(|idx| self.get(&idx).unwrap() * other)
+    }
+}
+
 impl<T: Numeric, const R: usize, const S: TensorShape> Mul<Scalar<T>> for GenericTensor<T, R, S> {
     type Output = Self;
 
     fn mul(self, other: Scalar<T>) -> Self::Output {
         Self::from_fn(|idx| self.get(&idx).unwrap() * other.val())
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> MulAssign<T> for GenericTensor<T, R, S> {
+    fn mul_assign(&mut self, other: T) {
+        self.update(&|v| v * other);
     }
 }
 

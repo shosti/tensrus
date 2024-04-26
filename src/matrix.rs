@@ -1,9 +1,7 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::scalar::Scalar;
 use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, TensorShape};
 use num::ToPrimitive;
-use std::ops::Mul;
 
 pub const fn matrix_shape(m: usize, n: usize) -> TensorShape {
     [m, n, 0, 0, 0]
@@ -91,20 +89,20 @@ mod tests {
         assert_eq!(x, y);
     }
 
-    // #[test]
-    // fn elem_mutiply() {
-    //     let mut x = Matrix::from(
-    //         [[2, 4, 6],
-    //          [8, 10, 12]]
-    //     );
-    //     let y = Matrix::from(
-    //         [[4, 8, 12],
-    //          [16, 20, 24]]
-    //     );
+    #[test]
+    fn elem_mutiply() {
+        let mut x = Matrix::from(
+            [[2, 4, 6],
+             [8, 10, 12]]
+        );
+        let y = Matrix::from(
+            [[4, 8, 12],
+             [16, 20, 24]]
+        );
 
-    //     x *= 2.0;
-    //     assert_eq!(x, y);
-    // }
+        x *= 2.0;
+        assert_eq!(x, y);
+    }
 
     // #[test]
     // fn matrix_vector_conversions() {

@@ -59,11 +59,25 @@ fn impl_tensor_macro(ast: &syn::DeriveInput) -> TokenStream {
             }
         }
 
-        impl<T: Numeric, const R: usize, const S: TensorShape> Mul<Scalar<T>> for #name<T, R, S> {
+        impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::Mul<T> for #name<T, R, S> {
             type Output = Self;
 
-            fn mul(self, other: Scalar<T>) -> Self::Output {
+            fn mul(self, other: T) -> Self::Output {
                 Self(self.0 * other)
+            }
+        }
+
+        impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::Mul<crate::scalar::Scalar<T>> for #name<T, R, S> {
+            type Output = Self;
+
+            fn mul(self, other: crate::scalar::Scalar<T>) -> Self::Output {
+                Self(self.0 * other)
+            }
+        }
+
+        impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::MulAssign<T> for #name<T, R, S> {
+            fn mul_assign(&mut self, other: T) {
+                self.0 *= other;
             }
         }
 
