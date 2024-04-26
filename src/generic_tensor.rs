@@ -1,9 +1,11 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use crate::tensor::{num_elems, IndexError, ShapeError, Tensor, TensorIterator, TensorShape};
+use crate::tensor::{
+    num_elems, IndexError, ShapeError, Tensor, TensorIterator, TensorOps, TensorShape,
+};
 use num::ToPrimitive;
 use std::cell::RefCell;
-use std::ops::{Mul, MulAssign};
+use std::ops::{Add, AddAssign, Mul, MulAssign};
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -133,6 +135,8 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for Gener
     }
 }
 
+impl<T: Numeric, const R: usize, const S: TensorShape> TensorOps<T> for GenericTensor<T, R, S> {}
+
 impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
     for GenericTensor<T, R, S>
 where
@@ -195,6 +199,28 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Eq for GenericTensor<T, R, S> {}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> Add<T> for GenericTensor<T, R, S> {
+    type Output = Self;
+
+    fn add(self, other: T) -> Self::Output {
+        Self::from_fn(|idx| self.get(&idx).unwrap() + other)
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> Add<Scalar<T>> for GenericTensor<T, R, S> {
+    type Output = Self;
+
+    fn add(self, other: Scalar<T>) -> Self::Output {
+        Self::from_fn(|idx| self.get(&idx).unwrap() + other.val())
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> AddAssign<T> for GenericTensor<T, R, S> {
+    fn add_assign(&mut self, other: T) {
+        self.update(&|v| v + other);
+    }
+}
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Mul<T> for GenericTensor<T, R, S> {
     type Output = Self;

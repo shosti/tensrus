@@ -59,6 +59,28 @@ fn impl_tensor_macro(ast: &syn::DeriveInput) -> TokenStream {
             }
         }
 
+        impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::Add<T> for #name<T, R, S> {
+            type Output = Self;
+
+            fn add(self, other: T) -> Self::Output {
+                Self(self.0 + other)
+            }
+        }
+
+        impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::Add<crate::scalar::Scalar<T>> for #name<T, R, S> {
+            type Output = Self;
+
+            fn add(self, other: crate::scalar::Scalar<T>) -> Self::Output {
+                Self(self.0 + other)
+            }
+        }
+
+        impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::AddAssign<T> for #name<T, R, S> {
+            fn add_assign(&mut self, other: T) {
+                self.0 += other;
+            }
+        }
+
         impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::Mul<T> for #name<T, R, S> {
             type Output = Self;
 
@@ -86,6 +108,8 @@ fn impl_tensor_macro(ast: &syn::DeriveInput) -> TokenStream {
                 Self(self.0.clone())
             }
         }
+
+        impl<T: Numeric, const R: usize, const S: TensorShape> crate::tensor::TensorOps<T> for #name<T, R, S> {}
     };
     gen.into()
 }

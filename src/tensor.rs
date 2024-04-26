@@ -1,4 +1,6 @@
 use crate::numeric::Numeric;
+use crate::scalar::Scalar;
+use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
@@ -41,6 +43,11 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
     fn get(&self, idx: &[usize; R]) -> Result<T, IndexError>;
     fn get_at_idx(&self, i: usize) -> Result<T, IndexError>;
     fn update(&self, f: &dyn Fn(T) -> T);
+}
+
+pub trait TensorOps<T: Numeric>:
+    Add<T> + Add<Scalar<T>> + AddAssign<T> + Mul<T> + Mul<Scalar<T>> + MulAssign<T>
+{
 }
 
 pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape> {
