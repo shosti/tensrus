@@ -126,6 +126,11 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for Gener
 
         Ok(self.storage.borrow()[i])
     }
+
+    fn update(&self, f: &dyn Fn(T) -> T) {
+        let mut vals = self.storage.borrow_mut();
+        vals.iter_mut().for_each(|v| *v = f(*v));
+    }
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
@@ -178,7 +183,9 @@ impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTens
     }
 }
 
-impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator for &'a GenericTensor<T, R, S> {
+impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
+    for &'a GenericTensor<T, R, S>
+{
     type Item = T;
     type IntoIter = TensorIterator<'a, T, R, S>;
 
@@ -287,5 +294,14 @@ mod tests {
             t.set(&idx, val).unwrap();
             assert_eq!(t.get(&idx).unwrap(), val);
         }
+    }
+
+    #[test]
+    fn update() {
+        let t: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([1, 2, 3, 4]);
+        t.update(&|val| val * 2.0);
+
+        let want: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([2, 4, 6, 8]);
+        assert_eq!(t, want);
     }
 }

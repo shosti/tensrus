@@ -32,6 +32,10 @@ fn impl_tensor_macro(ast: &syn::DeriveInput) -> TokenStream {
             fn get_at_idx(&self, i: usize) -> Result<T, IndexError> {
                 self.0.get_at_idx(i)
             }
+
+            fn update(&self, f: &dyn Fn(T) -> T) {
+                self.0.update(f);
+            }
         }
 
         impl<T: Numeric, const R: usize, const S: TensorShape, F> FromIterator<F> for #name<T, R, S>

@@ -40,6 +40,7 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
     fn shape(&self) -> [usize; R];
     fn get(&self, idx: &[usize; R]) -> Result<T, IndexError>;
     fn get_at_idx(&self, i: usize) -> Result<T, IndexError>;
+    fn update(&self, f: &dyn Fn(T) -> T);
 }
 
 pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape> {
