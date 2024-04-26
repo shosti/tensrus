@@ -30,7 +30,7 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
+pub trait Tensor<T: Numeric, const R: usize> {
     fn from_fn<F>(cb: F) -> Self
     where
         F: FnMut([usize; R]) -> T,
@@ -50,19 +50,19 @@ pub trait TensorOps<T: Numeric>:
 {
 }
 
-pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape> {
-    t: &'a dyn Tensor<T, R, S>,
+pub struct TensorIterator<'a, T: Numeric, const R: usize> {
+    t: &'a dyn Tensor<T, R>,
     cur: usize,
 }
 
-impl<'a, T: Numeric, const R: usize, const S: TensorShape> TensorIterator<'a, T, R, S> {
-    pub fn new(t: &'a dyn Tensor<T, R, S>) -> Self {
+impl<'a, T: Numeric, const R: usize> TensorIterator<'a, T, R> {
+    pub fn new(t: &'a dyn Tensor<T, R>) -> Self {
         Self { t, cur: 0 }
     }
 }
 
-impl<'a, T: Numeric, const R: usize, const S: TensorShape> Iterator
-    for TensorIterator<'a, T, R, S>
+impl<'a, T: Numeric, const R: usize> Iterator
+    for TensorIterator<'a, T, R>
 {
     type Item = T;
 

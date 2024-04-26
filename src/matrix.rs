@@ -2,23 +2,27 @@ use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
 use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, TensorShape};
 use num::ToPrimitive;
+// use std::ops::Mul;
 
 pub const fn matrix_shape(m: usize, n: usize) -> TensorShape {
     [m, n, 0, 0, 0]
 }
 
-pub type Matrix<T, const M: usize, const N: usize> = MatrixTensor<T, 2, { matrix_shape(M, N) }>;
-
-#[derive(Tensor, PartialEq, Debug)]
-pub struct MatrixTensor<T: Numeric, const R: usize, const S: TensorShape>(GenericTensor<T, R, S>);
-
-impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
-    for MatrixTensor<T, R, S>
+#[derive(PartialEq, Debug)]
+pub struct Matrix<T: Numeric, const M: usize, const N: usize>(
+    GenericTensor<T, 2, { matrix_shape(M, N) }>,
+)
 where
-    F: ToPrimitive,
+    [(); num_elems(2, matrix_shape(M, N))]:;
+
+impl<T: Numeric, const M: usize, const N: usize, F: ToPrimitive> From<[F; M * N]>
+    for Matrix<T, M, N>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
 {
-    fn from(arr: [F; num_elems(R, S)]) -> Self {
-        Self(GenericTensor::from(arr))
+    fn from(arr: [F; M * N]) -> Self {
+        let t: GenericTensor<T, 2, { matrix_shape(M, N) }> = arr.into_iter().collect();
+        Self(t)
     }
 }
 
@@ -28,9 +32,24 @@ where
     F: ToPrimitive,
 {
     fn from(arrs: [[F; N]; M]) -> Self {
-        Self(arrs.into_iter().flatten().collect())
+        let t: GenericTensor<T, 2, { matrix_shape(M, N) }> = arrs.into_iter().flatten().collect();
+        Self(t)
     }
 }
+
+// impl<T: Numeric, const M: usize, const N: usize, const P: usize> Mul<Matrix<T, N, P>>
+//     for Matrix<T, M, N>
+// where
+//     [(); num_elems(2, matrix_shape(M, N))]:,
+//     [(); num_elems(2, matrix_shape(N, P))]:,
+//     [(); num_elems(2, matrix_shape(M, P))]:,
+// {
+//     type Output = Matrix<T, M, P>;
+
+//     fn mul(self, other: Matrix<T, N, P>) -> Self::Output {
+//         todo!()
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
@@ -80,25 +99,15 @@ mod tests {
             let s = format!("{}{}", i, j);
             s.parse().unwrap()
         });
-        let y = Matrix::from([
-            [00, 01, 02, 03],
-            [10, 11, 12, 13],
-            [20, 21, 22, 23],
-        ]);
+        let y = Matrix::from([[00, 01, 02, 03], [10, 11, 12, 13], [20, 21, 22, 23]]);
 
         assert_eq!(x, y);
     }
 
     #[test]
     fn elem_mutiply() {
-        let mut x = Matrix::from(
-            [[2, 4, 6],
-             [8, 10, 12]]
-        );
-        let y = Matrix::from(
-            [[4, 8, 12],
-             [16, 20, 24]]
-        );
+        let mut x = Matrix::from([[2, 4, 6], [8, 10, 12]]);
+        let y = Matrix::from([[4, 8, 12], [16, 20, 24]]);
 
         x *= 2.0;
         assert_eq!(x, y);
@@ -124,25 +133,15 @@ mod tests {
     //     assert_eq!(x.row(4), Err(IndexError {}));
     // }
 
-    // #[test]
-    // fn matrix_multiply() {
-    //     let x = Matrix::from(
-    //         [[1, 2],
-    //          [3, 4],
-    //          [5, 6]]
-    //     );
-    //     let y = Matrix::from(
-    //         [[7, 8, 9, 10],
-    //          [9, 10, 11, 12]]
-    //     );
-    //     let res = Matrix::from(
-    //         [[25, 28, 31, 34],
-    //          [57, 64, 71, 78],
-    //          [89, 100, 111, 122]]
-    //     );
+    #[test]
+    fn matrix_multiply() {
+        let x: Matrix<f64, _, _> = Matrix::from([[1, 2], [3, 4], [5, 6]]);
+        let y: Matrix<f64, _, _> = Matrix::from([[7, 8, 9, 10], [9, 10, 11, 12]]);
+        let res: Matrix<f64, _, _> =
+            Matrix::from([[25, 28, 31, 34], [57, 64, 71, 78], [89, 100, 111, 122]]);
 
-    //     assert_eq!(x * y, res);
-    // }
+        assert_eq!(x * y, res);
+    }
 
     // #[test]
     // fn matrix_vector_multiply() {

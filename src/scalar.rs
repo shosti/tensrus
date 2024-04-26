@@ -7,14 +7,15 @@ pub const fn scalar_shape() -> TensorShape {
     [0; 5]
 }
 
-#[derive(Tensor, PartialEq, Debug)]
+#[derive(PartialEq, Debug)]
 pub struct ScalarTensor<T: Numeric, const R: usize, const S: TensorShape>(GenericTensor<T, R, S>);
 
 pub type Scalar<T> = ScalarTensor<T, 0, { scalar_shape() }>;
 
 impl<T: Numeric> Scalar<T> {
     pub fn val(&self) -> T {
-        self.get(&[]).unwrap()
+        todo!()
+        // self.get(&[]).unwrap()
     }
 }
 
@@ -31,7 +32,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vector::Vector;
+    // use crate::vector::Vector;
 
     #[test]
     fn basics() {

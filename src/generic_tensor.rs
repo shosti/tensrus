@@ -94,7 +94,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for GenericTensor<T, R, S> {
+impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R> for GenericTensor<T, R, S> {
     fn from_fn<F>(mut cb: F) -> Self
     where
         F: FnMut([usize; R]) -> T,
@@ -191,7 +191,7 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
     for &'a GenericTensor<T, R, S>
 {
     type Item = T;
-    type IntoIter = TensorIterator<'a, T, R, S>;
+    type IntoIter = TensorIterator<'a, T, R>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter::new(self)
