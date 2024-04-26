@@ -1,8 +1,8 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, TensorShape};
+use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
 use num::ToPrimitive;
-// use std::ops::Mul;
+use std::ops::Mul;
 
 pub const fn matrix_shape(m: usize, n: usize) -> TensorShape {
     [m, n, 0, 0, 0]
@@ -38,19 +38,19 @@ where
     }
 }
 
-// impl<T: Numeric, const M: usize, const N: usize, const P: usize> Mul<Matrix<T, N, P>>
-//     for Matrix<T, M, N>
-// where
-//     [(); num_elems(2, matrix_shape(M, N))]:,
-//     [(); num_elems(2, matrix_shape(N, P))]:,
-//     [(); num_elems(2, matrix_shape(M, P))]:,
-// {
-//     type Output = Matrix<T, M, P>;
+impl<T: Numeric, const M: usize, const N: usize, const P: usize> Mul<Matrix<T, N, P>>
+    for Matrix<T, M, N>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); num_elems(2, matrix_shape(N, P))]:,
+    [(); num_elems(2, matrix_shape(M, P))]:,
+{
+    type Output = Matrix<T, M, P>;
 
-//     fn mul(self, other: Matrix<T, N, P>) -> Self::Output {
-//         todo!()
-//     }
-// }
+    fn mul(self, _other: Matrix<T, N, P>) -> Self::Output {
+        todo!()
+    }
+}
 
 #[cfg(test)]
 mod tests {
