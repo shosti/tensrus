@@ -8,24 +8,26 @@ pub const fn vector_shape(n: usize) -> TensorShape {
 }
 
 #[derive(Tensor, PartialEq, Debug)]
-pub struct VectorTensor<T: Numeric, const R: usize, const S: TensorShape>(GenericTensor<T, R, S>);
-
-pub type Vector<T, const N: usize> = VectorTensor<T, 1, { vector_shape(N) }>;
-
-impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
-    for VectorTensor<T, R, S>
+#[TensorRank = 1]
+pub struct Vector<T: Numeric, const N: usize>(GenericTensor<T, 1, { vector_shape(N) }>)
 where
-    F: ToPrimitive,
+    [(); num_elems(1, vector_shape(N))]:;
+
+impl<T: Numeric, const N: usize, F: ToPrimitive> From<[F; N]> for Vector<T, N>
+where
+    [(); num_elems(1, vector_shape(N))]:,
 {
-    fn from(arr: [F; num_elems(R, S)]) -> Self {
-        Self(GenericTensor::from(arr))
+    fn from(arr: [F; N]) -> Self {
+        let t: GenericTensor<T, 1, { vector_shape(N) }> = arr.into_iter().collect();
+        Self(t)
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Into<GenericTensor<T, R, S>>
-    for VectorTensor<T, R, S>
+impl<T: Numeric, const N: usize> Into<GenericTensor<T, 1, { vector_shape(N) }>> for Vector<T, N>
+where
+    [(); num_elems(1, vector_shape(N))]:,
 {
-    fn into(self) -> GenericTensor<T, R, S> {
+    fn into(self) -> GenericTensor<T, 1, { vector_shape(N) }> {
         self.0
     }
 }
