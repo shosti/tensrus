@@ -1,16 +1,15 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{IndexError, Tensor, TensorIterator, TensorShape};
+use crate::tensor::{IndexError, Tensor, TensorShape};
 use num::ToPrimitive;
 
 pub const fn scalar_shape() -> TensorShape {
     [0; 5]
 }
 
-#[derive(PartialEq, Debug)]
-pub struct ScalarTensor<T: Numeric, const R: usize, const S: TensorShape>(GenericTensor<T, R, S>);
-
-pub type Scalar<T> = ScalarTensor<T, 0, { scalar_shape() }>;
+#[derive(Tensor, PartialEq, Debug)]
+#[TensorRank = 0]
+pub struct Scalar<T: Numeric>(GenericTensor<T, 0, { scalar_shape() }>);
 
 impl<T: Numeric> Scalar<T> {
     pub fn val(&self) -> T {
