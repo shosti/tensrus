@@ -92,9 +92,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
             storage: self.storage.clone(),
         })
     }
-}
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R> for GenericTensor<T, R, S> {
     fn from_fn<F>(mut cb: F) -> Self
     where
         F: FnMut([usize; R]) -> T,
@@ -105,6 +103,9 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R> for GenericT
             .collect()
     }
 
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R> for GenericTensor<T, R, S> {
     fn shape(&self) -> [usize; R] {
         let mut s = [0; R];
         for i in 0..R {

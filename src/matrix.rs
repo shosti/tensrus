@@ -8,7 +8,8 @@ pub const fn matrix_shape(m: usize, n: usize) -> TensorShape {
     [m, n, 0, 0, 0]
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Tensor, PartialEq, Debug)]
+#[TensorRank = 2]
 pub struct Matrix<T: Numeric, const M: usize, const N: usize>(
     GenericTensor<T, 2, { matrix_shape(M, N) }>,
 )

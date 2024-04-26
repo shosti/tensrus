@@ -31,10 +31,10 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
 }
 
 pub trait Tensor<T: Numeric, const R: usize> {
-    fn from_fn<F>(cb: F) -> Self
-    where
-        F: FnMut([usize; R]) -> T,
-        Self: Sized;
+    // fn from_fn<F>(cb: F) -> Self
+    // where
+    //     F: FnMut([usize; R]) -> T,
+    //     Self: Sized;
 
     fn rank(&self) -> usize {
         R
