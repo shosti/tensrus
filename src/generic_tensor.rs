@@ -81,12 +81,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for GenericTensor<T, R, S> {
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> TensorOps<T> for GenericTensor<T, R, S> {
     fn update(&mut self, f: &dyn Fn(T) -> T) {
         self.storage.iter_mut().for_each(|v| *v = f(*v));
     }
 }
-
-impl<T: Numeric, const R: usize, const S: TensorShape> TensorOps<T> for GenericTensor<T, R, S> {}
 
 impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
     for GenericTensor<T, R, S>

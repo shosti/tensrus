@@ -32,9 +32,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let shape = parse_shape(&ast);
     let gen = quote! {
         impl #impl_generics Tensor<T, #rank, #shape> for #name #type_generics #where_clause {
-            fn update(&mut self, f: &dyn Fn(T) -> T) {
-                self.0.update(f);
-            }
         }
 
         impl #f_impl_generics FromIterator<F> for #name #type_generics #where_clause
@@ -120,7 +117,11 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics crate::tensor::TensorOps<T> for #name #type_generics #where_clause {}
+        impl #impl_generics crate::tensor::TensorOps<T> for #name #type_generics #where_clause {
+            fn update(&mut self, f: &dyn Fn(T) -> T) {
+                self.0.update(f);
+            }
+        }
     };
     gen.into()
 }

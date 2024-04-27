@@ -44,12 +44,12 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
 
         s
     }
-    fn update(&mut self, f: &dyn Fn(T) -> T);
 }
 
 pub trait TensorOps<T: Numeric>:
     Add<T> + Add<Scalar<T>> + AddAssign<T> + Mul<T> + Mul<Scalar<T>> + MulAssign<T>
 {
+    fn update(&mut self, f: &dyn Fn(T) -> T);
 }
 
 pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape> {
