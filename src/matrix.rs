@@ -50,6 +50,14 @@ where
 
         Ok(Vector::from_fn(|[i]| self.get(&[i, j]).unwrap()))
     }
+
+    // This could be "fast" but we'll deal with that later
+    pub fn transpose(&self) -> Matrix<T, N, M>
+    where
+        [(); num_elems(2, matrix_shape(N, M))]:,
+    {
+        Matrix::from_fn(|[i, j]| self.get(&[j, i]).unwrap())
+    }
 }
 
 impl<T: Numeric, const M: usize, const N: usize, F: ToPrimitive> From<[F; M * N]>
@@ -199,18 +207,11 @@ mod tests {
         assert_eq!(a * x, Vector::from([1, -3]));
     }
 
-    // #[test]
-    // fn transpose() {
-    //     let x = Matrix::from(
-    //         [[1, 2, 3],
-    //          [4, 5, 6]]
-    //     );
-    //     let y = Matrix::from(
-    //         [[1, 4],
-    //          [2, 5],
-    //          [3, 6]]
-    //     );
+    #[test]
+    fn transpose() {
+        let x: Matrix<f64, _, _> = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+        let y: Matrix<f64, _, _> = Matrix::from([[1, 4], [2, 5], [3, 6]]);
 
-    //     assert_eq!(x.transpose(), y);
-    // }
+        assert_eq!(x.transpose(), y);
+    }
 }
