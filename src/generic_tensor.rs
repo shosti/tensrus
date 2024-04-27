@@ -59,14 +59,14 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
     }
 
     pub fn reshape<const R2: usize, const S2: TensorShape>(
-        &self,
+        self,
     ) -> Result<GenericTensor<T, R2, S2>, ShapeError> {
         if num_elems(R, S) != num_elems(R2, S2) {
             return Err(ShapeError {});
         }
 
         Ok(GenericTensor {
-            storage: self.storage.clone(),
+            storage: self.storage,
         })
     }
 
@@ -130,9 +130,7 @@ where
             .chain(std::iter::repeat(T::zero()))
             .take(Self::storage_size())
             .collect();
-        Self {
-            storage,
-        }
+        Self { storage }
     }
 }
 
