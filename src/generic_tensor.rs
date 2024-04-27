@@ -81,16 +81,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for GenericTensor<T, R, S> {
-    fn set(&mut self, idx: &[usize; R], val: T) -> Result<(), IndexError> {
-        match Self::storage_idx(idx) {
-            Ok(i) => {
-                self.storage[i] = val;
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
-    }
-
     fn update(&mut self, f: &dyn Fn(T) -> T) {
         self.storage.iter_mut().for_each(|v| *v = f(*v));
     }
@@ -307,7 +297,7 @@ mod tests {
             }
             let val: f64 = rng.gen();
 
-            t.set(&idx, val).unwrap();
+            t[idx] = val;
             assert_eq!(t[idx], val);
         }
     }

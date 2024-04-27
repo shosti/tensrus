@@ -44,7 +44,6 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
 
         s
     }
-    fn set(&mut self, idx: &[usize; R], val: T) -> Result<(), IndexError>;
     fn update(&mut self, f: &dyn Fn(T) -> T);
 }
 
