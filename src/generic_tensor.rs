@@ -4,7 +4,7 @@ use crate::tensor::{
     num_elems, IndexError, ShapeError, Tensor, TensorIterator, TensorOps, TensorShape,
 };
 use num::ToPrimitive;
-use std::ops::{Add, AddAssign, Mul, MulAssign};
+use std::ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign};
 
 #[derive(Debug)]
 pub struct GenericTensor<T: Numeric, const R: usize, const S: TensorShape> {
@@ -207,6 +207,24 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Mul<Scalar<T>> for Generi
 impl<T: Numeric, const R: usize, const S: TensorShape> MulAssign<T> for GenericTensor<T, R, S> {
     fn mul_assign(&mut self, other: T) {
         self.update(&|v| v * other);
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> Index<[usize; R]>
+    for GenericTensor<T, R, S>
+{
+    type Output = T;
+
+    fn index(&self, index: [usize; R]) -> &Self::Output {
+        self.storage.index(Self::storage_idx(&index).unwrap())
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> IndexMut<[usize; R]>
+    for GenericTensor<T, R, S>
+{
+    fn index_mut(&mut self, index: [usize; R]) -> &mut Self::Output {
+        self.storage.index_mut(Self::storage_idx(&index).unwrap())
     }
 }
 
