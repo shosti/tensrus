@@ -3,15 +3,11 @@ use crate::{
     op::Op,
     tensor::{Tensor, TensorOps, TensorShape},
 };
-use std::{
-    cell::RefCell,
-    fmt::{Debug},
-    rc::Rc,
-};
+use std::{cell::RefCell, cmp::Ordering, fmt::Debug, rc::Rc};
 
 thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Flow<T: Numeric, const R: usize, const S: TensorShape, Tn>
 where
     Tn: Tensor<T, R, S> + TensorOps<T>,
@@ -190,3 +186,52 @@ where
 //         self.inner.borrow_mut().grad = T::zero();
 //     }
 // }
+
+impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Clone for Flow<T, R, S, Tn>
+where
+    Tn: Tensor<T, R, S> + TensorOps<T>,
+{
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape, Tn> PartialEq for Flow<T, R, S, Tn>
+where
+    Tn: Tensor<T, R, S> + TensorOps<T>,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Eq for Flow<T, R, S, Tn> where
+    Tn: Tensor<T, R, S> + TensorOps<T>
+{
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape, Tn> PartialOrd for Flow<T, R, S, Tn>
+where
+    Tn: Tensor<T, R, S> + TensorOps<T>,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.id() < other.id() {
+            Some(Ordering::Less)
+        } else if self.id() == other.id() {
+            Some(Ordering::Equal)
+        } else {
+            Some(Ordering::Greater)
+        }
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Ord for Flow<T, R, S, Tn>
+where
+    Tn: Tensor<T, R, S> + TensorOps<T>,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}

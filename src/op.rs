@@ -3,9 +3,7 @@ use crate::{
     numeric::Numeric,
     tensor::{Tensor, TensorOps, TensorShape},
 };
-use std::{
-    fmt::{Debug, Formatter},
-};
+use std::fmt::{Debug, Formatter};
 
 #[derive(Debug)]
 pub enum Op<T: Numeric, const R: usize, const S: TensorShape, Tn>
@@ -54,8 +52,22 @@ where
     }
 }
 
-// impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Op<T, R, S, Tn> where
-//     Tn: Tensor<T, R, S> + TensorOps<T>
-// {
-//     pub fn children() -> Vec<
-// }
+impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Op<T, R, S, Tn>
+where
+    Tn: Tensor<T, R, S> + TensorOps<T>,
+{
+    pub fn children(&self) -> Vec<Flow<T, R, S, Tn>> {
+        match self {
+            Op::None => vec![],
+            Op::Unary(UnaryOp { child, .. }) => vec![child.clone()],
+            Op::Binary(BinaryOp {
+                children: (ch1, ch2),
+                ..
+            }) => {
+                let mut res = vec![ch1.clone(), ch2.clone()];
+                res.sort();
+                res
+            }
+        }
+    }
+}
