@@ -36,11 +36,11 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 self.0.get(idx)
             }
 
-            fn set(&self, idx: &[usize; #rank], val: T) -> Result<(), IndexError> {
+            fn set(&mut self, idx: &[usize; #rank], val: T) -> Result<(), IndexError> {
                 self.0.set(idx, val)
             }
 
-            fn update(&self, f: &dyn Fn(T) -> T) {
+            fn update(&mut self, f: &dyn Fn(T) -> T) {
                 self.0.update(f);
             }
         }

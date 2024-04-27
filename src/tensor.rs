@@ -43,8 +43,8 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
         s
     }
     fn get(&self, idx: &[usize; R]) -> Result<T, IndexError>;
-    fn set(&self, idx: &[usize; R], val: T) -> Result<(), IndexError>;
-    fn update(&self, f: &dyn Fn(T) -> T);
+    fn set(&mut self, idx: &[usize; R], val: T) -> Result<(), IndexError>;
+    fn update(&mut self, f: &dyn Fn(T) -> T);
 }
 
 pub trait TensorOps<T: Numeric>:
