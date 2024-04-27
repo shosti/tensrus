@@ -16,6 +16,19 @@ pub struct Matrix<T: Numeric, const M: usize, const N: usize>(
 where
     [(); num_elems(2, matrix_shape(M, N))]:;
 
+impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+{
+    pub fn from_fn<F>(cb: F) -> Self
+    where
+        F: Fn([usize; 2]) -> T,
+    {
+        let t: GenericTensor<T, 2, { matrix_shape(M, N) }> = GenericTensor::from_fn(cb);
+        Self(t)
+    }
+}
+
 impl<T: Numeric, const M: usize, const N: usize, F: ToPrimitive> From<[F; M * N]>
     for Matrix<T, M, N>
 where

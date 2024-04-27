@@ -93,9 +93,9 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         })
     }
 
-    fn from_fn<F>(mut cb: F) -> Self
+    pub fn from_fn<F>(cb: F) -> Self
     where
-        F: FnMut([usize; R]) -> T,
+        F: Fn([usize; R]) -> T,
     {
         (0..Self::storage_size())
             .into_iter()

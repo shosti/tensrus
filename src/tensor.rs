@@ -31,11 +31,6 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
 }
 
 pub trait Tensor<T: Numeric, const R: usize> {
-    // fn from_fn<F>(cb: F) -> Self
-    // where
-    //     F: FnMut([usize; R]) -> T,
-    //     Self: Sized;
-
     fn rank(&self) -> usize {
         R
     }
@@ -61,9 +56,7 @@ impl<'a, T: Numeric, const R: usize> TensorIterator<'a, T, R> {
     }
 }
 
-impl<'a, T: Numeric, const R: usize> Iterator
-    for TensorIterator<'a, T, R>
-{
+impl<'a, T: Numeric, const R: usize> Iterator for TensorIterator<'a, T, R> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
