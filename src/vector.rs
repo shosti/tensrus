@@ -30,7 +30,7 @@ where
         let mut res = T::zero();
         for i in 0..N {
             let idx = [i];
-            res += self.get(&idx).unwrap() * other.get(&idx).unwrap();
+            res += self[idx] * other[idx];
         }
 
         res
@@ -65,8 +65,7 @@ mod tests {
         let a: Vector<f64, 5> = Vector::from([1, 2, 3, 4, 5]);
 
         assert_eq!(a.shape(), [5]);
-        assert_eq!(a.get(&[3]), Ok(4.0));
-        assert_eq!(a.get(&[5]), Err(IndexError {}));
+        assert_eq!(a[[3]], 4.0);
     }
 
     #[test]

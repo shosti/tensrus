@@ -81,13 +81,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for GenericTensor<T, R, S> {
-    fn get(&self, idx: &[usize; R]) -> Result<T, IndexError> {
-        match Self::storage_idx(idx) {
-            Ok(i) => Ok(self.storage[i]),
-            Err(e) => Err(e),
-        }
-    }
-
     fn set(&mut self, idx: &[usize; R], val: T) -> Result<(), IndexError> {
         match Self::storage_idx(idx) {
             Ok(i) => {
@@ -169,7 +162,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Add<T> for GenericTensor<
     type Output = Self;
 
     fn add(self, other: T) -> Self::Output {
-        Self::from_fn(|idx| self.get(&idx).unwrap() + other)
+        Self::from_fn(|idx| self[idx] + other)
     }
 }
 
@@ -177,7 +170,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Add<Scalar<T>> for Generi
     type Output = Self;
 
     fn add(self, other: Scalar<T>) -> Self::Output {
-        Self::from_fn(|idx| self.get(&idx).unwrap() + other.val())
+        Self::from_fn(|idx| self[idx] + other.val())
     }
 }
 
@@ -191,7 +184,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Mul<T> for GenericTensor<
     type Output = Self;
 
     fn mul(self, other: T) -> Self::Output {
-        Self::from_fn(|idx| self.get(&idx).unwrap() * other)
+        Self::from_fn(|idx| self[idx] * other)
     }
 }
 
@@ -199,7 +192,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Mul<Scalar<T>> for Generi
     type Output = Self;
 
     fn mul(self, other: Scalar<T>) -> Self::Output {
-        Self::from_fn(|idx| self.get(&idx).unwrap() * other.val())
+        Self::from_fn(|idx| self[idx] * other.val())
     }
 }
 
@@ -315,7 +308,7 @@ mod tests {
             let val: f64 = rng.gen();
 
             t.set(&idx, val).unwrap();
-            assert_eq!(t.get(&idx).unwrap(), val);
+            assert_eq!(t[idx], val);
         }
     }
 

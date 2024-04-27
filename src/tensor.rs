@@ -44,7 +44,6 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
 
         s
     }
-    fn get(&self, idx: &[usize; R]) -> Result<T, IndexError>;
     fn set(&mut self, idx: &[usize; R], val: T) -> Result<(), IndexError>;
     fn update(&mut self, f: &dyn Fn(T) -> T);
 }
@@ -80,7 +79,7 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> Iterator
             return None;
         }
 
-        let item = self.t.get(&self.cur).unwrap();
+        let item = self.t[self.cur];
         if R == 0 {
             self.done = true;
             return Some(item);

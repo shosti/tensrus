@@ -32,10 +32,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let shape = parse_shape(&ast);
     let gen = quote! {
         impl #impl_generics Tensor<T, #rank, #shape> for #name #type_generics #where_clause {
-            fn get(&self, idx: &[usize; #rank]) -> Result<T, IndexError> {
-                self.0.get(idx)
-            }
-
             fn set(&mut self, idx: &[usize; #rank], val: T) -> Result<(), IndexError> {
                 self.0.set(idx, val)
             }

@@ -14,7 +14,7 @@ pub struct Scalar<T: Numeric>(GenericTensor<T, 0, { scalar_shape() }>);
 
 impl<T: Numeric> Scalar<T> {
     pub fn val(&self) -> T {
-        self.get(&[]).unwrap()
+        self[[]]
     }
 }
 
@@ -38,7 +38,7 @@ mod tests {
         let a: Scalar<f64> = Scalar::from(42);
 
         assert_eq!(a.shape(), []);
-        assert_eq!(a.get(&[]), Ok(42.0));
+        assert_eq!(a[[]], 42.0);
         assert_eq!(a.val(), 42.0);
     }
 
