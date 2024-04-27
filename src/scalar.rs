@@ -13,8 +13,7 @@ pub struct Scalar<T: Numeric>(GenericTensor<T, 0, { scalar_shape() }>);
 
 impl<T: Numeric> Scalar<T> {
     pub fn val(&self) -> T {
-        todo!()
-        // self.get(&[]).unwrap()
+        self.get(&[]).unwrap()
     }
 }
 
@@ -31,7 +30,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    // use crate::vector::Vector;
+    use crate::vector::Vector;
 
     #[test]
     fn basics() {

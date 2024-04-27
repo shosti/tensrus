@@ -84,7 +84,7 @@ mod tests {
     #[test]
     #[rustfmt::skip]
     fn from_iter() {
-        let x: Matrix<f64, 3, 2> = [1, 2, 3].iter().cycle().map(|x| *x).collect();
+        let x: Matrix<f64, 3, 2> = [1, 2, 3].into_iter().cycle().collect();
         let y: Matrix<f64, _, _> = Matrix::from([
             [1.0, 2.0],
             [3.0, 1.0],

@@ -3,7 +3,11 @@ extern crate syn;
 #[macro_use]
 extern crate quote;
 use proc_macro::TokenStream;
-use syn::{Meta, Expr, Lit, Attribute, DeriveInput};
+use proc_macro2::Span;
+use syn::{
+    punctuated::Punctuated, Attribute, DeriveInput, Expr, Generics, Ident, Lifetime, LifetimeParam,
+    Lit, Meta, Path, PathArguments, PathSegment, TraitBound, TypeParam, TypeParamBound,
+};
 
 #[proc_macro_derive(Tensor, attributes(TensorRank))]
 pub fn tensor_macro_derive(input: TokenStream) -> TokenStream {
@@ -11,11 +15,62 @@ pub fn tensor_macro_derive(input: TokenStream) -> TokenStream {
     impl_tensor_macro(&ast)
 }
 
+// This whole hullabaloo is to add <F: ToPrimitive> to the generics
+// clause. Thanks ChatGPT!
+fn add_to_primitive_f_param(generics: &mut Generics) {
+    let ident = Ident::new("F", Span::call_site());
+
+    let mut segments = Punctuated::new();
+    segments.push(PathSegment {
+        ident: Ident::new("num", Span::call_site()),
+        arguments: PathArguments::None,
+    });
+    segments.push(PathSegment {
+        ident: Ident::new("ToPrimitive", Span::call_site()),
+        arguments: PathArguments::None,
+    });
+    let path = Path {
+        leading_colon: None,
+        segments,
+    };
+
+    let trait_bound = TraitBound {
+        paren_token: None,
+        modifier: syn::TraitBoundModifier::None,
+        lifetimes: None,
+        path,
+    };
+
+    let bound = TypeParamBound::Trait(trait_bound);
+
+    let mut bounds = Punctuated::new();
+    bounds.push(bound);
+
+    let type_param = TypeParam {
+        attrs: vec![],
+        ident,
+        colon_token: Some(Default::default()),
+        bounds,
+        default: None,
+        eq_token: None,
+    };
+
+    generics.params.push(type_param.into());
+}
+
+// This adds the 'a lifetime to a list of params
+fn add_lifetime_param(generics: &mut Generics) {
+    let param = LifetimeParam::new(Lifetime::new("'a", Span::call_site()));
+    generics.params.insert(0, param.into());
+}
+
 fn parse_rank(rank_attr: &Attribute) -> usize {
     if let Meta::NameValue(ref val) = rank_attr.meta {
         if let Expr::Lit(ref lit) = val.value {
             if let Lit::Int(ref int) = lit.lit {
-                return int.base10_parse().expect("unable to parse TensorRank value");
+                return int
+                    .base10_parse()
+                    .expect("unable to parse TensorRank value");
             }
         }
     };
@@ -25,7 +80,16 @@ fn parse_rank(rank_attr: &Attribute) -> usize {
 
 fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let name = &ast.ident;
+
+    let mut f_generics = ast.generics.clone();
+    add_to_primitive_f_param(&mut f_generics);
+
+    let mut generics_with_lifetime = ast.generics.clone();
+    add_lifetime_param(&mut generics_with_lifetime);
+
     let (impl_generics, type_generics, where_clause) = ast.generics.split_for_impl();
+    let (f_impl_generics, _, _) = f_generics.split_for_impl();
+    let (impl_generics_with_lifetime, _, _) = generics_with_lifetime.split_for_impl();
     let rank_attr = &ast
         .attrs
         .iter()
@@ -34,14 +98,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let rank = parse_rank(rank_attr);
     let gen = quote! {
         impl #impl_generics Tensor<T, #rank> for #name #type_generics #where_clause {
-            // fn from_fn<F>(cb: F) -> Self
-            // where
-            //     F: FnMut([usize; R]) -> T,
-            // {
-            //     let t:
-            //     Self(GenericTensor::from_fn(cb))
-            // }
-
             fn shape(&self) -> [usize; #rank] {
                 self.0.shape()
             }
@@ -59,78 +115,76 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        // impl<T: Numeric, const R: usize, const S: TensorShape, F> FromIterator<F> for #name<T, R, S>
-        // where
-        //     F: ToPrimitive,
-        // {
-        //     fn from_iter<I>(iter: I) -> Self
-        //     where
-        //         I: IntoIterator<Item = F>,
-        //     {
-        //         Self(iter.into_iter().collect())
-        //     }
-        // }
+        impl #f_impl_generics FromIterator<F> for #name #type_generics #where_clause
+        {
+            fn from_iter<I>(iter: I) -> Self
+            where
+                I: IntoIterator<Item = F>,
+            {
+                Self(iter.into_iter().collect())
+            }
+        }
 
-        // impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator for &'a #name<T, R, S> {
-        //     type Item = T;
-        //     type IntoIter = TensorIterator<'a, T, R, S>;
+        impl #impl_generics_with_lifetime IntoIterator for &'a #name #type_generics #where_clause {
+            type Item = T;
+            type IntoIter = crate::tensor::TensorIterator<'a, T, #rank>;
 
-        //     fn into_iter(self) -> Self::IntoIter {
-        //         Self::IntoIter::new(self)
-        //     }
-        // }
+            fn into_iter(self) -> Self::IntoIter {
+                Self::IntoIter::new(self)
+            }
+        }
 
-        // impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::Add<T> for #name<T, R, S> {
-        //     type Output = Self;
+        impl #impl_generics std::ops::Add<T> for #name #type_generics #where_clause {
+            type Output = Self;
 
-        //     fn add(self, other: T) -> Self::Output {
-        //         Self(self.0 + other)
-        //     }
-        // }
+            fn add(self, other: T) -> Self::Output {
+                Self(self.0 + other)
+            }
+        }
 
-        // impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::Add<crate::scalar::Scalar<T>> for #name<T, R, S> {
-        //     type Output = Self;
+        impl #impl_generics std::ops::Add<crate::scalar::Scalar<T>> for #name #type_generics #where_clause {
+            type Output = Self;
 
-        //     fn add(self, other: crate::scalar::Scalar<T>) -> Self::Output {
-        //         Self(self.0 + other)
-        //     }
-        // }
+            fn add(self, other: crate::scalar::Scalar<T>) -> Self::Output {
+                Self(self.0 + other)
+            }
+        }
 
-        // impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::AddAssign<T> for #name<T, R, S> {
-        //     fn add_assign(&mut self, other: T) {
-        //         self.0 += other;
-        //     }
-        // }
+        impl #impl_generics std::ops::AddAssign<T> for #name #type_generics #where_clause {
+            fn add_assign(&mut self, other: T) {
+                self.0 += other;
+            }
+        }
 
-        // impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::Mul<T> for #name<T, R, S> {
-        //     type Output = Self;
+        impl #impl_generics std::ops::Mul<T> for #name #type_generics #where_clause {
+            type Output = Self;
 
-        //     fn mul(self, other: T) -> Self::Output {
-        //         Self(self.0 * other)
-        //     }
-        // }
+            fn mul(self, other: T) -> Self::Output {
+                Self(self.0 * other)
+            }
+        }
 
-        // impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::Mul<crate::scalar::Scalar<T>> for #name<T, R, S> {
-        //     type Output = Self;
+        impl #impl_generics std::ops::Mul<crate::scalar::Scalar<T>> for #name #type_generics #where_clause {
+            type Output = Self;
 
-        //     fn mul(self, other: crate::scalar::Scalar<T>) -> Self::Output {
-        //         Self(self.0 * other)
-        //     }
-        // }
+            fn mul(self, other: crate::scalar::Scalar<T>) -> Self::Output {
+                Self(self.0 * other)
+            }
+        }
 
-        // impl<T: Numeric, const R: usize, const S: TensorShape> std::ops::MulAssign<T> for #name<T, R, S> {
-        //     fn mul_assign(&mut self, other: T) {
-        //         self.0 *= other;
-        //     }
-        // }
+        impl #impl_generics std::ops::MulAssign<T> for #name #type_generics #where_clause {
+            fn mul_assign(&mut self, other: T) {
+                self.0 *= other;
+            }
+        }
 
-        // impl<T: Numeric, const R: usize, const S: TensorShape> Clone for #name<T, R, S> {
-        //     fn clone(&self) -> Self {
-        //         Self(self.0.clone())
-        //     }
-        // }
+        impl #impl_generics Clone for #name #type_generics #where_clause {
+            fn clone(&self) -> Self {
+                Self(self.0.clone())
+            }
+        }
 
-        // impl<T: Numeric, const R: usize, const S: TensorShape> crate::tensor::TensorOps<T> for #name<T, R, S> {}
+        impl #impl_generics crate::tensor::TensorOps<T> for #name #type_generics #where_clause {}
     };
     gen.into()
 }
