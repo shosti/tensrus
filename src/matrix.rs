@@ -90,6 +90,19 @@ where
     }
 }
 
+impl<T: Numeric, const M: usize, const N: usize> Mul<Vector<T, N>> for Matrix<T, M, N>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); num_elems(1, vector_shape(N))]:,
+    [(); num_elems(1, vector_shape(M))]:,
+{
+    type Output = Vector<T, M>;
+
+    fn mul(self, other: Vector<T, N>) -> Self::Output {
+        Self::Output::from_fn(|[i]| self.row(i).unwrap().dot(&other))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -178,16 +191,13 @@ mod tests {
         assert_eq!(x * y, res);
     }
 
-    // #[test]
-    // fn matrix_vector_multiply() {
-    //     let a = Matrix::from(
-    //         [[1, -1, 2],
-    //          [0, -3, 1]]
-    //     );
-    //     let x = Vector::from([2, 1, 0]);
+    #[test]
+    fn matrix_vector_multiply() {
+        let a: Matrix<f64, _, _> = Matrix::from([[1, -1, 2], [0, -3, 1]]);
+        let x: Vector<f64, _> = Vector::from([2, 1, 0]);
 
-    //     assert_eq!(a * x, Vector::from([1, -3]));
-    // }
+        assert_eq!(a * x, Vector::from([1, -3]));
+    }
 
     // #[test]
     // fn transpose() {
