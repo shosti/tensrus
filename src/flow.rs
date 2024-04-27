@@ -14,7 +14,7 @@ use std::{
 
 thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Flow<T: Numeric, Tn: TensorOps<T>> {
     inner: Rc<RefCell<FlowInner<T, Tn>>>,
 }
@@ -53,6 +53,10 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
 
     pub fn grad(&self) -> T {
         self.inner.borrow().grad
+    }
+
+    pub fn op(&self) -> Op<T, Tn> {
+        self.inner.borrow().op.clone()
     }
 
     pub fn update_from_grad(&self, epsilon: T) {
@@ -204,14 +208,6 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
 //         self.inner.borrow_mut().grad = T::zero();
 //     }
 // }
-
-impl<T: Numeric, Tn: TensorOps<T>> Clone for Flow<T, Tn> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-        }
-    }
-}
 
 impl<T: Numeric, Tn: TensorOps<T>> PartialEq for Flow<T, Tn> {
     fn eq(&self, other: &Self) -> bool {

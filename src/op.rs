@@ -3,19 +3,20 @@ use crate::{
     numeric::Numeric,
     tensor::{TensorOps},
 };
-use std::fmt::{Debug, Formatter};
+use std::{fmt::{Debug, Formatter}, rc::Rc};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Op<T: Numeric, Tn: TensorOps<T>> {
     None,
     Unary(UnaryOp<T, Tn>),
     Binary(BinaryOp<T, Tn>),
 }
 
+#[derive(Clone)]
 pub struct UnaryOp<T: Numeric, Tn: TensorOps<T>> {
     op: String,
     child: Flow<T, Tn>,
-    _f: Box<dyn FnMut(Flow<T, Tn>, T)>,
+    _f: Rc<dyn FnMut(Flow<T, Tn>, T)>,
 }
 
 impl<T: Numeric, Tn: TensorOps<T>> Debug for UnaryOp<T, Tn> {
@@ -24,10 +25,11 @@ impl<T: Numeric, Tn: TensorOps<T>> Debug for UnaryOp<T, Tn> {
     }
 }
 
+#[derive(Clone)]
 pub struct BinaryOp<T: Numeric, Tn: TensorOps<T>> {
     op: String,
     children: (Flow<T, Tn>, Flow<T, Tn>),
-    _f: Box<dyn FnMut(Flow<T, Tn>, Flow<T, Tn>, T)>,
+    _f: Rc<dyn FnMut(Flow<T, Tn>, Flow<T, Tn>, T)>,
 }
 
 impl<T: Numeric, Tn: TensorOps<T>> Debug for BinaryOp<T, Tn> {
