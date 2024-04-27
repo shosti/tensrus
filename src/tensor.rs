@@ -1,6 +1,7 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use std::ops::{Add, AddAssign, IndexMut, Mul, MulAssign};
+use std::fmt::Debug;
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
@@ -47,7 +48,7 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
 }
 
 pub trait TensorOps<T: Numeric>:
-    Add<T> + Add<Scalar<T>> + AddAssign<T> + Mul<T> + Mul<Scalar<T>> + MulAssign<T>
+    Add<T> + Add<Scalar<T>> + AddAssign<T> + Mul<T> + Mul<Scalar<T>> + MulAssign<T> + Debug
 {
     fn update(&mut self, f: &dyn Fn(T) -> T);
 }

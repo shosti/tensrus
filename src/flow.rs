@@ -1,7 +1,7 @@
 use crate::{
     numeric::Numeric,
     op::Op,
-    tensor::{Tensor, TensorOps, TensorShape},
+    tensor::{TensorOps},
 };
 use std::{
     cell::RefCell,
@@ -15,27 +15,18 @@ use std::{
 thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 
 #[derive(Debug)]
-pub struct Flow<T: Numeric, const R: usize, const S: TensorShape, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
-    inner: Rc<RefCell<FlowInner<T, R, S, Tn>>>,
+pub struct Flow<T: Numeric, Tn: TensorOps<T>> {
+    inner: Rc<RefCell<FlowInner<T, Tn>>>,
 }
 
 #[derive(Debug)]
-struct FlowInner<T: Numeric, const R: usize, const S: TensorShape, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
+struct FlowInner<T: Numeric, Tn: TensorOps<T>> {
     id: u64,
     data: Tn,
     grad: T,
-    op: Op<T, R, S, Tn>,
+    op: Op<T, Tn>,
 }
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Flow<T, R, S, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
+impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
     pub fn new(val: Tn) -> Self {
         let inner = Rc::new(RefCell::new(FlowInner {
             id: Self::next_id(),
@@ -78,7 +69,7 @@ where
 
         Self::build_trace(self, &mut nodes, &mut edges);
 
-        return (nodes, edges);
+        (nodes, edges)
     }
 
     fn build_trace(val: &Self, nodes: &mut HashSet<Self>, edges: &mut HashSet<(Self, Self)>) {
@@ -214,10 +205,7 @@ where
 //     }
 // }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Clone for Flow<T, R, S, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
+impl<T: Numeric, Tn: TensorOps<T>> Clone for Flow<T, Tn> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -225,24 +213,15 @@ where
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn> PartialEq for Flow<T, R, S, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
+impl<T: Numeric, Tn: TensorOps<T>> PartialEq for Flow<T, Tn> {
     fn eq(&self, other: &Self) -> bool {
         self.id() == other.id()
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Eq for Flow<T, R, S, Tn> where
-    Tn: Tensor<T, R, S> + TensorOps<T>
-{
-}
+impl<T: Numeric, Tn: TensorOps<T>> Eq for Flow<T, Tn> {}
 
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Hash for Flow<T, R, S, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
+impl<T: Numeric, Tn: TensorOps<T>> Hash for Flow<T, Tn> {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
@@ -251,10 +230,7 @@ where
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn> PartialOrd for Flow<T, R, S, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
+impl<T: Numeric, Tn: TensorOps<T>> PartialOrd for Flow<T, Tn> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self.id() < other.id() {
             Some(Ordering::Less)
@@ -266,10 +242,7 @@ where
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Ord for Flow<T, R, S, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
+impl<T: Numeric, Tn: TensorOps<T>> Ord for Flow<T, Tn> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
     }

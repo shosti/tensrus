@@ -1,62 +1,44 @@
 use crate::{
     flow::Flow,
     numeric::Numeric,
-    tensor::{Tensor, TensorOps, TensorShape},
+    tensor::{TensorOps},
 };
 use std::fmt::{Debug, Formatter};
 
 #[derive(Debug)]
-pub enum Op<T: Numeric, const R: usize, const S: TensorShape, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
+pub enum Op<T: Numeric, Tn: TensorOps<T>> {
     None,
-    Unary(UnaryOp<T, R, S, Tn>),
-    Binary(BinaryOp<T, R, S, Tn>),
+    Unary(UnaryOp<T, Tn>),
+    Binary(BinaryOp<T, Tn>),
 }
 
-pub struct UnaryOp<T: Numeric, const R: usize, const S: TensorShape, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
+pub struct UnaryOp<T: Numeric, Tn: TensorOps<T>> {
     op: String,
-    child: Flow<T, R, S, Tn>,
-    _f: Box<dyn FnMut(Flow<T, R, S, Tn>, T)>,
+    child: Flow<T, Tn>,
+    _f: Box<dyn FnMut(Flow<T, Tn>, T)>,
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Debug for UnaryOp<T, R, S, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T> + Debug,
-{
+impl<T: Numeric, Tn: TensorOps<T>> Debug for UnaryOp<T, Tn> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "{}({:?})", self.op, self.child)
     }
 }
 
-pub struct BinaryOp<T: Numeric, const R: usize, const S: TensorShape, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
+pub struct BinaryOp<T: Numeric, Tn: TensorOps<T>> {
     op: String,
-    children: (Flow<T, R, S, Tn>, Flow<T, R, S, Tn>),
-    _f: Box<dyn FnMut(Flow<T, R, S, Tn>, Flow<T, R, S, Tn>, T)>,
+    children: (Flow<T, Tn>, Flow<T, Tn>),
+    _f: Box<dyn FnMut(Flow<T, Tn>, Flow<T, Tn>, T)>,
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Debug for BinaryOp<T, R, S, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T> + Debug,
-{
+impl<T: Numeric, Tn: TensorOps<T>> Debug for BinaryOp<T, Tn> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         let (ch1, ch2) = &self.children;
         write!(f, "{}({:?}, {:?})", self.op, ch1, ch2)
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Op<T, R, S, Tn>
-where
-    Tn: Tensor<T, R, S> + TensorOps<T>,
-{
-    pub fn children(&self) -> Vec<Flow<T, R, S, Tn>> {
+impl<T: Numeric, Tn: TensorOps<T>> Op<T, Tn> {
+    pub fn children(&self) -> Vec<Flow<T, Tn>> {
         match self {
             Op::None => vec![],
             Op::Unary(UnaryOp { child, .. }) => vec![child.clone()],
