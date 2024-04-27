@@ -30,7 +30,7 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-pub trait Tensor<T: Numeric, const R: usize> {
+pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
     fn rank(&self) -> usize {
         R
     }
@@ -45,18 +45,20 @@ pub trait TensorOps<T: Numeric>:
 {
 }
 
-pub struct TensorIterator<'a, T: Numeric, const R: usize> {
-    t: &'a dyn Tensor<T, R>,
+pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape> {
+    t: &'a dyn Tensor<T, R, S>,
     cur: usize,
 }
 
-impl<'a, T: Numeric, const R: usize> TensorIterator<'a, T, R> {
-    pub fn new(t: &'a dyn Tensor<T, R>) -> Self {
+impl<'a, T: Numeric, const R: usize, const S: TensorShape> TensorIterator<'a, T, R, S> {
+    pub fn new(t: &'a dyn Tensor<T, R, S>) -> Self {
         Self { t, cur: 0 }
     }
 }
 
-impl<'a, T: Numeric, const R: usize> Iterator for TensorIterator<'a, T, R> {
+impl<'a, T: Numeric, const R: usize, const S: TensorShape> Iterator
+    for TensorIterator<'a, T, R, S>
+{
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {

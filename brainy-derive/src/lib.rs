@@ -4,100 +4,34 @@ extern crate syn;
 extern crate quote;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
+use quote::ToTokens;
 use syn::{
-    punctuated::Punctuated, Attribute, DeriveInput, Expr, Generics, Ident, Lifetime, LifetimeParam,
-    Lit, Meta, Path, PathArguments, PathSegment, TraitBound, TypeParam, TypeParamBound,
+    punctuated::Punctuated, DeriveInput, Expr, Generics, Ident, Lifetime, LifetimeParam, Lit, Meta,
+    Path, PathArguments, PathSegment, TraitBound, TypeParam, TypeParamBound,
 };
 
-#[proc_macro_derive(Tensor, attributes(tensor_rank))]
+#[proc_macro_derive(Tensor, attributes(tensor_rank, tensor_shape))]
 pub fn tensor_macro_derive(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
     impl_tensor_macro(&ast)
-}
-
-// This whole hullabaloo is to add <F: ToPrimitive> to the generics
-// clause. Thanks ChatGPT!
-fn add_to_primitive_f_param(generics: &mut Generics) {
-    let ident = Ident::new("F", Span::call_site());
-
-    let mut segments = Punctuated::new();
-    segments.push(PathSegment {
-        ident: Ident::new("num", Span::call_site()),
-        arguments: PathArguments::None,
-    });
-    segments.push(PathSegment {
-        ident: Ident::new("ToPrimitive", Span::call_site()),
-        arguments: PathArguments::None,
-    });
-    let path = Path {
-        leading_colon: None,
-        segments,
-    };
-
-    let trait_bound = TraitBound {
-        paren_token: None,
-        modifier: syn::TraitBoundModifier::None,
-        lifetimes: None,
-        path,
-    };
-
-    let bound = TypeParamBound::Trait(trait_bound);
-
-    let mut bounds = Punctuated::new();
-    bounds.push(bound);
-
-    let type_param = TypeParam {
-        attrs: vec![],
-        ident,
-        colon_token: Some(Default::default()),
-        bounds,
-        default: None,
-        eq_token: None,
-    };
-
-    generics.params.push(type_param.into());
-}
-
-// This adds the 'a lifetime to a list of params
-fn add_lifetime_param(generics: &mut Generics) {
-    let param = LifetimeParam::new(Lifetime::new("'a", Span::call_site()));
-    generics.params.insert(0, param.into());
-}
-
-fn parse_rank(rank_attr: &Attribute) -> usize {
-    if let Meta::NameValue(ref val) = rank_attr.meta {
-        if let Expr::Lit(ref lit) = val.value {
-            if let Lit::Int(ref int) = lit.lit {
-                return int
-                    .base10_parse()
-                    .expect("unable to parse tensor_rank value");
-            }
-        }
-    };
-
-    panic!("tensor_rank attribute is the wrong format (should be #[tensor_rank = <integer>]");
 }
 
 fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let name = &ast.ident;
 
     let mut f_generics = ast.generics.clone();
-    add_to_primitive_f_param(&mut f_generics);
+    push_to_primitive_f_param(&mut f_generics);
 
     let mut generics_with_lifetime = ast.generics.clone();
-    add_lifetime_param(&mut generics_with_lifetime);
+    push_lifetime_param(&mut generics_with_lifetime);
 
     let (impl_generics, type_generics, where_clause) = ast.generics.split_for_impl();
     let (f_impl_generics, _, _) = f_generics.split_for_impl();
     let (impl_generics_with_lifetime, _, _) = generics_with_lifetime.split_for_impl();
-    let rank_attr = &ast
-        .attrs
-        .iter()
-        .find(|&attr| attr.path().is_ident("tensor_rank"))
-        .expect("tensor_rank attribute must be set");
-    let rank = parse_rank(rank_attr);
+    let rank = parse_rank(&ast);
+    let shape = parse_shape(&ast);
     let gen = quote! {
-        impl #impl_generics Tensor<T, #rank> for #name #type_generics #where_clause {
+        impl #impl_generics Tensor<T, #rank, #shape> for #name #type_generics #where_clause {
             fn shape(&self) -> [usize; #rank] {
                 self.0.shape()
             }
@@ -127,7 +61,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
 
         impl #impl_generics_with_lifetime IntoIterator for &'a #name #type_generics #where_clause {
             type Item = T;
-            type IntoIter = crate::tensor::TensorIterator<'a, T, #rank>;
+            type IntoIter = crate::tensor::TensorIterator<'a, T, #rank, #shape>;
 
             fn into_iter(self) -> Self::IntoIter {
                 Self::IntoIter::new(self)
@@ -187,4 +121,100 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         impl #impl_generics crate::tensor::TensorOps<T> for #name #type_generics #where_clause {}
     };
     gen.into()
+}
+
+// This whole hullabaloo is to add <F: ToPrimitive> to the generics
+// clause. Thanks ChatGPT!
+fn push_to_primitive_f_param(generics: &mut Generics) {
+    let ident = Ident::new("F", Span::call_site());
+
+    let mut segments = Punctuated::new();
+    segments.push(PathSegment {
+        ident: Ident::new("num", Span::call_site()),
+        arguments: PathArguments::None,
+    });
+    segments.push(PathSegment {
+        ident: Ident::new("ToPrimitive", Span::call_site()),
+        arguments: PathArguments::None,
+    });
+    let path = Path {
+        leading_colon: None,
+        segments,
+    };
+
+    let trait_bound = TraitBound {
+        paren_token: None,
+        modifier: syn::TraitBoundModifier::None,
+        lifetimes: None,
+        path,
+    };
+
+    let bound = TypeParamBound::Trait(trait_bound);
+
+    let mut bounds = Punctuated::new();
+    bounds.push(bound);
+
+    let type_param = TypeParam {
+        attrs: vec![],
+        ident,
+        colon_token: Some(Default::default()),
+        bounds,
+        default: None,
+        eq_token: None,
+    };
+
+    generics.params.push(type_param.into());
+}
+
+// This adds the 'a lifetime to a list of params
+fn push_lifetime_param(generics: &mut Generics) {
+    let param = LifetimeParam::new(Lifetime::new("'a", Span::call_site()));
+    generics.params.insert(0, param.into());
+}
+
+fn parse_rank(ast: &DeriveInput) -> usize {
+    let rank_attr = ast
+        .attrs
+        .iter()
+        .find(|&attr| attr.path().is_ident("tensor_rank"))
+        .expect("tensor_rank attribute must be set");
+    if let Meta::NameValue(ref val) = rank_attr.meta {
+        if let Expr::Lit(ref lit) = val.value {
+            if let Lit::Int(ref int) = lit.lit {
+                return int
+                    .base10_parse()
+                    .expect("unable to parse tensor_rank value");
+            }
+        }
+    };
+
+    panic!("tensor_rank attribute is the wrong format (should be #[tensor_rank = <integer>]");
+}
+
+fn parse_shape(ast: &DeriveInput) -> ShapeParam {
+    let shape_attr = ast
+        .attrs
+        .iter()
+        .find(|&attr| attr.path().is_ident("tensor_shape"))
+        .expect("tensor_shape attribute must be set");
+
+    if let Meta::NameValue(ref val) = shape_attr.meta {
+        if let Expr::Lit(ref lit) = val.value {
+            if let Lit::Str(ref s) = lit.lit {
+                return ShapeParam(s.value());
+            }
+        }
+    };
+
+    panic!("tensor_shape must be a string");
+}
+
+struct ShapeParam(String);
+
+impl ToTokens for ShapeParam {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let expr_str = format!("{{ {} }}", self.0);
+        let expr: syn::Expr = syn::parse_str(expr_str.as_str()).expect("Failed to parse code");
+        expr.to_tokens(tokens);
+    }
 }

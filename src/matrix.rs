@@ -11,6 +11,7 @@ pub const fn matrix_shape(m: usize, n: usize) -> TensorShape {
 
 #[derive(Tensor, PartialEq, Debug)]
 #[tensor_rank = 2]
+#[tensor_shape = "matrix_shape(M, N)"]
 pub struct Matrix<T: Numeric, const M: usize, const N: usize>(
     GenericTensor<T, 2, { matrix_shape(M, N) }>,
 )
