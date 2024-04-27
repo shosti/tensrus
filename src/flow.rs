@@ -1,7 +1,7 @@
 use crate::{
     numeric::Numeric,
-    op::Op,
-    tensor::{TensorOps},
+    op::{NoOp, Op},
+    tensor::TensorOps,
 };
 use std::{
     cell::RefCell,
@@ -24,15 +24,16 @@ struct FlowInner<T: Numeric, Tn: TensorOps<T>> {
     id: u64,
     data: Tn,
     grad: T,
-    op: Op<T, Tn>,
+    op: Box<dyn Op<T, Tn>>,
 }
+
 impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
     pub fn new(val: Tn) -> Self {
         let inner = Rc::new(RefCell::new(FlowInner {
             id: Self::next_id(),
             data: val,
             grad: T::zero(),
-            op: Op::None,
+            op: Box::new(NoOp {}),
         }));
         Self { inner }
     }
@@ -55,8 +56,8 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
         self.inner.borrow().grad
     }
 
-    pub fn op(&self) -> Op<T, Tn> {
-        self.inner.borrow().op.clone()
+    pub fn op(&self) -> String {
+        format!("{:?}", self.inner.borrow().op)
     }
 
     pub fn update_from_grad(&self, epsilon: T) {
