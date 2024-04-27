@@ -8,7 +8,7 @@ pub const fn vector_shape(n: usize) -> TensorShape {
 }
 
 #[derive(Tensor, PartialEq, Debug)]
-#[TensorRank = 1]
+#[tensor_rank = 1]
 pub struct Vector<T: Numeric, const N: usize>(GenericTensor<T, 1, { vector_shape(N) }>)
 where
     [(); num_elems(1, vector_shape(N))]:;

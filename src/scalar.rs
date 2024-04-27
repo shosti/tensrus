@@ -8,7 +8,7 @@ pub const fn scalar_shape() -> TensorShape {
 }
 
 #[derive(Tensor, PartialEq, Debug)]
-#[TensorRank = 0]
+#[tensor_rank = 0]
 pub struct Scalar<T: Numeric>(GenericTensor<T, 0, { scalar_shape() }>);
 
 impl<T: Numeric> Scalar<T> {

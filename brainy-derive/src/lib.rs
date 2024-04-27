@@ -9,7 +9,7 @@ use syn::{
     Lit, Meta, Path, PathArguments, PathSegment, TraitBound, TypeParam, TypeParamBound,
 };
 
-#[proc_macro_derive(Tensor, attributes(TensorRank))]
+#[proc_macro_derive(Tensor, attributes(tensor_rank))]
 pub fn tensor_macro_derive(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
     impl_tensor_macro(&ast)
@@ -70,12 +70,12 @@ fn parse_rank(rank_attr: &Attribute) -> usize {
             if let Lit::Int(ref int) = lit.lit {
                 return int
                     .base10_parse()
-                    .expect("unable to parse TensorRank value");
+                    .expect("unable to parse tensor_rank value");
             }
         }
     };
 
-    panic!("TensorRank attribute is the wrong format (should be #[TensorRank = <int>]");
+    panic!("tensor_rank attribute is the wrong format (should be #[tensor_rank = <integer>]");
 }
 
 fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
@@ -93,8 +93,8 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let rank_attr = &ast
         .attrs
         .iter()
-        .find(|&attr| attr.path().is_ident("TensorRank"))
-        .expect("TensorRank attribute must be set");
+        .find(|&attr| attr.path().is_ident("tensor_rank"))
+        .expect("tensor_rank attribute must be set");
     let rank = parse_rank(rank_attr);
     let gen = quote! {
         impl #impl_generics Tensor<T, #rank> for #name #type_generics #where_clause {
