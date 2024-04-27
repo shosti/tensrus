@@ -1,7 +1,7 @@
 extern crate brainy;
 
-use brainy::value::Value;
 use brainy::render::Graph;
+use brainy::value::Value;
 use std::fs::File;
 use std::process::Command;
 

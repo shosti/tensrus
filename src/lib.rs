@@ -7,10 +7,10 @@ extern crate brainy_derive;
 
 pub mod flow;
 pub mod generic_tensor;
-pub mod op;
 pub mod matrix;
 pub mod nn;
 pub mod numeric;
+pub mod op;
 pub mod render;
 pub mod scalar;
 pub mod tensor;

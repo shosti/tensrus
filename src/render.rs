@@ -26,7 +26,13 @@ impl Graph {
 
         for n in nodes.iter() {
             let label = match n.op() {
-                Some(op) => format!("{} | {} | data {:.4} | grad {:.4}", n.id(), op, n.val(), n.grad()),
+                Some(op) => format!(
+                    "{} | {} | data {:.4} | grad {:.4}",
+                    n.id(),
+                    op,
+                    n.val(),
+                    n.grad()
+                ),
                 None => format!("{} | data {:.4} | grad {:.4}", n.id(), n.val(), n.grad()),
             };
             let id = format!("id{}", n.id());
