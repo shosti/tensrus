@@ -1,6 +1,7 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
 use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
+use crate::vector::{vector_shape, Vector};
 use num::ToPrimitive;
 use std::ops::Mul;
 
@@ -26,6 +27,28 @@ where
     {
         let t: GenericTensor<T, 2, { matrix_shape(M, N) }> = GenericTensor::from_fn(cb);
         Self(t)
+    }
+
+    pub fn row(&self, i: usize) -> Result<Vector<T, N>, IndexError>
+    where
+        [(); num_elems(1, vector_shape(N))]:,
+    {
+        if i >= M {
+            return Err(IndexError {});
+        }
+
+        Ok(Vector::from_fn(|[j]| self.get(&[i, j]).unwrap()))
+    }
+
+    pub fn col(&self, j: usize) -> Result<Vector<T, M>, IndexError>
+    where
+        [(); num_elems(1, vector_shape(M))]:,
+    {
+        if j >= N {
+            return Err(IndexError {});
+        }
+
+        Ok(Vector::from_fn(|[i]| self.get(&[i, j]).unwrap()))
     }
 }
 
@@ -57,11 +80,13 @@ where
     [(); num_elems(2, matrix_shape(M, N))]:,
     [(); num_elems(2, matrix_shape(N, P))]:,
     [(); num_elems(2, matrix_shape(M, P))]:,
+    [(); num_elems(1, vector_shape(M))]:,
+    [(); num_elems(1, vector_shape(N))]:,
 {
     type Output = Matrix<T, M, P>;
 
-    fn mul(self, _other: Matrix<T, N, P>) -> Self::Output {
-        todo!()
+    fn mul(self, other: Matrix<T, N, P>) -> Self::Output {
+        Self::Output::from_fn(|[i, j]| self.row(i).unwrap().dot(&other.col(j).unwrap()))
     }
 }
 
@@ -69,6 +94,7 @@ where
 mod tests {
     use super::*;
     use crate::tensor::IndexError;
+    use crate::vector::Vector;
 
     #[test]
     #[rustfmt::skip]
@@ -127,25 +153,20 @@ mod tests {
         assert_eq!(x, y);
     }
 
-    // #[test]
-    // fn matrix_vector_conversions() {
-    //     let x = Matrix::from(
-    //         [[1, 2, 3],
-    //          [4, 5, 6],
-    //          [7, 8, 9],
-    //          [10, 11, 12]]
-    //     );
+    #[test]
+    fn matrix_vector_conversions() {
+        let x: Matrix<f64, _, _> = Matrix::from([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]);
 
-    //     assert_eq!(x.col(0), Ok(Vector::from([1, 4, 7, 10])));
-    //     assert_eq!(x.col(1), Ok(Vector::from([2, 5, 8, 11])));
-    //     assert_eq!(x.col(2), Ok(Vector::from([3, 6, 9, 12])));
-    //     assert_eq!(x.col(3), Err(IndexError {}));
-    //     assert_eq!(x.row(0), Ok(Vector::from([1, 2, 3])));
-    //     assert_eq!(x.row(1), Ok(Vector::from([4, 5, 6])));
-    //     assert_eq!(x.row(2), Ok(Vector::from([7, 8, 9])));
-    //     assert_eq!(x.row(3), Ok(Vector::from([10, 11, 12])));
-    //     assert_eq!(x.row(4), Err(IndexError {}));
-    // }
+        assert_eq!(x.col(0), Ok(Vector::from([1, 4, 7, 10])));
+        assert_eq!(x.col(1), Ok(Vector::from([2, 5, 8, 11])));
+        assert_eq!(x.col(2), Ok(Vector::from([3, 6, 9, 12])));
+        assert_eq!(x.col(3), Err(IndexError {}));
+        assert_eq!(x.row(0), Ok(Vector::from([1, 2, 3])));
+        assert_eq!(x.row(1), Ok(Vector::from([4, 5, 6])));
+        assert_eq!(x.row(2), Ok(Vector::from([7, 8, 9])));
+        assert_eq!(x.row(3), Ok(Vector::from([10, 11, 12])));
+        assert_eq!(x.row(4), Err(IndexError {}));
+    }
 
     #[test]
     fn matrix_multiply() {

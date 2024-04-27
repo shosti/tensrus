@@ -13,6 +13,29 @@ pub struct Vector<T: Numeric, const N: usize>(GenericTensor<T, 1, { vector_shape
 where
     [(); num_elems(1, vector_shape(N))]:;
 
+impl<T: Numeric, const N: usize> Vector<T, N>
+where
+    [(); num_elems(1, vector_shape(N))]:,
+{
+    pub fn from_fn<F>(cb: F) -> Self
+    where
+        F: Fn([usize; 1]) -> T,
+    {
+        let t: GenericTensor<T, 1, { vector_shape(N) }> = GenericTensor::from_fn(cb);
+        Self(t)
+    }
+
+    pub fn dot(&self, other: &Self) -> T {
+        let mut res = T::zero();
+        for i in 0..N {
+            let idx = [i];
+            res = res + (self.get(&idx).unwrap() * other.get(&idx).unwrap());
+        }
+
+        res
+    }
+}
+
 impl<T: Numeric, const N: usize, F: ToPrimitive> From<[F; N]> for Vector<T, N>
 where
     [(); num_elems(1, vector_shape(N))]:,
@@ -32,20 +55,7 @@ where
     }
 }
 
-// #[derive(Debug)]
-// pub struct Vector<T: Numeric, const N: usize> {
-//     vals: Rc<RefCell<Vec<T>>>,
-// }
-
 // impl<T: Numeric, const N: usize> Vector<T, N> {
-//     pub fn dot(&self, other: &Self) -> T {
-//         let mut res = T::zero();
-//         for i in 0..N {
-//             res = res + (self.get([i]).unwrap() * other.get([i]).unwrap());
-//         }
-
-//         res
-//     }
 // }
 
 // impl<T: Numeric, const N: usize> From<[T; N]> for Vector<T, N> {
@@ -231,41 +241,26 @@ mod tests {
         assert_eq!(a.get(&[5]), Err(IndexError {}));
     }
 
-    //         #[test]
-    //         fn mul_assign() {
-    //             let mut a = Vector::from([2, 4, 6, 8]);
-    //             a *= 3.0;
+    #[test]
+    fn mul_assign() {
+        let mut a = Vector::from([2, 4, 6, 8]);
+        a *= 3.0;
 
-    //             assert_eq!(a, Vector::from([6, 12, 18, 24]));
-    //         }
+        assert_eq!(a, Vector::from([6, 12, 18, 24]));
+    }
 
-    //         #[test]
-    //         fn from_fn() {
-    //             let a: Vector<_, 4> = Vector::from_fn(|idx| idx[0] as f32 * 2.0);
+    #[test]
+    fn from_fn() {
+        let a: Vector<_, 4> = Vector::from_fn(|idx| idx[0] as f32 * 2.0);
 
-    //             assert_eq!(a, Vector::from([0, 2, 4, 6]));
-    //         }
+        assert_eq!(a, Vector::from([0, 2, 4, 6]));
+    }
 
-    //         #[test]
-    //         fn dot_product() {
-    //             let a = Vector::from([1, 2, 3]);
-    //             let b = Vector::from([4, 5, 6]);
+    #[test]
+    fn dot_product() {
+        let a: Vector<f64, _> = Vector::from([1, 2, 3]);
+        let b: Vector<f64, _> = Vector::from([4, 5, 6]);
 
-    //             assert_eq!(a.dot(&b), 32.0);
-    //         }
-
-    //         #[test]
-    //         fn transpose() {
-    //             let x = Vector::from([1, 2, 3]);
-
-    //             assert_eq!(x.transpose(), RowVector::from([1, 2, 3]));
-    //         }
-
-    //         #[test]
-    //         fn row_vec_matrix_mul() {
-    //             let x = RowVector::from([1, 2, 3]);
-    //             let a = Matrix::from([[2, 4], [3, 6], [7, 8]]);
-
-    //             assert_eq!(x * a, RowVector::from([29, 40]));
-    //         }
+        assert_eq!(a.dot(&b), 32.0);
+    }
 }
