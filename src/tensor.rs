@@ -1,6 +1,6 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use std::ops::{Add, AddAssign, Mul, MulAssign};
+use std::ops::{Add, AddAssign, IndexMut, Mul, MulAssign};
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
@@ -30,7 +30,9 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
+pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
+    IndexMut<[usize; R], Output = T>
+{
     fn rank(&self) -> usize {
         R
     }

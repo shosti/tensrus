@@ -108,6 +108,20 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
+        impl #impl_generics std::ops::Index<[usize; #rank]> for #name #type_generics #where_clause {
+            type Output = T;
+
+            fn index(&self, idx: [usize; #rank]) -> &Self::Output {
+                self.0.index(idx)
+            }
+        }
+
+        impl #impl_generics std::ops::IndexMut<[usize; #rank]> for #name #type_generics #where_clause {
+            fn index_mut(&mut self, idx: [usize; #rank]) -> &mut Self::Output {
+                self.0.index_mut(idx)
+            }
+        }
+
         impl #impl_generics Clone for #name #type_generics #where_clause {
             fn clone(&self) -> Self {
                 Self(self.0.clone())
