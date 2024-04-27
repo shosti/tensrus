@@ -77,7 +77,7 @@ impl<'a> Labeller<'a, Nd, Ed> for Graph {
 
 impl<'a> GraphWalk<'a, Nd, Ed> for Graph {
     fn nodes(&'a self) -> Nodes<'a, Nd> {
-        let nodes: Vec<Nd> = self.nodes.values().map(|n| n.clone()).collect();
+        let nodes: Vec<Nd> = self.nodes.values().cloned().collect();
         Cow::Owned(nodes)
     }
 

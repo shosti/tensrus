@@ -5,11 +5,11 @@ use crate::{
 };
 use std::{
     cell::RefCell,
-    fmt::{Debug, Formatter},
+    fmt::{Debug},
     rc::Rc,
 };
 
-thread_local!(static NEXT_ID: RefCell<u64> = RefCell::new(1));
+thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 
 #[derive(Debug, Clone)]
 pub struct Flow<T: Numeric, const R: usize, const S: TensorShape, Tn>
@@ -27,7 +27,7 @@ where
     id: u64,
     data: Tn,
     grad: T,
-    op: Op<T, R, S, Tn>,
+    _op: Op<T, R, S, Tn>,
 }
 impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Flow<T, R, S, Tn>
 where
@@ -38,7 +38,7 @@ where
             id: Self::next_id(),
             data: val,
             grad: T::zero(),
-            op: Op::None,
+            _op: Op::None,
         }));
         Self { inner }
     }

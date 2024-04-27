@@ -75,7 +75,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         F: Fn([usize; R]) -> T,
     {
         (0..Self::storage_size())
-            .into_iter()
             .map(|i| cb(Self::idx_from_storage_idx(i).unwrap()))
             .collect()
     }
@@ -90,7 +89,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for Gener
     }
 
     fn set(&mut self, idx: &[usize; R], val: T) -> Result<(), IndexError> {
-        match Self::storage_idx(&idx) {
+        match Self::storage_idx(idx) {
             Ok(i) => {
                 self.storage[i] = val;
                 Ok(())
@@ -236,7 +235,7 @@ mod tests {
     #[test]
     fn from_iterator() {
         let xs: [i64; 3] = [1, 2, 3];
-        let iter = xs.iter().cycle().map(|x| *x);
+        let iter = xs.iter().cycle().copied();
 
         let t1: GenericTensor<f64, 0, { [0; 5] }> = iter.clone().collect();
         assert_eq!(t1, GenericTensor::<f64, 0, { [0; 5] }>::from([1.0]));
@@ -249,7 +248,7 @@ mod tests {
             ])
         );
 
-        let t3: GenericTensor<f64, 2, { [4, 2, 0, 0, 0] }> = xs.iter().map(|x| *x).collect();
+        let t3: GenericTensor<f64, 2, { [4, 2, 0, 0, 0] }> = xs.iter().copied().collect();
         assert_eq!(
             t3,
             GenericTensor::<f64, 2, { [4, 2, 0, 0, 0] }>::from([
@@ -292,7 +291,7 @@ mod tests {
 
     #[test]
     fn to_iter() {
-        let t: GenericTensor<f64, 2, { [2; 5] }> = (0..4).into_iter().collect();
+        let t: GenericTensor<f64, 2, { [2; 5] }> = (0..4).collect();
         let vals: Vec<f64> = t.into_iter().collect();
         assert_eq!(vals, vec![0.0, 1.0, 2.0, 3.0]);
     }

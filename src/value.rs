@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::rc::Rc;
 
-thread_local!(static NEXT_ID: RefCell<u64> = RefCell::new(1));
+thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 
 pub struct Value<T: Numeric> {
     inner: Rc<RefCell<ValueInner<T>>>,
@@ -15,7 +15,7 @@ struct ValueInner<T: Numeric> {
     id: u64,
     data: T,
     grad: T,
-    backward: Option<Box<dyn FnMut(T, T) -> ()>>,
+    backward: Option<Box<dyn FnMut(T, T)>>,
     prev: Vec<Value<T>>,
     op: String,
 }
@@ -76,7 +76,7 @@ impl<T: Numeric> Value<T> {
 
     pub fn op(&self) -> Option<String> {
         let op = self.inner.borrow().op.clone();
-        if op == "" {
+        if op.is_empty() {
             None
         } else {
             Some(op)
@@ -90,7 +90,7 @@ impl<T: Numeric> Value<T> {
 
         Self::build_trace(self, &mut nodes, &mut edges);
 
-        return (nodes, edges);
+        (nodes, edges)
     }
 
     fn build_trace(val: &Self, nodes: &mut HashSet<Self>, edges: &mut HashSet<(Self, Self)>) {
@@ -303,7 +303,7 @@ impl<T: Numeric> std::iter::Sum for Value<T> {
         }
         let mut res = first.unwrap();
 
-        while let Some(next) = iter.next() {
+        for next in iter {
             res = res + next;
         }
 

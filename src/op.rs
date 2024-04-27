@@ -4,9 +4,7 @@ use crate::{
     tensor::{Tensor, TensorOps, TensorShape},
 };
 use std::{
-    cell::RefCell,
     fmt::{Debug, Formatter},
-    rc::Rc,
 };
 
 #[derive(Debug)]
@@ -19,13 +17,13 @@ where
     Binary(BinaryOp<T, R, S, Tn>),
 }
 
-struct UnaryOp<T: Numeric, const R: usize, const S: TensorShape, Tn>
+pub struct UnaryOp<T: Numeric, const R: usize, const S: TensorShape, Tn>
 where
     Tn: Tensor<T, R, S> + TensorOps<T>,
 {
     op: String,
     child: Flow<T, R, S, Tn>,
-    f: Box<dyn FnMut(Flow<T, R, S, Tn>, T)>,
+    _f: Box<dyn FnMut(Flow<T, R, S, Tn>, T)>,
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Debug for UnaryOp<T, R, S, Tn>
@@ -37,13 +35,13 @@ where
     }
 }
 
-struct BinaryOp<T: Numeric, const R: usize, const S: TensorShape, Tn>
+pub struct BinaryOp<T: Numeric, const R: usize, const S: TensorShape, Tn>
 where
     Tn: Tensor<T, R, S> + TensorOps<T>,
 {
     op: String,
     children: (Flow<T, R, S, Tn>, Flow<T, R, S, Tn>),
-    f: Box<dyn FnMut(Flow<T, R, S, Tn>, Flow<T, R, S, Tn>, T)>,
+    _f: Box<dyn FnMut(Flow<T, R, S, Tn>, Flow<T, R, S, Tn>, T)>,
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Debug for BinaryOp<T, R, S, Tn>

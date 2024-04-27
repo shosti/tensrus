@@ -30,7 +30,7 @@ where
         let mut res = T::zero();
         for i in 0..N {
             let idx = [i];
-            res = res + (self.get(&idx).unwrap() * other.get(&idx).unwrap());
+            res += self.get(&idx).unwrap() * other.get(&idx).unwrap();
         }
 
         res
@@ -47,12 +47,12 @@ where
     }
 }
 
-impl<T: Numeric, const N: usize> Into<GenericTensor<T, 1, { vector_shape(N) }>> for Vector<T, N>
+impl<T: Numeric, const N: usize> From<Vector<T, N>> for GenericTensor<T, 1, { vector_shape(N) }>
 where
     [(); num_elems(1, vector_shape(N))]:,
 {
-    fn into(self) -> GenericTensor<T, 1, { vector_shape(N) }> {
-        self.0
+    fn from(val: Vector<T, N>) -> Self {
+        val.0
     }
 }
 
