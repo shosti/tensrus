@@ -43,7 +43,6 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
         s
     }
     fn get(&self, idx: &[usize; R]) -> Result<T, IndexError>;
-    fn get_at_idx(&self, i: usize) -> Result<T, IndexError>;
     fn set(&self, idx: &[usize; R], val: T) -> Result<(), IndexError>;
     fn update(&self, f: &dyn Fn(T) -> T);
 }
@@ -55,12 +54,17 @@ pub trait TensorOps<T: Numeric>:
 
 pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape> {
     t: &'a dyn Tensor<T, R, S>,
-    cur: usize,
+    done: bool,
+    cur: [usize; R],
 }
 
 impl<'a, T: Numeric, const R: usize, const S: TensorShape> TensorIterator<'a, T, R, S> {
     pub fn new(t: &'a dyn Tensor<T, R, S>) -> Self {
-        Self { t, cur: 0 }
+        Self {
+            t,
+            cur: [0; R],
+            done: false,
+        }
     }
 }
 
@@ -70,12 +74,28 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> Iterator
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.t.get_at_idx(self.cur) {
-            Ok(val) => {
-                self.cur += 1;
-                Some(val)
-            }
-            Err(_) => None,
+        if self.done {
+            return None;
         }
+
+        let item = self.t.get(&self.cur).unwrap();
+        if R == 0 {
+            self.done = true;
+            return Some(item);
+        }
+
+        self.cur[R - 1] += 1;
+        for dim in (0..R).rev() {
+            if self.cur[dim] == S[dim] {
+                if dim == 0 {
+                    self.done = true;
+                    break;
+                }
+                self.cur[dim] = 0;
+                self.cur[dim - 1] += 1;
+            }
+        }
+
+        Some(item)
     }
 }

@@ -93,14 +93,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for Gener
         }
     }
 
-    fn get_at_idx(&self, i: usize) -> Result<T, IndexError> {
-        if i >= Self::storage_size() {
-            return Err(IndexError {});
-        }
-
-        Ok(self.storage.borrow()[i])
-    }
-
     fn set(&self, idx: &[usize; R], val: T) -> Result<(), IndexError> {
         match Self::storage_idx(&idx) {
             Ok(i) => {

@@ -36,10 +36,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 self.0.get(idx)
             }
 
-            fn get_at_idx(&self, i: usize) -> Result<T, IndexError> {
-                self.0.get_at_idx(i)
-            }
-
             fn set(&self, idx: &[usize; #rank], val: T) -> Result<(), IndexError> {
                 self.0.set(idx, val)
             }
