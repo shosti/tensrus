@@ -29,17 +29,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
 
         s
     }
-    pub fn set(&self, idx: &[usize; R], val: T) -> Result<(), IndexError> {
-        match Self::storage_idx(&idx) {
-            Ok(i) => {
-                let mut storage = self.storage.borrow_mut();
-                storage[i] = val;
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
-    }
-
     fn storage_size() -> usize {
         num_elems(R, S)
     }
@@ -128,6 +117,17 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for Gener
         }
 
         Ok(self.storage.borrow()[i])
+    }
+
+    fn set(&self, idx: &[usize; R], val: T) -> Result<(), IndexError> {
+        match Self::storage_idx(&idx) {
+            Ok(i) => {
+                let mut storage = self.storage.borrow_mut();
+                storage[i] = val;
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
     }
 
     fn update(&self, f: &dyn Fn(T) -> T) {
