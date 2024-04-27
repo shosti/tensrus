@@ -3,7 +3,14 @@ use crate::{
     op::Op,
     tensor::{Tensor, TensorOps, TensorShape},
 };
-use std::{cell::RefCell, cmp::Ordering, fmt::Debug, rc::Rc};
+use std::{
+    cell::RefCell,
+    cmp::Ordering,
+    collections::HashSet,
+    fmt::Debug,
+    hash::{Hash, Hasher},
+    rc::Rc,
+};
 
 thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 
@@ -23,7 +30,7 @@ where
     id: u64,
     data: Tn,
     grad: T,
-    _op: Op<T, R, S, Tn>,
+    op: Op<T, R, S, Tn>,
 }
 impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Flow<T, R, S, Tn>
 where
@@ -34,7 +41,7 @@ where
             id: Self::next_id(),
             data: val,
             grad: T::zero(),
-            _op: Op::None,
+            op: Op::None,
         }));
         Self { inner }
     }
@@ -62,6 +69,26 @@ where
         let grad = inner.grad;
 
         inner.data += -epsilon * grad;
+    }
+
+    // returns (nodes, edges)
+    pub fn trace(&self) -> (HashSet<Self>, HashSet<(Self, Self)>) {
+        let mut nodes = HashSet::new();
+        let mut edges = HashSet::new();
+
+        Self::build_trace(self, &mut nodes, &mut edges);
+
+        return (nodes, edges);
+    }
+
+    fn build_trace(val: &Self, nodes: &mut HashSet<Self>, edges: &mut HashSet<(Self, Self)>) {
+        if !nodes.contains(val) {
+            nodes.insert(val.clone());
+            for child in val.inner.borrow().op.children().iter() {
+                edges.insert((child.clone(), val.clone()));
+                Self::build_trace(child, nodes, edges);
+            }
+        }
     }
 
     // fn build_topo(cur: &Flow<T>, topo: &mut Vec<Self>, visited: &mut HashSet<u64>) {
@@ -210,6 +237,18 @@ where
 impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Eq for Flow<T, R, S, Tn> where
     Tn: Tensor<T, R, S> + TensorOps<T>
 {
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape, Tn> Hash for Flow<T, R, S, Tn>
+where
+    Tn: Tensor<T, R, S> + TensorOps<T>,
+{
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        self.id().hash(state)
+    }
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape, Tn> PartialOrd for Flow<T, R, S, Tn>
