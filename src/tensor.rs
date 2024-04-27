@@ -34,7 +34,14 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape> {
     fn rank(&self) -> usize {
         R
     }
-    fn shape(&self) -> [usize; R];
+    fn shape(&self) -> [usize; R] {
+        let mut s = [0; R];
+        for i in 0..R {
+            s[i] = S[i];
+        }
+
+        s
+    }
     fn get(&self, idx: &[usize; R]) -> Result<T, IndexError>;
     fn get_at_idx(&self, i: usize) -> Result<T, IndexError>;
     fn set(&self, idx: &[usize; R], val: T) -> Result<(), IndexError>;

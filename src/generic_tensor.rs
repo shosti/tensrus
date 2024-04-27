@@ -21,14 +21,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         }
     }
 
-    pub fn shape(&self) -> [usize; R] {
-        let mut s = [0; R];
-        for i in 0..R {
-            s[i] = S[i];
-        }
-
-        s
-    }
     fn storage_size() -> usize {
         num_elems(R, S)
     }
@@ -91,19 +83,9 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
             .map(|i| cb(Self::idx_from_storage_idx(i).unwrap()))
             .collect()
     }
-
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for GenericTensor<T, R, S> {
-    fn shape(&self) -> [usize; R] {
-        let mut s = [0; R];
-        for i in 0..R {
-            s[i] = S[i];
-        }
-
-        s
-    }
-
     fn get(&self, idx: &[usize; R]) -> Result<T, IndexError> {
         match Self::storage_idx(idx) {
             Ok(i) => Ok(self.storage.borrow()[i]),
