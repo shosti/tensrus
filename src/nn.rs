@@ -1,5 +1,6 @@
+use crate::flow::Flow;
 use crate::numeric::Numeric;
-use crate::value::Value;
+use crate::scalar::Scalar;
 use rand::distributions::{Distribution, Uniform};
 use rand::SeedableRng;
 
@@ -9,12 +10,12 @@ pub trait Module<T: Numeric> {
             p.zero_grad();
         }
     }
-    fn parameters(&self) -> Vec<Value<T>>;
+    fn parameters(&self) -> Vec<Flow<T, Scalar<T>>>;
 }
 
 pub struct Neuron<T: Numeric> {
-    w: Vec<Value<T>>,
-    b: Value<T>,
+    w: Vec<Flow<T, Scalar<T>>>,
+    b: Flow<T, Scalar<T>>,
     nonlin: bool,
 }
 
@@ -24,18 +25,18 @@ impl<T: Numeric> Neuron<T> {
         let between = Uniform::from(-T::one()..T::one());
         let mut rng = rand::rngs::StdRng::seed_from_u64(42);
         for _ in 0..nin {
-            w.push(Value::new(between.sample(&mut rng)));
+            w.push(Flow::from(between.sample(&mut rng)));
         }
 
         Self {
             w,
-            b: Value::new(T::zero()),
+            b: Flow::from(T::zero()),
             nonlin,
         }
     }
 
-    pub fn call(&self, x: &Vec<Value<T>>) -> Value<T> {
-        let wx: Value<T> = std::iter::zip(self.w.clone(), x)
+    pub fn call(&self, x: &Vec<Flow<T, Scalar<T>>>) -> Flow<T, Scalar<T>> {
+        let wx: Flow<T, Scalar<T>> = std::iter::zip(self.w.clone(), x)
             .map(|(wi, xi)| (wi * xi.clone()))
             .sum();
         let act = wx + self.b.clone();
@@ -48,7 +49,7 @@ impl<T: Numeric> Neuron<T> {
 }
 
 impl<T: Numeric> Module<T> for Neuron<T> {
-    fn parameters(&self) -> Vec<Value<T>> {
+    fn parameters(&self) -> Vec<Flow<T, Scalar<T>>> {
         let mut p = self.w.clone();
         p.push(self.b.clone());
 
@@ -70,7 +71,7 @@ impl<T: Numeric> Layer<T> {
         Self { neurons }
     }
 
-    pub fn call(&self, x: &Vec<Value<T>>) -> Vec<Value<T>> {
+    pub fn call(&self, x: &Vec<Flow<T, Scalar<T>>>) -> Vec<Flow<T, Scalar<T>>> {
         let mut out = Vec::new();
         for n in self.neurons.iter() {
             out.push(n.call(x));
@@ -81,7 +82,7 @@ impl<T: Numeric> Layer<T> {
 }
 
 impl<T: Numeric> Module<T> for Layer<T> {
-    fn parameters(&self) -> Vec<Value<T>> {
+    fn parameters(&self) -> Vec<Flow<T, Scalar<T>>> {
         let mut res = Vec::new();
         for n in self.neurons.iter() {
             for p in n.parameters().iter() {
@@ -111,7 +112,7 @@ impl<T: Numeric> MLP<T> {
         MLP { layers }
     }
 
-    pub fn call(&self, x: Vec<Value<T>>) -> Vec<Value<T>> {
+    pub fn call(&self, x: Vec<Flow<T, Scalar<T>>>) -> Vec<Flow<T, Scalar<T>>> {
         let mut res = x;
         for layer in self.layers.iter() {
             res = layer.call(&res);
@@ -126,7 +127,11 @@ impl<T: Numeric> MLP<T> {
         }
     }
 
-    pub fn loss(&self, ys: &Vec<Value<T>>, ypred: &Vec<Value<T>>) -> Value<T> {
+    pub fn loss(
+        &self,
+        ys: &Vec<Flow<T, Scalar<T>>>,
+        ypred: &Vec<Flow<T, Scalar<T>>>,
+    ) -> Flow<T, Scalar<T>> {
         std::iter::zip(ys.iter(), ypred.iter())
             .map(|(ygt, yout)| (yout.clone() - ygt.clone()).pow(T::from(2.0).unwrap()))
             .sum()
@@ -134,7 +139,7 @@ impl<T: Numeric> MLP<T> {
 }
 
 impl<T: Numeric> Module<T> for MLP<T> {
-    fn parameters(&self) -> Vec<Value<T>> {
+    fn parameters(&self) -> Vec<Flow<T, Scalar<T>>> {
         let mut res = Vec::new();
         for layer in self.layers.iter() {
             for p in layer.parameters().iter() {

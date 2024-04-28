@@ -10,6 +10,7 @@ use std::{
     collections::HashSet,
     fmt::Debug,
     hash::{Hash, Hasher},
+    iter::Sum,
     ops::{Add, Div, Mul, Neg, Sub},
     rc::Rc,
 };
@@ -222,5 +223,21 @@ impl<T: Numeric, Tn: TensorOps<T>> PartialOrd for Flow<T, Tn> {
 impl<T: Numeric, Tn: TensorOps<T>> Ord for Flow<T, Tn> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+
+impl<T: Numeric> Sum for Flow<T, Scalar<T>> {
+    fn sum<I: Iterator<Item = Flow<T, Scalar<T>>>>(mut iter: I) -> Self {
+        let first = iter.next();
+        if first.is_none() {
+            return Flow::from(T::zero());
+        }
+        let mut res = first.unwrap();
+
+        for next in iter {
+            res = res + next;
+        }
+
+        res
     }
 }
