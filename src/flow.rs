@@ -105,6 +105,16 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
     }
 }
 
+impl<T: Numeric> Flow<T, Scalar<T>> {
+    pub fn val(&self) -> T {
+        self.inner.borrow().data.val()
+    }
+
+    pub fn grad(&self) -> T {
+        self.inner.borrow().grad.val()
+    }
+}
+
 // impl<T: Numeric, const R: usize, const S: TensorShape, Tn: Tensor<T, R, S>> {
 //     }
 //     pub fn relu(&self) -> Self {
