@@ -1,6 +1,6 @@
 use crate::{
     numeric::Numeric,
-    op::{AddOp, NoOp, Op, PowOp},
+    op::{AddOp, MulOp, NoOp, Op, PowOp},
     scalar::Scalar,
     tensor::TensorOps,
 };
@@ -10,7 +10,7 @@ use std::{
     collections::HashSet,
     fmt::Debug,
     hash::{Hash, Hasher},
-    ops::Add,
+    ops::{Add, Mul},
     rc::Rc,
 };
 
@@ -187,6 +187,14 @@ impl<T: Numeric> Add<Flow<T, Scalar<T>>> for Flow<T, Scalar<T>> {
 
     fn add(self, other: Flow<T, Scalar<T>>) -> Self::Output {
         AddOp::create_flow(self, other)
+    }
+}
+
+impl<T: Numeric> Mul<Flow<T, Scalar<T>>> for Flow<T, Scalar<T>> {
+    type Output = Self;
+
+    fn mul(self, other: Flow<T, Scalar<T>>) -> Self::Output {
+        MulOp::create_flow(self, other)
     }
 }
 
