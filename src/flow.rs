@@ -64,7 +64,7 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
     pub fn update_from_grad(&self, epsilon: T) {
         self.data
             .borrow_mut()
-            .update_zip(&self.grad.borrow(), &|data, grad| data + grad * -epsilon);
+            .update_zip(&self.grad.borrow(), |data, grad| data + grad * -epsilon);
     }
 
     pub fn zero_grad(&self) {
@@ -72,7 +72,7 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
     }
 
     pub fn update_grad(&self, f: impl Fn(T, T) -> T) {
-        self.grad.borrow_mut().update_zip(&self.data.borrow(), &f);
+        self.grad.borrow_mut().update_zip(&self.data.borrow(), f);
     }
 
     // returns (nodes, edges)

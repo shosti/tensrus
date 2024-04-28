@@ -75,7 +75,10 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<T, R, S> for GenericTensor<T, R, S> {}
+impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<T, R, S>
+    for GenericTensor<T, R, S>
+{
+}
 
 impl<T: Numeric, const R: usize, const S: TensorShape> TensorOps<T> for GenericTensor<T, R, S> {
     fn zeros() -> Self {
@@ -83,11 +86,11 @@ impl<T: Numeric, const R: usize, const S: TensorShape> TensorOps<T> for GenericT
         Self { storage }
     }
 
-    fn update(&mut self, f: &dyn Fn(T) -> T) {
+    fn update<F: Fn(T) -> T>(&mut self, f: F) {
         self.storage.iter_mut().for_each(|v| *v = f(*v));
     }
 
-    fn update_zip(&mut self, other: &Self, f: &dyn Fn(T, T) -> T) {
+    fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F) {
         self.storage
             .iter_mut()
             .zip(other.storage.iter())
@@ -146,7 +149,7 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
     for &'a GenericTensor<T, R, S>
 {
     type Item = T;
-    type IntoIter = TensorIterator<'a, T, R, S>;
+    type IntoIter = TensorIterator<'a, T, R, S, GenericTensor<T, R, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter::new(self)

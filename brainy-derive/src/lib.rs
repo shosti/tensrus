@@ -48,7 +48,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
 
         impl #impl_generics_with_lifetime IntoIterator for &'a #name #type_generics #where_clause {
             type Item = T;
-            type IntoIter = crate::tensor::TensorIterator<'a, T, #rank, #shape>;
+            type IntoIter = crate::tensor::TensorIterator<'a, T, #rank, #shape, #name #type_generics>;
 
             fn into_iter(self) -> Self::IntoIter {
                 Self::IntoIter::new(self)
@@ -124,11 +124,11 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 Self(crate::generic_tensor::GenericTensor::zeros())
             }
 
-            fn update(&mut self, f: &dyn Fn(T) -> T) {
+            fn update<F: Fn(T) -> T>(&mut self, f: F) {
                 self.0.update(f);
             }
 
-            fn update_zip(&mut self, other: &Self, f: &dyn Fn(T, T) -> T) {
+            fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F) {
                 self.0.update_zip(&other.0, f);
             }
         }

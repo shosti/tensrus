@@ -62,19 +62,27 @@ pub trait TensorOps<T: Numeric>:
     + 'static
 {
     fn zeros() -> Self;
-    fn update(&mut self, f: &dyn Fn(T) -> T);
-    fn update_zip(&mut self, other: &Self, f: &dyn Fn(T, T) -> T);
+    fn update<F: Fn(T) -> T>(&mut self, f: F);
+    fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F);
 }
 
-pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape> {
-    t: &'a dyn ShapedTensor<T, R, S>,
+pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape, Tn>
+where
+    Tn: ShapedTensor<T, R, S>,
+{
+    _ignored: std::marker::PhantomData<T>,
+    t: &'a Tn,
     done: bool,
     cur: [usize; R],
 }
 
-impl<'a, T: Numeric, const R: usize, const S: TensorShape> TensorIterator<'a, T, R, S> {
-    pub fn new(t: &'a dyn ShapedTensor<T, R, S>) -> Self {
+impl<'a, T: Numeric, const R: usize, const S: TensorShape, Tn> TensorIterator<'a, T, R, S, Tn>
+where
+    Tn: ShapedTensor<T, R, S>,
+{
+    pub fn new(t: &'a Tn) -> Self {
         Self {
+            _ignored: std::marker::PhantomData,
             t,
             cur: [0; R],
             done: false,
@@ -82,8 +90,10 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> TensorIterator<'a, T,
     }
 }
 
-impl<'a, T: Numeric, const R: usize, const S: TensorShape> Iterator
-    for TensorIterator<'a, T, R, S>
+impl<'a, T: Numeric, const R: usize, const S: TensorShape, Tn> Iterator
+    for TensorIterator<'a, T, R, S, Tn>
+where
+    Tn: ShapedTensor<T, R, S>,
 {
     type Item = T;
 
