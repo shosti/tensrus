@@ -10,7 +10,7 @@ use std::{
     collections::HashSet,
     fmt::Debug,
     hash::{Hash, Hasher},
-    ops::{Add, Mul},
+    ops::{Add, Div, Mul, Neg, Sub},
     rc::Rc,
 };
 
@@ -182,19 +182,45 @@ impl<T: Numeric> Flow<T, Scalar<T>> {
     }
 }
 
-impl<T: Numeric> Add<Flow<T, Scalar<T>>> for Flow<T, Scalar<T>> {
+impl<T: Numeric> Add for Flow<T, Scalar<T>> {
     type Output = Self;
 
-    fn add(self, other: Flow<T, Scalar<T>>) -> Self::Output {
+    fn add(self, other: Self) -> Self::Output {
         AddOp::create_flow(self, other)
     }
 }
 
-impl<T: Numeric> Mul<Flow<T, Scalar<T>>> for Flow<T, Scalar<T>> {
+impl<T: Numeric> Mul for Flow<T, Scalar<T>> {
     type Output = Self;
 
-    fn mul(self, other: Flow<T, Scalar<T>>) -> Self::Output {
+    fn mul(self, other: Self) -> Self::Output {
         MulOp::create_flow(self, other)
+    }
+}
+
+impl<T: Numeric> Div for Flow<T, Scalar<T>> {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self::Output {
+        let inv = other.pow(-T::one());
+
+        self * inv
+    }
+}
+
+impl<T: Numeric> Sub for Flow<T, Scalar<T>> {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self::Output {
+        self + (-other)
+    }
+}
+
+impl<T: Numeric> Neg for Flow<T, Scalar<T>> {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        self * Flow::new(Scalar::from(-T::one()))
     }
 }
 
