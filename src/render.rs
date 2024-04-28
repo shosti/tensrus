@@ -1,5 +1,5 @@
-use crate::numeric::Numeric;
 use crate::flow::Flow;
+use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use dot::{render, Edges, GraphWalk, Id, LabelText, Labeller, Nodes, RankDir};
 use std::borrow::Cow;
@@ -26,7 +26,13 @@ impl Graph {
         let mut es = Vec::new();
 
         for n in nodes.iter() {
-            let label = format!("{} | {:?}", n.id(), n.op());
+            let label = format!(
+                "{} | data: {} | grad: {} | {:?}",
+                n.id(),
+                n.val(),
+                n.grad(),
+                n.op()
+            );
             let id = format!("id{}", n.id());
             let node = Nd {
                 id: id.clone(),

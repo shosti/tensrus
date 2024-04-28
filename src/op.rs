@@ -1,5 +1,5 @@
 use crate::{flow::Flow, numeric::Numeric, scalar::Scalar, tensor::TensorOps};
-use std::fmt::Debug;
+use std::fmt::{Formatter, Debug};
 
 pub trait Op<T: Numeric, Tn: TensorOps<T>>: Debug {
     fn children(&self) -> Vec<Flow<T, Tn>>;
@@ -15,7 +15,7 @@ impl<T: Numeric, Tn: TensorOps<T>> Op<T, Tn> for NoOp {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct PowOp<T: Numeric, Tn: TensorOps<T>> {
     n: T,
     from: Flow<T, Tn>,
@@ -27,6 +27,12 @@ impl<T: Numeric> PowOp<T, Scalar<T>> {
         let op = PowOp { n, from };
 
         Flow::new_from_op(data, op)
+    }
+}
+
+impl<T: Numeric> Debug for PowOp<T, Scalar<T>> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{} ^ {}", self.from.val(), self.n)
     }
 }
 
@@ -42,9 +48,15 @@ impl<T: Numeric> Op<T, Scalar<T>> for PowOp<T, Scalar<T>> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ReluOp<T: Numeric, Tn: TensorOps<T>> {
     from: Flow<T, Tn>,
+}
+
+impl<T: Numeric> Debug for ReluOp<T, Scalar<T>> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "ReLU({})", self.from.val())
+    }
 }
 
 impl<T: Numeric> ReluOp<T, Scalar<T>> {
@@ -79,7 +91,7 @@ impl<T: Numeric> Op<T, Scalar<T>> for ReluOp<T, Scalar<T>> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct AddOp<T: Numeric, Tn: TensorOps<T>> {
     from: (Flow<T, Tn>, Flow<T, Tn>),
 }
@@ -90,6 +102,12 @@ impl<T: Numeric> AddOp<T, Scalar<T>> {
         let op = AddOp { from: (a, b) };
 
         Flow::new_from_op(outval, op)
+    }
+}
+
+impl<T: Numeric> Debug for AddOp<T, Scalar<T>> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{} + {}", self.from.0.val(), self.from.1.val())
     }
 }
 
@@ -111,9 +129,15 @@ impl<T: Numeric> Op<T, Scalar<T>> for AddOp<T, Scalar<T>> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct MulOp<T: Numeric, Tn: TensorOps<T>> {
     from: (Flow<T, Tn>, Flow<T, Tn>),
+}
+
+impl<T: Numeric> Debug for MulOp<T, Scalar<T>> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{} * {}", self.from.0.val(), self.from.1.val())
+    }
 }
 
 impl<T: Numeric> MulOp<T, Scalar<T>> {
