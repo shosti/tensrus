@@ -1,6 +1,7 @@
 use crate::flow::Flow;
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
+use crate::value::Value;
 use dot::{render, Edges, GraphWalk, Id, LabelText, Labeller, Nodes, RankDir};
 use std::borrow::Cow;
 use std::collections::hash_map::HashMap;
@@ -20,6 +21,39 @@ pub struct Graph {
 
 impl Graph {
     pub fn new<T: Numeric>(val: Flow<T, Scalar<T>>) -> Self {
+        let (nodes, edges) = val.trace();
+
+        let mut ns = HashMap::new();
+        let mut es = Vec::new();
+
+        for n in nodes.iter() {
+            let label = format!(
+                "{} | data: {} | grad: {} | {:?}",
+                n.id(),
+                n.val(),
+                n.grad(),
+                n.op()
+            );
+            let id = format!("id{}", n.id());
+            let node = Nd {
+                id: id.clone(),
+                label,
+            };
+            ns.insert(id, node);
+        }
+
+        for (from, to) in edges.iter() {
+            let edge = (format!("id{}", from.id()), format!("id{}", to.id()));
+            es.push(edge);
+        }
+
+        Self {
+            nodes: ns,
+            edges: es,
+        }
+    }
+
+    pub fn new_val<T: Numeric>(val: Value<T>) -> Self {
         let (nodes, edges) = val.trace();
 
         let mut ns = HashMap::new();

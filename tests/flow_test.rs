@@ -1,13 +1,13 @@
 extern crate brainy;
 
-use brainy::render::Graph;
 use brainy::flow::Flow;
+use brainy::render::Graph;
 use brainy::scalar::Scalar;
 use std::fs::File;
 use std::process::Command;
 
 #[test]
-fn value_sanity_test() {
+fn flow_sanity_test() {
     let x = Flow::from(-4.0);
     let z = Flow::from(2.0) * x.clone() + Flow::from(2.0) + x.clone();
     let q = z.clone().relu() + z.clone() * x.clone();
@@ -20,28 +20,28 @@ fn value_sanity_test() {
     assert_eq!(x.grad(), 46.0);
 }
 
-// #[test]
-// fn test_more_ops() {
-//     let a = Flow::from(-4.0);
-//     let b = Flow::from(2.0);
-//     let mut c = a.clone() + b.clone();
-//     let mut d = a.clone() * b.clone() + b.clone().pow(3.0);
-//     c = c.clone() + (c.clone() + Flow::from(1.0));
-//     c = c.clone() + (Flow::from(1.0) + c.clone() + (-a.clone()));
-//     d = d.clone() + (d.clone() * Flow::from(2.0) + (b.clone() + a.clone()).relu());
-//     d = d.clone() + (Flow::from(3.0) * d.clone() + (b.clone() - a.clone()).relu());
-//     let e = c.clone() - d.clone();
-//     let f = e.pow(2.0);
-//     let mut g: Flow<f64> = f.clone() / Flow::from(2.0);
-//     g = g.clone() + (Flow::from(10.0) / f.clone());
-//     g.backward();
+#[test]
+fn test_more_ops() {
+    let a = Flow::from(-4.0);
+    let b = Flow::from(2.0);
+    let mut c = a.clone() + b.clone();
+    let mut d = a.clone() * b.clone() + b.clone().pow(3.0);
+    c = c.clone() + (c.clone() + Flow::from(1.0));
+    c = c.clone() + (Flow::from(1.0) + c.clone() + (-a.clone()));
+    d = d.clone() + (d.clone() * Flow::from(2.0) + (b.clone() + a.clone()).relu());
+    d = d.clone() + (Flow::from(3.0) * d.clone() + (b.clone() - a.clone()).relu());
+    let e = c.clone() - d.clone();
+    let f = e.pow(2.0);
+    let mut g: Flow<f64, _> = f.clone() / Flow::from(2.0);
+    g = g.clone() + (Flow::from(10.0) / f.clone());
+    g.backward();
 
-//     let tol = 0.00000001;
+    let tol = 0.00000001;
 
-//     assert!((g.val() - 24.70408163265306).abs() < tol);
-//     assert!((a.grad() - 138.83381924198252).abs() < tol);
-//     assert!((b.grad() - 645.5772594752187).abs() < tol);
-// }
+    assert!((g.val() - 24.70408163265306).abs() < tol);
+    assert!((a.grad() - 138.83381924198252).abs() < tol);
+    assert!((b.grad() - 645.5772594752187).abs() < tol);
+}
 
 fn render_graph(x: Flow<f64, Scalar<f64>>, id: String) {
     let g = Graph::new(x.clone());

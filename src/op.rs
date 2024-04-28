@@ -1,5 +1,5 @@
 use crate::{flow::Flow, numeric::Numeric, scalar::Scalar, tensor::TensorOps};
-use std::fmt::{Formatter, Debug};
+use std::fmt::{Debug, Formatter};
 
 pub trait Op<T: Numeric, Tn: TensorOps<T>>: Debug {
     fn children(&self) -> Vec<Flow<T, Tn>>;
@@ -120,12 +120,8 @@ impl<T: Numeric> Op<T, Scalar<T>> for AddOp<T, Scalar<T>> {
     }
 
     fn backward(&self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
-        self.from.0.update_grad(|grad, _data| {
-            grad + to_grad.val()
-        });
-        self.from.1.update_grad(|grad, _data| {
-            grad + to_grad.val()
-        });
+        self.from.0.update_grad(|grad, _data| grad + to_grad.val());
+        self.from.1.update_grad(|grad, _data| grad + to_grad.val());
     }
 }
 
@@ -157,15 +153,15 @@ impl<T: Numeric> Op<T, Scalar<T>> for MulOp<T, Scalar<T>> {
         out
     }
 
-    fn backward(&self, _to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
+    fn backward(&self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
         let a_data = self.from.0.val();
-        let b_data = self.from.0.val();
+        let b_data = self.from.1.val();
 
-        self.from.0.update_grad(|grad, _data| {
-            grad + b_data * grad
-        });
-        self.from.1.update_grad(|grad, _data| {
-            grad + a_data * grad
-        });
+        self.from
+            .0
+            .update_grad(|grad, _data| grad + b_data * to_grad.val());
+        self.from
+            .1
+            .update_grad(|grad, _data| grad + a_data * to_grad.val());
     }
 }
