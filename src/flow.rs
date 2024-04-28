@@ -99,19 +99,6 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
             }
         }
     }
-
-    // fn build_topo(cur: &Flow<T>, topo: &mut Vec<Self>, visited: &mut HashSet<u64>) {
-    //     let val = cur.inner.borrow();
-    //     if visited.contains(&val.id) {
-    //         return;
-    //     }
-
-    //     visited.insert(val.id);
-    //     for child in val.prev.iter() {
-    //         Self::build_topo(child, topo, visited);
-    //     }
-    //     topo.push(cur.clone());
-    // }
 }
 
 // impl<T: Numeric, const R: usize, const S: TensorShape, Tn: Tensor<T, R, S>> {
@@ -136,46 +123,6 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
 //         Self { inner }
 //     }
 //     // returns (nodes, edges)
-//     pub fn trace(&self) -> (HashSet<Self>, HashSet<(Self, Self)>) {
-//         let mut nodes = HashSet::new();
-//         let mut edges = HashSet::new();
-
-//         Self::build_trace(self, &mut nodes, &mut edges);
-
-//         return (nodes, edges);
-//     }
-
-//     fn build_trace(val: &Self, nodes: &mut HashSet<Self>, edges: &mut HashSet<(Self, Self)>) {
-//         if !nodes.contains(val) {
-//             nodes.insert(val.clone());
-//             for child in val.inner.borrow().prev.iter() {
-//                 edges.insert((child.clone(), val.clone()));
-//                 Self::build_trace(child, nodes, edges);
-//             }
-//         }
-//     }
-
-//     pub fn backward(&self) {
-//         let mut topo = Vec::new();
-//         let mut visited = HashSet::new();
-
-//         Self::build_topo(self, &mut topo, &mut visited);
-
-//         self.inner.borrow_mut().grad = T::one();
-//         for val in topo.iter().rev() {
-//             let grad;
-//             let data;
-//             {
-//                 let inner = val.inner.borrow();
-//                 grad = inner.grad;
-//                 data = inner.data;
-//             }
-//             if let Some(backward) = &mut val.inner.borrow_mut().backward {
-//                 backward(grad, data);
-//             }
-//         }
-//     }
-
 //     pub fn pow(&self, n: T) -> Self {
 //         let val = self.inner.borrow().data.powf(n);
 //         let children = HashSet::from([self.clone()]);
@@ -224,6 +171,34 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
 // }
 
 impl<T: Numeric> Flow<T, Scalar<T>> {
+    pub fn backward(&self) {
+        let mut topo = Vec::new();
+        let mut visited = HashSet::new();
+
+        Self::build_topo(self, &mut topo, &mut visited);
+
+        self.inner.borrow_mut().grad = Scalar::from(T::one());
+        for flow in topo.iter().rev() {
+            {
+                let inner = flow.inner.borrow();
+                inner.op.backward(&inner.grad, &inner.data);
+            }
+        }
+    }
+
+    fn build_topo(cur: &Self, topo: &mut Vec<Self>, visited: &mut HashSet<u64>) {
+        let flow = cur.inner.borrow();
+        if visited.contains(&flow.id) {
+            return;
+        }
+
+        visited.insert(flow.id);
+        for child in flow.op.children().iter() {
+            Self::build_topo(child, topo, visited);
+        }
+        topo.push(cur.clone());
+    }
+
     pub fn pow(&self, n: T) -> Self {
         PowOp::create_flow(self.clone(), n)
     }

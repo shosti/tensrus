@@ -3,7 +3,7 @@ use std::fmt::Debug;
 
 pub trait Op<T: Numeric, Tn: TensorOps<T>>: Debug {
     fn children(&self) -> Vec<Flow<T, Tn>>;
-    fn backwards(&self, _to_grad: &Tn, _to_data: &Tn) {}
+    fn backward(&self, _to_grad: &Tn, _to_data: &Tn) {}
 }
 
 #[derive(Clone, Debug)]
@@ -36,7 +36,7 @@ impl<T: Numeric> Op<T, Scalar<T>> for PowOp<T, Scalar<T>> {
         vec![self.from.clone()]
     }
 
-    fn backwards(&self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
+    fn backward(&self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
         self.from.update_grad(|grad, data| {
             grad + ((self.n * data.powf(self.n - T::one())) * to_grad.val())
         });
