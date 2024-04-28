@@ -12,11 +12,6 @@ pub struct GenericTensor<T: Numeric, const R: usize, const S: TensorShape> {
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
-    pub fn zeros() -> Self {
-        let storage = vec![T::zero(); Self::storage_size()];
-        Self { storage }
-    }
-
     fn storage_size() -> usize {
         num_elems(R, S)
     }
@@ -84,6 +79,11 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for Gener
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> TensorOps<T> for GenericTensor<T, R, S> {
+    fn zeros() -> Self {
+        let storage = vec![T::zero(); Self::storage_size()];
+        Self { storage }
+    }
+
     fn update(&mut self, f: &dyn Fn(T) -> T) {
         self.storage.iter_mut().for_each(|v| *v = f(*v));
     }

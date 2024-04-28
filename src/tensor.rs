@@ -50,6 +50,7 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
 pub trait TensorOps<T: Numeric>:
     Add<T> + Add<Scalar<T>> + AddAssign<T> + Mul<T> + Mul<Scalar<T>> + MulAssign<T> + Debug + Clone
 {
+    fn zeros() -> Self;
     fn update(&mut self, f: &dyn Fn(T) -> T);
 }
 

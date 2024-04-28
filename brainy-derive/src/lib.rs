@@ -118,6 +118,10 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         }
 
         impl #impl_generics crate::tensor::TensorOps<T> for #name #type_generics #where_clause {
+            fn zeros() -> Self {
+                Self(crate::generic_tensor::GenericTensor::zeros())
+            }
+
             fn update(&mut self, f: &dyn Fn(T) -> T) {
                 self.0.update(f);
             }
