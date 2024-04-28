@@ -125,6 +125,10 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             fn update(&mut self, f: &dyn Fn(T) -> T) {
                 self.0.update(f);
             }
+
+            fn update_zip(&mut self, other: &Self, f: &dyn Fn(T, T) -> T) {
+                self.0.update_zip(&other.0, f);
+            }
         }
     };
     gen.into()

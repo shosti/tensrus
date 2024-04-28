@@ -48,10 +48,11 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
 }
 
 pub trait TensorOps<T: Numeric>:
-    Add<T> + Add<Scalar<T>> + AddAssign<T> + Mul<T> + Mul<Scalar<T>> + MulAssign<T> + Debug + Clone
+    Add<T> + Add<Scalar<T>> + AddAssign<T> + Mul<T> + Mul<Scalar<T>> + MulAssign<T> + Debug + Clone + 'static
 {
     fn zeros() -> Self;
     fn update(&mut self, f: &dyn Fn(T) -> T);
+    fn update_zip(&mut self, other: &Self, f: &dyn Fn(T, T) -> T);
 }
 
 pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape> {

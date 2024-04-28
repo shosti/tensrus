@@ -75,8 +75,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for GenericTensor<T, R, S> {
-}
+impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for GenericTensor<T, R, S> {}
 
 impl<T: Numeric, const R: usize, const S: TensorShape> TensorOps<T> for GenericTensor<T, R, S> {
     fn zeros() -> Self {
@@ -86,6 +85,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> TensorOps<T> for GenericT
 
     fn update(&mut self, f: &dyn Fn(T) -> T) {
         self.storage.iter_mut().for_each(|v| *v = f(*v));
+    }
+
+    fn update_zip(&mut self, other: &Self, f: &dyn Fn(T, T) -> T) {
+        self.storage
+            .iter_mut()
+            .zip(other.storage.iter())
+            .for_each(|(v1, v2)| *v1 = f(*v1, *v2))
     }
 }
 

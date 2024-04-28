@@ -1,6 +1,7 @@
 use crate::{
     numeric::Numeric,
-    op::{NoOp, Op},
+    op::{NoOp, Op, PowOp},
+    scalar::Scalar,
     tensor::TensorOps,
 };
 use std::{
@@ -23,7 +24,7 @@ pub struct Flow<T: Numeric, Tn: TensorOps<T>> {
 struct FlowInner<T: Numeric, Tn: TensorOps<T>> {
     id: u64,
     data: Tn,
-    grad: T,
+    grad: Tn,
     op: Box<dyn Op<T, Tn>>,
 }
 
@@ -32,8 +33,18 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
         let inner = Rc::new(RefCell::new(FlowInner {
             id: Self::next_id(),
             data: val,
-            grad: T::zero(),
+            grad: Tn::zeros(),
             op: Box::new(NoOp {}),
+        }));
+        Self { inner }
+    }
+
+    pub fn new_from_op(val: Tn, op: impl Op<T, Tn> + 'static) -> Self {
+        let inner = Rc::new(RefCell::new(FlowInner {
+            id: Self::next_id(),
+            data: val,
+            grad: Tn::zeros(),
+            op: Box::new(op),
         }));
         Self { inner }
     }
@@ -52,19 +63,21 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
         self.inner.borrow().id
     }
 
-    pub fn grad(&self) -> T {
-        self.inner.borrow().grad
-    }
-
     pub fn op(&self) -> String {
         format!("{:?}", self.inner.borrow().op)
     }
 
-    pub fn update_from_grad(&self, epsilon: T) {
-        let mut inner = self.inner.borrow_mut();
-        let grad = inner.grad;
+    // pub fn update_from_grad(&self, epsilon: T) {
+    //     let mut inner = self.inner.borrow_mut();
+    //     let grad = inner.grad;
 
-        inner.data += -epsilon * grad;
+    //     inner.data += -epsilon * grad;
+    // }
+
+    pub fn update_grad(&self, f: impl Fn(T, T) -> T) {
+        let inner_immut = self.inner.borrow();
+        let mut inner = self.inner.borrow_mut();
+        inner.grad.update_zip(&inner_immut.data, &f);
     }
 
     // returns (nodes, edges)
@@ -209,6 +222,12 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
 //         self.inner.borrow_mut().grad = T::zero();
 //     }
 // }
+
+impl<T: Numeric> Flow<T, Scalar<T>> {
+    pub fn pow(&self, n: T) -> Self {
+        PowOp::create_flow(self.clone(), n)
+    }
+}
 
 impl<T: Numeric, Tn: TensorOps<T>> PartialEq for Flow<T, Tn> {
     fn eq(&self, other: &Self) -> bool {
