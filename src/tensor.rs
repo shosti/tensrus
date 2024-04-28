@@ -31,7 +31,10 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
+// Marker trait for the purposes of the derive macro
+pub trait Tensor {}
+
+pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape>:
     IndexMut<[usize; R], Output = T>
 {
     fn rank(&self) -> usize {
@@ -48,7 +51,15 @@ pub trait Tensor<T: Numeric, const R: usize, const S: TensorShape>:
 }
 
 pub trait TensorOps<T: Numeric>:
-    Add<T> + Add<Scalar<T>> + AddAssign<T> + Mul<T> + Mul<Scalar<T>> + MulAssign<T> + Debug + Clone + 'static
+    Add<T>
+    + Add<Scalar<T>>
+    + AddAssign<T>
+    + Mul<T>
+    + Mul<Scalar<T>>
+    + MulAssign<T>
+    + Debug
+    + Clone
+    + 'static
 {
     fn zeros() -> Self;
     fn update(&mut self, f: &dyn Fn(T) -> T);
@@ -56,13 +67,13 @@ pub trait TensorOps<T: Numeric>:
 }
 
 pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape> {
-    t: &'a dyn Tensor<T, R, S>,
+    t: &'a dyn ShapedTensor<T, R, S>,
     done: bool,
     cur: [usize; R],
 }
 
 impl<'a, T: Numeric, const R: usize, const S: TensorShape> TensorIterator<'a, T, R, S> {
-    pub fn new(t: &'a dyn Tensor<T, R, S>) -> Self {
+    pub fn new(t: &'a dyn ShapedTensor<T, R, S>) -> Self {
         Self {
             t,
             cur: [0; R],

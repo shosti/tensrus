@@ -1,7 +1,7 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::tensor::{
-    num_elems, IndexError, ShapeError, Tensor, TensorIterator, TensorOps, TensorShape,
+    num_elems, IndexError, ShapeError, ShapedTensor, TensorIterator, TensorOps, TensorShape,
 };
 use num::ToPrimitive;
 use std::ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign};
@@ -75,7 +75,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T, R, S> for GenericTensor<T, R, S> {}
+impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<T, R, S> for GenericTensor<T, R, S> {}
 
 impl<T: Numeric, const R: usize, const S: TensorShape> TensorOps<T> for GenericTensor<T, R, S> {
     fn zeros() -> Self {

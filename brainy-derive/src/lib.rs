@@ -31,7 +31,9 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let rank = parse_rank(&ast);
     let shape = parse_shape(&ast);
     let gen = quote! {
-        impl #impl_generics Tensor<T, #rank, #shape> for #name #type_generics #where_clause {
+        impl #impl_generics Tensor for #name #type_generics #where_clause {}
+
+        impl #impl_generics crate::tensor::ShapedTensor<T, #rank, #shape> for #name #type_generics #where_clause {
         }
 
         impl #f_impl_generics FromIterator<F> for #name #type_generics #where_clause

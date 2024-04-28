@@ -32,6 +32,7 @@ where
 mod tests {
     use super::*;
     use crate::vector::Vector;
+    use crate::tensor::ShapedTensor;
 
     #[test]
     fn basics() {

@@ -116,6 +116,7 @@ where
 mod tests {
     use super::*;
     use crate::tensor::IndexError;
+    use crate::tensor::ShapedTensor;
     use crate::vector::Vector;
 
     #[test]
