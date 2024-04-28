@@ -78,3 +78,35 @@ impl<T: Numeric> Op<T, Scalar<T>> for ReluOp<T, Scalar<T>> {
         });
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct AddOp<T: Numeric, Tn: TensorOps<T>> {
+    from: (Flow<T, Tn>, Flow<T, Tn>),
+}
+
+impl<T: Numeric> AddOp<T, Scalar<T>> {
+    pub fn create_flow(a: Flow<T, Scalar<T>>, b: Flow<T, Scalar<T>>) -> Flow<T, Scalar<T>> {
+        let outval = Scalar::from(a.val() + b.val());
+        let op = AddOp { from: (a, b) };
+
+        Flow::new_from_op(outval, op)
+    }
+}
+
+impl<T: Numeric> Op<T, Scalar<T>> for AddOp<T, Scalar<T>> {
+    fn children(&self) -> Vec<Flow<T, Scalar<T>>> {
+        let mut out = vec![self.from.0.clone(), self.from.1.clone()];
+        out.sort();
+
+        out
+    }
+
+    fn backward(&self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
+        self.from.0.update_grad(|grad, _data| {
+            grad + to_grad.val()
+        });
+        self.from.1.update_grad(|grad, _data| {
+            grad + to_grad.val()
+        });
+    }
+}

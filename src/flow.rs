@@ -1,6 +1,6 @@
 use crate::{
     numeric::Numeric,
-    op::{NoOp, Op, PowOp},
+    op::{AddOp, NoOp, Op, PowOp},
     scalar::Scalar,
     tensor::TensorOps,
 };
@@ -10,6 +10,7 @@ use std::{
     collections::HashSet,
     fmt::Debug,
     hash::{Hash, Hasher},
+    ops::Add,
     rc::Rc,
 };
 
@@ -71,7 +72,9 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
         let inner_imut = self.inner.borrow();
         let mut inner = self.inner.borrow_mut();
 
-        inner.data.update_zip(&inner_imut.grad, &|data, grad| data + grad * -epsilon);
+        inner
+            .data
+            .update_zip(&inner_imut.grad, &|data, grad| data + grad * -epsilon);
     }
 
     pub fn zero_grad(&self) {
@@ -176,6 +179,14 @@ impl<T: Numeric> Flow<T, Scalar<T>> {
 
     pub fn pow(&self, n: T) -> Self {
         PowOp::create_flow(self.clone(), n)
+    }
+}
+
+impl<T: Numeric> Add<Flow<T, Scalar<T>>> for Flow<T, Scalar<T>> {
+    type Output = Self;
+
+    fn add(self, other: Flow<T, Scalar<T>>) -> Self::Output {
+        AddOp::create_flow(self, other)
     }
 }
 
