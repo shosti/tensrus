@@ -67,12 +67,16 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
         format!("{:?}", self.inner.borrow().op)
     }
 
-    // pub fn update_from_grad(&self, epsilon: T) {
-    //     let mut inner = self.inner.borrow_mut();
-    //     let grad = inner.grad;
+    pub fn update_from_grad(&self, epsilon: T) {
+        let inner_imut = self.inner.borrow();
+        let mut inner = self.inner.borrow_mut();
 
-    //     inner.data += -epsilon * grad;
-    // }
+        inner.data.update_zip(&inner_imut.grad, &|data, grad| data + grad * -epsilon);
+    }
+
+    pub fn zero_grad(&self) {
+        self.inner.borrow_mut().grad = Tn::zeros();
+    }
 
     pub fn update_grad(&self, f: impl Fn(T, T) -> T) {
         let inner_immut = self.inner.borrow();
@@ -103,42 +107,6 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
 
 // impl<T: Numeric, const R: usize, const S: TensorShape, Tn: Tensor<T, R, S>> {
 //     }
-
-//     fn new_from_op(data: T, prev: HashSet<Flow<T>>, op: String) -> Self {
-//         let mut children: Vec<Flow<T>> = prev.into_iter().collect();
-//         children.sort_by(|v, t| {
-//             v.val()
-//                 .partial_cmp(&t.val())
-//                 .unwrap_or(std::cmp::Ordering::Equal)
-//         });
-//         let inner = Rc::new(RefCell::new(FlowInner {
-//             id: Self::next_id(),
-//             data,
-//             grad: T::zero(),
-//             backward: None,
-//             prev: children,
-//             op,
-//         }));
-
-//         Self { inner }
-//     }
-//     // returns (nodes, edges)
-//     pub fn pow(&self, n: T) -> Self {
-//         let val = self.inner.borrow().data.powf(n);
-//         let children = HashSet::from([self.clone()]);
-//         let out = Self::new_from_op(val, children, "^".to_string());
-
-//         let self_grad = self.clone();
-//         let backward = move |grad, _| {
-//             let data = self_grad.inner.borrow().data;
-//             let mut self_inner = self_grad.inner.borrow_mut();
-//             self_inner.grad += (n * data.powf(n - T::one())) * grad;
-//         };
-//         out.inner.borrow_mut().backward = Some(Box::new(backward));
-
-//         out
-//     }
-
 //     pub fn relu(&self) -> Self {
 //         let data = self.inner.borrow().data;
 //         let outval = if data.is_sign_negative() {
@@ -165,9 +133,6 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
 //         out
 //     }
 
-//     pub fn zero_grad(&self) {
-//         self.inner.borrow_mut().grad = T::zero();
-//     }
 // }
 
 impl<T: Numeric> Flow<T, Scalar<T>> {
