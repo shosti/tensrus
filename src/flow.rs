@@ -18,36 +18,29 @@ thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 
 #[derive(Debug, Clone)]
 pub struct Flow<T: Numeric, Tn: TensorOps<T>> {
-    inner: Rc<RefCell<FlowInner<T, Tn>>>,
-}
-
-#[derive(Debug)]
-struct FlowInner<T: Numeric, Tn: TensorOps<T>> {
     id: u64,
-    data: Tn,
-    grad: Tn,
-    op: Box<dyn Op<T, Tn>>,
+    data: Rc<RefCell<Tn>>,
+    grad: Rc<RefCell<Tn>>,
+    op: Rc<dyn Op<T, Tn>>,
 }
 
 impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
     pub fn new(val: Tn) -> Self {
-        let inner = Rc::new(RefCell::new(FlowInner {
+        Self {
             id: Self::next_id(),
-            data: val,
-            grad: Tn::zeros(),
-            op: Box::new(NoOp {}),
-        }));
-        Self { inner }
+            data: Rc::new(RefCell::new(val)),
+            grad: Rc::new(RefCell::new(Tn::zeros())),
+            op: Rc::new(NoOp {}),
+        }
     }
 
     pub fn new_from_op(val: Tn, op: impl Op<T, Tn> + 'static) -> Self {
-        let inner = Rc::new(RefCell::new(FlowInner {
+        Self {
             id: Self::next_id(),
-            data: val,
-            grad: Tn::zeros(),
-            op: Box::new(op),
-        }));
-        Self { inner }
+            data: Rc::new(RefCell::new(val)),
+            grad: Rc::new(RefCell::new(Tn::zeros())),
+            op: Rc::new(op),
+        }
     }
 
     fn next_id() -> u64 {
@@ -61,30 +54,25 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
     }
 
     pub fn id(&self) -> u64 {
-        self.inner.borrow().id
+        self.id
     }
 
     pub fn op(&self) -> String {
-        format!("{:?}", self.inner.borrow().op)
+        format!("{:?}", self.op)
     }
 
     pub fn update_from_grad(&self, epsilon: T) {
-        let inner_imut = self.inner.borrow();
-        let mut inner = self.inner.borrow_mut();
-
-        inner
-            .data
-            .update_zip(&inner_imut.grad, &|data, grad| data + grad * -epsilon);
+        self.data
+            .borrow_mut()
+            .update_zip(&self.grad.borrow(), &|data, grad| data + grad * -epsilon);
     }
 
     pub fn zero_grad(&self) {
-        self.inner.borrow_mut().grad = Tn::zeros();
+        self.grad.replace(Tn::zeros());
     }
 
     pub fn update_grad(&self, f: impl Fn(T, T) -> T) {
-        let inner_immut = self.inner.borrow();
-        let mut inner = self.inner.borrow_mut();
-        inner.grad.update_zip(&inner_immut.data, &f);
+        self.grad.borrow_mut().update_zip(&self.data.borrow(), &f);
     }
 
     // returns (nodes, edges)
@@ -100,7 +88,7 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
     fn build_trace(val: &Self, nodes: &mut HashSet<Self>, edges: &mut HashSet<(Self, Self)>) {
         if !nodes.contains(val) {
             nodes.insert(val.clone());
-            for child in val.inner.borrow().op.children().iter() {
+            for child in val.op.children().iter() {
                 edges.insert((child.clone(), val.clone()));
                 Self::build_trace(child, nodes, edges);
             }
@@ -116,11 +104,11 @@ impl<T: Numeric> From<T> for Flow<T, Scalar<T>> {
 
 impl<T: Numeric> Flow<T, Scalar<T>> {
     pub fn val(&self) -> T {
-        self.inner.borrow().data.val()
+        self.data.borrow().val()
     }
 
     pub fn grad(&self) -> T {
-        self.inner.borrow().grad.val()
+        self.grad.borrow().val()
     }
 }
 
@@ -131,23 +119,21 @@ impl<T: Numeric> Flow<T, Scalar<T>> {
 
         Self::build_topo(self, &mut topo, &mut visited);
 
-        self.inner.borrow_mut().grad = Scalar::from(T::one());
+        self.grad.replace(Scalar::from(T::one()));
         for flow in topo.iter().rev() {
             {
-                let inner = flow.inner.borrow();
-                inner.op.backward(&inner.grad, &inner.data);
+                flow.op.backward(&flow.grad.borrow(), &flow.data.borrow());
             }
         }
     }
 
     fn build_topo(cur: &Self, topo: &mut Vec<Self>, visited: &mut HashSet<u64>) {
-        let flow = cur.inner.borrow();
-        if visited.contains(&flow.id) {
+        if visited.contains(&cur.id) {
             return;
         }
 
-        visited.insert(flow.id);
-        for child in flow.op.children().iter() {
+        visited.insert(cur.id);
+        for child in cur.op.children().iter() {
             Self::build_topo(child, topo, visited);
         }
         topo.push(cur.clone());
