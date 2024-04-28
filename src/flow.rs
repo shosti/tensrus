@@ -1,6 +1,6 @@
 use crate::{
     numeric::Numeric,
-    op::{AddOp, MulOp, NoOp, Op, PowOp},
+    op::{AddOp, MulOp, NoOp, Op, PowOp, ReluOp},
     scalar::Scalar,
     tensor::TensorOps,
 };
@@ -108,6 +108,12 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
     }
 }
 
+impl<T: Numeric> From<T> for Flow<T, Scalar<T>> {
+    fn from(val: T) -> Self {
+        Flow::new(Scalar::from(val))
+    }
+}
+
 impl<T: Numeric> Flow<T, Scalar<T>> {
     pub fn val(&self) -> T {
         self.inner.borrow().data.val()
@@ -117,36 +123,6 @@ impl<T: Numeric> Flow<T, Scalar<T>> {
         self.inner.borrow().grad.val()
     }
 }
-
-// impl<T: Numeric, const R: usize, const S: TensorShape, Tn: Tensor<T, R, S>> {
-//     }
-//     pub fn relu(&self) -> Self {
-//         let data = self.inner.borrow().data;
-//         let outval = if data.is_sign_negative() {
-//             T::zero()
-//         } else {
-//             data
-//         };
-//         let children = HashSet::from([self.clone()]);
-//         let out = Self::new_from_op(outval, children, "ReLU".to_string());
-
-//         let self_grad = self.clone();
-//         let backward = move |grad, data: T| {
-//             let mut self_inner = self_grad.inner.borrow_mut();
-//             let diff = if data.is_sign_positive() && !data.is_zero() {
-//                 grad
-//             } else {
-//                 T::zero()
-//             };
-
-//             self_inner.grad += diff;
-//         };
-//         out.inner.borrow_mut().backward = Some(Box::new(backward));
-
-//         out
-//     }
-
-// }
 
 impl<T: Numeric> Flow<T, Scalar<T>> {
     pub fn backward(&self) {
@@ -179,6 +155,10 @@ impl<T: Numeric> Flow<T, Scalar<T>> {
 
     pub fn pow(&self, n: T) -> Self {
         PowOp::create_flow(self.clone(), n)
+    }
+
+    pub fn relu(&self) -> Self {
+        ReluOp::create_flow(self.clone())
     }
 }
 
