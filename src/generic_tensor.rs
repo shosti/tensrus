@@ -4,11 +4,13 @@ use crate::tensor::{
     num_elems, IndexError, ShapeError, ShapedTensor, TensorIterator, TensorOps, TensorShape,
 };
 use num::ToPrimitive;
-use std::ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign};
+use std::cell::RefCell;
+use std::ops::{Add, AddAssign, Mul, MulAssign};
+use std::rc::Rc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GenericTensor<T: Numeric, const R: usize, const S: TensorShape> {
-    storage: Vec<T>,
+    storage: Rc<RefCell<Vec<T>>>,
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
@@ -31,12 +33,12 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
             i -= cur * offset;
         }
         debug_assert!(i == 0);
-        debug_assert!(Self::storage_idx(&res).unwrap() == idx);
+        debug_assert!(Self::storage_idx(res).unwrap() == idx);
 
         Ok(res)
     }
 
-    fn storage_idx(idx: &[usize; R]) -> Result<usize, IndexError> {
+    fn storage_idx(idx: [usize; R]) -> Result<usize, IndexError> {
         if R == 0 {
             return Ok(0);
         }
@@ -78,22 +80,44 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
 impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<T, R, S>
     for GenericTensor<T, R, S>
 {
+    fn get(&self, idx: [usize; R]) -> T {
+        match Self::storage_idx(idx) {
+            Ok(i) => self.storage.borrow()[i],
+            Err(_e) => panic!("get: out of bounds"),
+        }
+    }
+
+    fn set(&self, idx: [usize; R], val: T) {
+        match Self::storage_idx(idx) {
+            Ok(i) => {
+                let mut storage = self.storage.borrow_mut();
+                storage[i] = val;
+            }
+            Err(_e) => panic!("set: out of bounds"),
+        }
+    }
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> TensorOps<T> for GenericTensor<T, R, S> {
     fn zeros() -> Self {
         let storage = vec![T::zero(); Self::storage_size()];
-        Self { storage }
+        Self {
+            storage: Rc::new(RefCell::new(storage)),
+        }
     }
 
     fn update<F: Fn(T) -> T>(&mut self, f: F) {
-        self.storage.iter_mut().for_each(|v| *v = f(*v));
+        self.storage
+            .borrow_mut()
+            .iter_mut()
+            .for_each(|v| *v = f(*v));
     }
 
     fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F) {
         self.storage
+            .borrow_mut()
             .iter_mut()
-            .zip(other.storage.iter())
+            .zip(other.storage.borrow().iter())
             .for_each(|(v1, v2)| *v1 = f(*v1, *v2))
     }
 }
@@ -116,20 +140,14 @@ where
     where
         I: IntoIterator<Item = F>,
     {
-        let storage: Vec<T> = iter
+        let vals: Vec<T> = iter
             .into_iter()
             .map(|v| T::from(v).unwrap())
             .chain(std::iter::repeat(T::zero()))
             .take(Self::storage_size())
             .collect();
-        Self { storage }
-    }
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape> Clone for GenericTensor<T, R, S> {
-    fn clone(&self) -> Self {
         Self {
-            storage: self.storage.clone(),
+            storage: Rc::new(RefCell::new(vals)),
         }
     }
 }
@@ -137,7 +155,8 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Clone for GenericTensor<T
 impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTensor<T, R, S> {
     fn eq(&self, other: &Self) -> bool {
         for i in 0..Self::storage_size() {
-            if self.storage[i] != other.storage[i] {
+            // TODO: use helpers once they're there
+            if self.storage.borrow()[i] != other.storage.borrow()[i] {
                 return false;
             }
         }
@@ -162,7 +181,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Add<T> for GenericTensor<
     type Output = Self;
 
     fn add(self, other: T) -> Self::Output {
-        Self::from_fn(|idx| self[idx] + other)
+        Self::from_fn(|idx| self.get(idx) + other)
     }
 }
 
@@ -170,7 +189,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Add<Scalar<T>> for Generi
     type Output = Self;
 
     fn add(self, other: Scalar<T>) -> Self::Output {
-        Self::from_fn(|idx| self[idx] + other.val())
+        Self::from_fn(|idx| self.get(idx) + other.val())
     }
 }
 
@@ -184,7 +203,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Mul<T> for GenericTensor<
     type Output = Self;
 
     fn mul(self, other: T) -> Self::Output {
-        Self::from_fn(|idx| self[idx] * other)
+        Self::from_fn(|idx| self.get(idx) * other)
     }
 }
 
@@ -192,31 +211,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Mul<Scalar<T>> for Generi
     type Output = Self;
 
     fn mul(self, other: Scalar<T>) -> Self::Output {
-        Self::from_fn(|idx| self[idx] * other.val())
+        Self::from_fn(|idx| self.get(idx) * other.val())
     }
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> MulAssign<T> for GenericTensor<T, R, S> {
     fn mul_assign(&mut self, other: T) {
         self.update(&|v| v * other);
-    }
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape> Index<[usize; R]>
-    for GenericTensor<T, R, S>
-{
-    type Output = T;
-
-    fn index(&self, index: [usize; R]) -> &Self::Output {
-        self.storage.index(Self::storage_idx(&index).unwrap())
-    }
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape> IndexMut<[usize; R]>
-    for GenericTensor<T, R, S>
-{
-    fn index_mut(&mut self, index: [usize; R]) -> &mut Self::Output {
-        self.storage.index_mut(Self::storage_idx(&index).unwrap())
     }
 }
 
@@ -298,7 +299,7 @@ mod tests {
         test_get_and_set(GenericTensor::<f64, 4, { [1, 99, 232, 8, 0] }>::zeros());
     }
 
-    fn test_get_and_set<const R: usize, const S: TensorShape>(mut t: GenericTensor<f64, R, S>) {
+    fn test_get_and_set<const R: usize, const S: TensorShape>(t: GenericTensor<f64, R, S>) {
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
             let mut idx = [0; R];
@@ -307,8 +308,8 @@ mod tests {
             }
             let val: f64 = rng.gen();
 
-            t[idx] = val;
-            assert_eq!(t[idx], val);
+            t.set(idx, val);
+            assert_eq!(t.get(idx), val);
         }
     }
 

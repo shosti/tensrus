@@ -20,27 +20,27 @@ thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 #[derive(Debug, Clone)]
 pub struct Flow<T: Numeric, Tn: TensorOps<T>> {
     id: u64,
-    data: Rc<RefCell<Tn>>,
-    grad: Rc<RefCell<Tn>>,
-    op: Rc<dyn Op<T, Tn>>,
+    data: Tn,
+    grad: Tn,
+    op: Rc<RefCell<dyn Op<T, Tn>>>,
 }
 
 impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
-    pub fn new(val: Tn) -> Self {
+    pub fn new(data: Tn) -> Self {
         Self {
             id: Self::next_id(),
-            data: Rc::new(RefCell::new(val)),
-            grad: Rc::new(RefCell::new(Tn::zeros())),
-            op: Rc::new(NoOp {}),
+            data,
+            grad: Tn::zeros(),
+            op: Rc::new(RefCell::new(NoOp {})),
         }
     }
 
-    pub fn new_from_op(val: Tn, op: impl Op<T, Tn> + 'static) -> Self {
+    pub fn new_from_op(data: Tn, op: impl Op<T, Tn> + 'static) -> Self {
         Self {
             id: Self::next_id(),
-            data: Rc::new(RefCell::new(val)),
-            grad: Rc::new(RefCell::new(Tn::zeros())),
-            op: Rc::new(op),
+            data,
+            grad: Tn::zeros(),
+            op: Rc::new(RefCell::new(op)),
         }
     }
 
@@ -59,21 +59,21 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
     }
 
     pub fn op(&self) -> String {
-        format!("{:?}", self.op)
+        format!("{:?}", self.op.borrow())
     }
 
     pub fn update_from_grad(&self, epsilon: T) {
         self.data
-            .borrow_mut()
-            .update_zip(&self.grad.borrow(), |data, grad| data + grad * -epsilon);
+            .clone()
+            .update_zip(&self.grad, |data, grad| data + grad * -epsilon);
     }
 
-    pub fn zero_grad(&self) {
-        self.grad.replace(Tn::zeros());
+    pub fn zero_grad(&mut self) {
+        self.grad.update(|_| T::zero());
     }
 
-    pub fn update_grad(&self, f: impl Fn(T, T) -> T) {
-        self.grad.borrow_mut().update_zip(&self.data.borrow(), f);
+    pub fn update_grad(&mut self, f: impl Fn(T, T) -> T) {
+        self.grad.update_zip(&self.data, f);
     }
 
     // returns (nodes, edges)
@@ -89,7 +89,7 @@ impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
     fn build_trace(val: &Self, nodes: &mut HashSet<Self>, edges: &mut HashSet<(Self, Self)>) {
         if !nodes.contains(val) {
             nodes.insert(val.clone());
-            for child in val.op.children().iter() {
+            for child in val.op.borrow().children().iter() {
                 edges.insert((child.clone(), val.clone()));
                 Self::build_trace(child, nodes, edges);
             }
@@ -105,26 +105,24 @@ impl<T: Numeric> From<T> for Flow<T, Scalar<T>> {
 
 impl<T: Numeric> Flow<T, Scalar<T>> {
     pub fn val(&self) -> T {
-        self.data.borrow().val()
+        self.data.val()
     }
 
     pub fn grad(&self) -> T {
-        self.grad.borrow().val()
+        self.grad.val()
     }
 }
 
 impl<T: Numeric> Flow<T, Scalar<T>> {
-    pub fn backward(&self) {
+    pub fn backward(&mut self) {
         let mut topo = Vec::new();
         let mut visited = HashSet::new();
 
         Self::build_topo(self, &mut topo, &mut visited);
 
-        self.grad.replace(Scalar::from(T::one()));
+        self.grad.update(|_| T::one());
         for flow in topo.iter().rev() {
-            {
-                flow.op.backward(&flow.grad.borrow(), &flow.data.borrow());
-            }
+            flow.op.borrow_mut().backward(&flow.grad, &flow.data);
         }
     }
 
@@ -134,7 +132,7 @@ impl<T: Numeric> Flow<T, Scalar<T>> {
         }
 
         visited.insert(cur.id);
-        for child in cur.op.children().iter() {
+        for child in cur.op.borrow().children().iter() {
             Self::build_topo(child, topo, visited);
         }
         topo.push(cur.clone());

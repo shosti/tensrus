@@ -1,6 +1,6 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{Tensor, TensorShape};
+use crate::tensor::{ShapedTensor, Tensor, TensorShape};
 use num::ToPrimitive;
 
 pub const fn scalar_shape() -> TensorShape {
@@ -14,7 +14,7 @@ pub struct Scalar<T: Numeric>(GenericTensor<T, 0, { scalar_shape() }>);
 
 impl<T: Numeric> Scalar<T> {
     pub fn val(&self) -> T {
-        self[[]]
+        self.get([])
     }
 }
 
@@ -31,15 +31,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vector::Vector;
     use crate::tensor::ShapedTensor;
+    use crate::vector::Vector;
 
     #[test]
     fn basics() {
         let a: Scalar<f64> = Scalar::from(42);
 
         assert_eq!(a.shape(), []);
-        assert_eq!(a[[]], 42.0);
+        assert_eq!(a.get([]), 42.0);
         assert_eq!(a.val(), 42.0);
     }
 

@@ -12,7 +12,7 @@ fn flow_sanity_test() {
     let z = Flow::from(2.0) * x.clone() + Flow::from(2.0) + x.clone();
     let q = z.clone().relu() + z.clone() * x.clone();
     let h = (z.clone() * z.clone()).relu();
-    let y = h.clone() + q.clone() + q.clone() * x.clone();
+    let mut y = h.clone() + q.clone() + q.clone() * x.clone();
     y.backward();
     render_graph(y.clone(), "thing".to_string());
 

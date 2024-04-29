@@ -34,6 +34,12 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         impl #impl_generics Tensor for #name #type_generics #where_clause {}
 
         impl #impl_generics crate::tensor::ShapedTensor<T, #rank, #shape> for #name #type_generics #where_clause {
+            fn get(&self, idx: [usize; #rank]) -> T {
+                self.0.get(idx)
+            }
+            fn set(&self, idx: [usize; #rank], val: T) {
+                self.0.set(idx, val)
+            }
         }
 
         impl #f_impl_generics FromIterator<F> for #name #type_generics #where_clause
@@ -96,20 +102,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         impl #impl_generics std::ops::MulAssign<T> for #name #type_generics #where_clause {
             fn mul_assign(&mut self, other: T) {
                 self.0 *= other;
-            }
-        }
-
-        impl #impl_generics std::ops::Index<[usize; #rank]> for #name #type_generics #where_clause {
-            type Output = T;
-
-            fn index(&self, idx: [usize; #rank]) -> &Self::Output {
-                self.0.index(idx)
-            }
-        }
-
-        impl #impl_generics std::ops::IndexMut<[usize; #rank]> for #name #type_generics #where_clause {
-            fn index_mut(&mut self, idx: [usize; #rank]) -> &mut Self::Output {
-                self.0.index_mut(idx)
             }
         }
 

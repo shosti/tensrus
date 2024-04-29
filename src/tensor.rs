@@ -1,7 +1,8 @@
+use std::fmt::Debug;
+use std::ops::{Add, AddAssign, Mul, MulAssign};
+
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use std::fmt::Debug;
-use std::ops::{Add, AddAssign, IndexMut, Mul, MulAssign};
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
@@ -34,9 +35,7 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
 // Marker trait for the purposes of the derive macro
 pub trait Tensor {}
 
-pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape>:
-    IndexMut<[usize; R], Output = T>
-{
+pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape> {
     fn rank(&self) -> usize {
         R
     }
@@ -48,6 +47,8 @@ pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape>:
 
         s
     }
+    fn get(&self, idx: [usize; R]) -> T;
+    fn set(&self, idx: [usize; R], val: T);
 }
 
 pub trait TensorOps<T: Numeric>:
@@ -102,7 +103,7 @@ where
             return None;
         }
 
-        let item = self.t[self.cur];
+        let item = self.t.get(self.cur);
         if R == 0 {
             self.done = true;
             return Some(item);

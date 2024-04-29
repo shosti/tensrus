@@ -3,7 +3,7 @@ use std::fmt::{Debug, Formatter};
 
 pub trait Op<T: Numeric, Tn: TensorOps<T>>: Debug {
     fn children(&self) -> Vec<Flow<T, Tn>>;
-    fn backward(&self, _to_grad: &Tn, _to_data: &Tn) {}
+    fn backward(&mut self, _to_grad: &Tn, _to_data: &Tn) {}
 }
 
 #[derive(Clone, Debug)]
@@ -41,7 +41,7 @@ impl<T: Numeric> Op<T, Scalar<T>> for PowOp<T, Scalar<T>> {
         vec![self.from.clone()]
     }
 
-    fn backward(&self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
+    fn backward(&mut self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
         self.from.update_grad(|grad, data| {
             grad + ((self.n * data.powf(self.n - T::one())) * to_grad.val())
         });
@@ -78,7 +78,7 @@ impl<T: Numeric> Op<T, Scalar<T>> for ReluOp<T, Scalar<T>> {
         vec![self.from.clone()]
     }
 
-    fn backward(&self, to_grad: &Scalar<T>, to_data: &Scalar<T>) {
+    fn backward(&mut self, to_grad: &Scalar<T>, to_data: &Scalar<T>) {
         self.from.update_grad(|grad, _data| {
             let diff = if to_data.val().is_sign_positive() && !to_data.val().is_zero() {
                 to_grad.val()
@@ -119,7 +119,7 @@ impl<T: Numeric> Op<T, Scalar<T>> for AddOp<T, Scalar<T>> {
         out
     }
 
-    fn backward(&self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
+    fn backward(&mut self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
         self.from.0.update_grad(|grad, _data| grad + to_grad.val());
         self.from.1.update_grad(|grad, _data| grad + to_grad.val());
     }
@@ -153,7 +153,7 @@ impl<T: Numeric> Op<T, Scalar<T>> for MulOp<T, Scalar<T>> {
         out
     }
 
-    fn backward(&self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
+    fn backward(&mut self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
         let a_data = self.from.0.val();
         let b_data = self.from.1.val();
 

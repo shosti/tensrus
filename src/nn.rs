@@ -5,8 +5,8 @@ use rand::distributions::{Distribution, Uniform};
 use rand::SeedableRng;
 
 pub trait Module<T: Numeric> {
-    fn zero_grad(&self) {
-        for p in self.parameters().iter() {
+    fn zero_grad(&mut self) {
+        for p in self.parameters().iter_mut() {
             p.zero_grad();
         }
     }
@@ -121,8 +121,8 @@ impl<T: Numeric> MLP<T> {
         res
     }
 
-    pub fn zero_grad(&self) {
-        for p in self.parameters().iter() {
+    pub fn zero_grad(&mut self) {
+        for p in self.parameters().iter_mut() {
             p.zero_grad();
         }
     }

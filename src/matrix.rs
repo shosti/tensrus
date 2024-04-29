@@ -1,6 +1,6 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
+use crate::tensor::{num_elems, IndexError, ShapedTensor, Tensor, TensorShape};
 use crate::vector::{vector_shape, Vector};
 use num::ToPrimitive;
 use std::ops::Mul;
@@ -38,7 +38,7 @@ where
             return Err(IndexError {});
         }
 
-        Ok(Vector::from_fn(|[j]| self[[i, j]]))
+        Ok(Vector::from_fn(|[j]| self.get([i, j])))
     }
 
     pub fn col(&self, j: usize) -> Result<Vector<T, M>, IndexError>
@@ -49,7 +49,7 @@ where
             return Err(IndexError {});
         }
 
-        Ok(Vector::from_fn(|[i]| self[[i, j]]))
+        Ok(Vector::from_fn(|[i]| self.get([i, j])))
     }
 
     // This could be "fast" but we'll deal with that later
@@ -57,7 +57,7 @@ where
     where
         [(); num_elems(2, matrix_shape(N, M))]:,
     {
-        Matrix::from_fn(|[i, j]| self[[j, i]])
+        Matrix::from_fn(|[i, j]| self.get([j, i]))
     }
 }
 
@@ -130,8 +130,8 @@ mod tests {
         ]);
 
         assert_eq!(x.shape(), [4, 3]);
-        assert_eq!(x[[2, 1]], 5.0);
-        assert_eq!(x[[3, 2]], 3.0);
+        assert_eq!(x.get([2, 1]), 5.0);
+        assert_eq!(x.get([3, 2]), 3.0);
 
         let y: Matrix<f64, 4, 3> = Matrix::from([
             3.0, 4.0, 5.0,

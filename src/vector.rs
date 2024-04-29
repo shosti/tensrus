@@ -1,6 +1,6 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{num_elems, Tensor, TensorShape};
+use crate::tensor::{num_elems, ShapedTensor, Tensor, TensorShape};
 use num::ToPrimitive;
 
 pub const fn vector_shape(n: usize) -> TensorShape {
@@ -30,7 +30,7 @@ where
         let mut res = T::zero();
         for i in 0..N {
             let idx = [i];
-            res += self[idx] * other[idx];
+            res += self.get(idx) * other.get(idx);
         }
 
         res
@@ -66,7 +66,7 @@ mod tests {
         let a: Vector<f64, 5> = Vector::from([1, 2, 3, 4, 5]);
 
         assert_eq!(a.shape(), [5]);
-        assert_eq!(a[[3]], 4.0);
+        assert_eq!(a.get([3]), 4.0);
     }
 
     #[test]

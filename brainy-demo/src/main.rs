@@ -18,12 +18,12 @@ fn main() {
         .map(|&n| Flow::from(n))
         .collect();
 
-    let n: MLP<f64> = MLP::new(3, vec![4, 4, 1]);
+    let mut n: MLP<f64> = MLP::new(3, vec![4, 4, 1]);
 
     let mut ypred;
     for i in 0..50 {
         ypred = xs.iter().map(|x| n.call(x.to_vec())[0].clone()).collect();
-        let loss = n.loss(&ys, &ypred);
+        let mut loss = n.loss(&ys, &ypred);
         n.zero_grad();
         loss.backward();
         for p in n.parameters() {
