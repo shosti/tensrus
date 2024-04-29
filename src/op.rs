@@ -1,19 +1,24 @@
-use crate::{flow::Flow, numeric::Numeric, scalar::Scalar, tensor::Tensor};
+use crate::{
+    flow::{Flow, FlowRef},
+    numeric::Numeric,
+    scalar::Scalar,
+    tensor::{BasicTensor, Tensor},
+};
 use std::{
     fmt::{Debug, Formatter},
     ops::Add,
 };
 
-pub trait Op<T: Numeric, Tn: Tensor<T>>: Debug + 'static {
-    fn children(&self) -> Vec<Flow<T, Tn>>;
-    fn backward(&mut self, _to_grad: &Tn, _to_data: &Tn) {}
+pub trait Op<T: Numeric>: Debug + 'static {
+    fn children(&self) -> Vec<FlowRef<T>>;
+    fn backward(&mut self, _to_grad: &dyn BasicTensor<T>, _to_data: &dyn BasicTensor<T>) {}
 }
 
 #[derive(Clone, Debug)]
 pub struct NoOp {}
 
-impl<T: Numeric, Tn: Tensor<T>> Op<T, Tn> for NoOp {
-    fn children(&self) -> Vec<Flow<T, Tn>> {
+impl<T: Numeric> Op<T> for NoOp {
+    fn children(&self) -> Vec<FlowRef<T>> {
         vec![]
     }
 }
@@ -39,15 +44,16 @@ impl<T: Numeric> Debug for PowOp<T, Scalar<T>> {
     }
 }
 
-impl<T: Numeric> Op<T, Scalar<T>> for PowOp<T, Scalar<T>> {
-    fn children(&self) -> Vec<Flow<T, Scalar<T>>> {
-        vec![self.from.clone()]
+impl<T: Numeric> Op<T> for PowOp<T, Scalar<T>> {
+    fn children(&self) -> Vec<FlowRef<T>> {
+        let from = self.from.clone();
+        vec![from.into()]
     }
 
-    fn backward(&mut self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
-        self.from.update_grad(|grad, data| {
-            grad + ((self.n * data.powf(self.n - T::one())) * to_grad.val())
-        });
+    fn backward(&mut self, _to_grad: &dyn BasicTensor<T>, _to_data: &dyn BasicTensor<T>) {
+        // self.from.update_grad(|grad, data| {
+        //     grad + ((self.n * data.powf(self.n - T::one())) * to_grad.val())
+        // });
     }
 }
 
@@ -79,24 +85,25 @@ where
     }
 }
 
-impl<T: Numeric, Tn> Op<T, Tn> for ReluOp<T, Tn>
+impl<T: Numeric, Tn> Op<T> for ReluOp<T, Tn>
 where
     Tn: Tensor<T>,
 {
-    fn children(&self) -> Vec<Flow<T, Tn>> {
-        vec![self.from.clone()]
+    fn children(&self) -> Vec<FlowRef<T>> {
+        let from = self.from.clone();
+        vec![from.into()]
     }
 
-    fn backward(&mut self, to_grad: &Tn, to_data: &Tn) {
-        self.from.grad.update_zip2(to_grad, to_data, |from_grad, to_grad, to_data| {
-            let diff = if to_data.is_sign_positive() && !to_data.is_zero() {
-                to_grad
-            } else {
-                T::zero()
-            };
+    fn backward(&mut self, _to_grad: &dyn BasicTensor<T>, _to_data: &dyn BasicTensor<T>) {
+        // self.from.grad.update_zip2(to_grad, to_data, |from_grad, to_grad, to_data| {
+        //     let diff = if to_data.is_sign_positive() && !to_data.is_zero() {
+        //         to_grad
+        //     } else {
+        //         T::zero()
+        //     };
 
-            from_grad + diff
-        })
+        //     from_grad + diff
+        // })
     }
 }
 
@@ -123,23 +130,24 @@ impl<T: Numeric, Tn: Tensor<T>> Debug for AddOp<T, Tn> {
     }
 }
 
-impl<T: Numeric, Tn: Tensor<T>> Op<T, Tn> for AddOp<T, Tn> {
-    fn children(&self) -> Vec<Flow<T, Tn>> {
-        let mut out = vec![self.from.0.clone(), self.from.1.clone()];
-        out.sort();
+impl<T: Numeric, Tn: Tensor<T>> Op<T> for AddOp<T, Tn> {
+    fn children(&self) -> Vec<FlowRef<T>> {
+        todo!()
+        // let mut out = vec![self.from.0.clone(), self.from.1.clone()];
+        // out.sort();
 
-        out
+        // out
     }
 
-    fn backward(&mut self, to_grad: &Tn, _to_data: &Tn) {
-        self.from
-            .0
-            .grad
-            .update_zip(to_grad, |from_grad, to_grad| from_grad + to_grad);
-        self.from
-            .1
-            .grad
-            .update_zip(to_grad, |from_grad, to_grad| from_grad + to_grad);
+    fn backward(&mut self, to_grad: &dyn BasicTensor<T>, _to_data: &dyn BasicTensor<T>) {
+        // self.from
+        //     .0
+        //     .grad
+        //     .update_zip(to_grad, |from_grad, to_grad| from_grad + to_grad);
+        // self.from
+        //     .1
+        //     .grad
+        //     .update_zip(to_grad, |from_grad, to_grad| from_grad + to_grad);
     }
 }
 
@@ -163,23 +171,24 @@ impl<T: Numeric> MulOp<T, Scalar<T>> {
     }
 }
 
-impl<T: Numeric> Op<T, Scalar<T>> for MulOp<T, Scalar<T>> {
-    fn children(&self) -> Vec<Flow<T, Scalar<T>>> {
-        let mut out = vec![self.from.0.clone(), self.from.1.clone()];
-        out.sort();
+impl<T: Numeric> Op<T> for MulOp<T, Scalar<T>> {
+    fn children(&self) -> Vec<FlowRef<T>> {
+        todo!()
+        // let mut out = vec![self.from.0.clone(), self.from.1.clone()];
+        // out.sort();
 
-        out
+        // out
     }
 
-    fn backward(&mut self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
-        let a_data = self.from.0.val();
-        let b_data = self.from.1.val();
+    fn backward(&mut self, to_grad: &dyn BasicTensor<T>, _to_data: &dyn BasicTensor<T>) {
+        // let a_data = self.from.0.val();
+        // let b_data = self.from.1.val();
 
-        self.from
-            .0
-            .update_grad(|grad, _data| grad + b_data * to_grad.val());
-        self.from
-            .1
-            .update_grad(|grad, _data| grad + a_data * to_grad.val());
+        // self.from
+        //     .0
+        //     .update_grad(|grad, _data| grad + b_data * to_grad.val());
+        // self.from
+        //     .1
+        //     .update_grad(|grad, _data| grad + a_data * to_grad.val());
     }
 }

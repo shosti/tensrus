@@ -28,12 +28,12 @@ impl Graph {
         for n in nodes.iter() {
             let label = format!(
                 "{} | data: {} | grad: {} | {:?}",
-                n.id(),
+                n.id,
                 n.val(),
                 n.grad(),
                 n.op()
             );
-            let id = format!("id{}", n.id());
+            let id = format!("id{}", n.id);
             let node = Nd {
                 id: id.clone(),
                 label,
@@ -42,7 +42,7 @@ impl Graph {
         }
 
         for (from, to) in edges.iter() {
-            let edge = (format!("id{}", from.id()), format!("id{}", to.id()));
+            let edge = (format!("id{}", from.id), format!("id{}", to.id));
             es.push(edge);
         }
 

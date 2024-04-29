@@ -2,7 +2,7 @@ use crate::{
     numeric::Numeric,
     op::{AddOp, MulOp, NoOp, Op, PowOp, ReluOp},
     scalar::Scalar,
-    tensor::Tensor,
+    tensor::{BasicTensor, Tensor},
 };
 use std::{
     cell::RefCell,
@@ -19,10 +19,18 @@ thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 
 #[derive(Debug, Clone)]
 pub struct Flow<T: Numeric, Tn: Tensor<T>> {
-    id: u64,
+    pub id: u64,
     pub data: Tn,
     pub grad: Tn,
-    op: Rc<RefCell<dyn Op<T, Tn>>>,
+    op: Rc<RefCell<dyn Op<T>>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FlowRef<T: Numeric> {
+    id: u64,
+    data: Rc<dyn BasicTensor<T>>,
+    grad: Rc<dyn BasicTensor<T>>,
+    op: Rc<RefCell<dyn Op<T>>>,
 }
 
 impl<T: Numeric, Tn: Tensor<T>> Flow<T, Tn> {
@@ -35,7 +43,7 @@ impl<T: Numeric, Tn: Tensor<T>> Flow<T, Tn> {
         }
     }
 
-    pub fn new_from_op(data: Tn, op: impl Op<T, Tn>) -> Self {
+    pub fn new_from_op(data: Tn, op: impl Op<T>) -> Self {
         Self {
             id: Self::next_id(),
             data,
@@ -52,10 +60,6 @@ impl<T: Numeric, Tn: Tensor<T>> Flow<T, Tn> {
         });
 
         id
-    }
-
-    pub fn id(&self) -> u64 {
-        self.id
     }
 
     pub fn op(&self) -> String {
@@ -91,13 +95,13 @@ impl<T: Numeric, Tn: Tensor<T>> Flow<T, Tn> {
     }
 
     fn build_trace(val: &Self, nodes: &mut HashSet<Self>, edges: &mut HashSet<(Self, Self)>) {
-        if !nodes.contains(val) {
-            nodes.insert(val.clone());
-            for child in val.op.borrow().children().iter() {
-                edges.insert((child.clone(), val.clone()));
-                Self::build_trace(child, nodes, edges);
-            }
-        }
+        // if !nodes.contains(val) {
+        //     nodes.insert(val.clone());
+        //     for child in val.op.borrow().children().iter() {
+        //         edges.insert((child.clone(), val.clone()));
+        //         Self::build_trace(child, nodes, edges);
+        //     }
+        // }
     }
 }
 
@@ -121,16 +125,19 @@ impl<T: Numeric> Flow<T, Scalar<T>> {
     pub fn backward(&mut self) {
         let mut topo = Vec::new();
         let mut visited = HashSet::new();
+        let cur: FlowRef<T> = self.clone().into();
 
-        Self::build_topo(self, &mut topo, &mut visited);
+        Self::build_topo(&cur, &mut topo, &mut visited);
 
         self.grad.update(|_| T::one());
         for flow in topo.iter().rev() {
-            flow.op.borrow_mut().backward(&flow.grad, &flow.data);
+            flow.op
+                .borrow_mut()
+                .backward(flow.grad.as_ref(), flow.data.as_ref());
         }
     }
 
-    fn build_topo(cur: &Self, topo: &mut Vec<Self>, visited: &mut HashSet<u64>) {
+    fn build_topo(cur: &FlowRef<T>, topo: &mut Vec<FlowRef<T>>, visited: &mut HashSet<u64>) {
         if visited.contains(&cur.id) {
             return;
         }
@@ -194,32 +201,40 @@ impl<T: Numeric> Neg for Flow<T, Scalar<T>> {
 
 impl<T: Numeric, Tn: Tensor<T>> PartialEq for Flow<T, Tn> {
     fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
+        self.id == other.id
     }
 }
 
 impl<T: Numeric, Tn: Tensor<T>> Eq for Flow<T, Tn> {}
 
-impl<T: Numeric, Tn: Tensor<T>> Hash for Flow<T, Tn> {
+impl<T: Numeric> Hash for FlowRef<T> {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
     {
-        self.id().hash(state)
+        self.id.hash(state)
     }
 }
 
-impl<T: Numeric, Tn: Tensor<T>> PartialOrd for Flow<T, Tn> {
+impl<T: Numeric> PartialOrd for FlowRef<T> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.id.cmp(&other.id))
     }
 }
 
-impl<T: Numeric, Tn: Tensor<T>> Ord for Flow<T, Tn> {
+impl<T: Numeric> Ord for FlowRef<T> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
     }
 }
+
+impl<T: Numeric> PartialEq for FlowRef<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl<T: Numeric> Eq for FlowRef<T> {}
 
 impl<T: Numeric> Sum for Flow<T, Scalar<T>> {
     fn sum<I: Iterator<Item = Flow<T, Scalar<T>>>>(mut iter: I) -> Self {
@@ -234,5 +249,16 @@ impl<T: Numeric> Sum for Flow<T, Scalar<T>> {
         }
 
         res
+    }
+}
+
+impl<T: Numeric, Tn: Tensor<T>> From<Flow<T, Tn>> for FlowRef<T> {
+    fn from(flow: Flow<T, Tn>) -> Self {
+        Self {
+            id: flow.id,
+            data: Rc::new(flow.data.clone()),
+            grad: Rc::new(flow.grad.clone()),
+            op: flow.op.clone(),
+        }
     }
 }
