@@ -31,7 +31,19 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let rank = parse_rank(&ast);
     let shape = parse_shape(&ast);
     let gen = quote! {
-        impl #impl_generics Tensor for #name #type_generics #where_clause {}
+        impl #impl_generics crate::tensor::Tensor<T> for #name #type_generics #where_clause {
+            fn zeros() -> Self {
+                Self(crate::generic_tensor::GenericTensor::zeros())
+            }
+
+            fn update<F: Fn(T) -> T>(&mut self, f: F) {
+                self.0.update(f);
+            }
+
+            fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F) {
+                self.0.update_zip(&other.0, f);
+            }
+        }
 
         impl #impl_generics crate::tensor::ShapedTensor<T, #rank, #shape> for #name #type_generics #where_clause {
             fn get(&self, idx: [usize; #rank]) -> T {
@@ -100,20 +112,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         impl #impl_generics Clone for #name #type_generics #where_clause {
             fn clone(&self) -> Self {
                 Self(self.0.clone())
-            }
-        }
-
-        impl #impl_generics crate::tensor::TensorOps<T> for #name #type_generics #where_clause {
-            fn zeros() -> Self {
-                Self(crate::generic_tensor::GenericTensor::zeros())
-            }
-
-            fn update<F: Fn(T) -> T>(&mut self, f: F) {
-                self.0.update(f);
-            }
-
-            fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F) {
-                self.0.update_zip(&other.0, f);
             }
         }
     };

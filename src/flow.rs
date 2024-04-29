@@ -2,7 +2,7 @@ use crate::{
     numeric::Numeric,
     op::{AddOp, MulOp, NoOp, Op, PowOp, ReluOp},
     scalar::Scalar,
-    tensor::TensorOps,
+    tensor::Tensor,
 };
 use std::{
     cell::RefCell,
@@ -18,14 +18,14 @@ use std::{
 thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 
 #[derive(Debug, Clone)]
-pub struct Flow<T: Numeric, Tn: TensorOps<T>> {
+pub struct Flow<T: Numeric, Tn: Tensor<T>> {
     id: u64,
     pub data: Tn,
     pub grad: Tn,
     op: Rc<RefCell<dyn Op<T, Tn>>>,
 }
 
-impl<T: Numeric, Tn: TensorOps<T>> Flow<T, Tn> {
+impl<T: Numeric, Tn: Tensor<T>> Flow<T, Tn> {
     pub fn new(data: Tn) -> Self {
         Self {
             id: Self::next_id(),
@@ -189,15 +189,15 @@ impl<T: Numeric> Neg for Flow<T, Scalar<T>> {
     }
 }
 
-impl<T: Numeric, Tn: TensorOps<T>> PartialEq for Flow<T, Tn> {
+impl<T: Numeric, Tn: Tensor<T>> PartialEq for Flow<T, Tn> {
     fn eq(&self, other: &Self) -> bool {
         self.id() == other.id()
     }
 }
 
-impl<T: Numeric, Tn: TensorOps<T>> Eq for Flow<T, Tn> {}
+impl<T: Numeric, Tn: Tensor<T>> Eq for Flow<T, Tn> {}
 
-impl<T: Numeric, Tn: TensorOps<T>> Hash for Flow<T, Tn> {
+impl<T: Numeric, Tn: Tensor<T>> Hash for Flow<T, Tn> {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
@@ -206,7 +206,7 @@ impl<T: Numeric, Tn: TensorOps<T>> Hash for Flow<T, Tn> {
     }
 }
 
-impl<T: Numeric, Tn: TensorOps<T>> PartialOrd for Flow<T, Tn> {
+impl<T: Numeric, Tn: Tensor<T>> PartialOrd for Flow<T, Tn> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self.id() < other.id() {
             Some(Ordering::Less)
@@ -218,7 +218,7 @@ impl<T: Numeric, Tn: TensorOps<T>> PartialOrd for Flow<T, Tn> {
     }
 }
 
-impl<T: Numeric, Tn: TensorOps<T>> Ord for Flow<T, Tn> {
+impl<T: Numeric, Tn: Tensor<T>> Ord for Flow<T, Tn> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
     }

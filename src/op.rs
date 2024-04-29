@@ -1,7 +1,7 @@
-use crate::{flow::Flow, numeric::Numeric, scalar::Scalar, tensor::TensorOps};
+use crate::{flow::Flow, numeric::Numeric, scalar::Scalar, tensor::Tensor};
 use std::fmt::{Debug, Formatter};
 
-pub trait Op<T: Numeric, Tn: TensorOps<T>>: Debug {
+pub trait Op<T: Numeric, Tn: Tensor<T>>: Debug {
     fn children(&self) -> Vec<Flow<T, Tn>>;
     fn backward(&mut self, _to_grad: &Tn, _to_data: &Tn) {}
 }
@@ -9,14 +9,14 @@ pub trait Op<T: Numeric, Tn: TensorOps<T>>: Debug {
 #[derive(Clone, Debug)]
 pub struct NoOp {}
 
-impl<T: Numeric, Tn: TensorOps<T>> Op<T, Tn> for NoOp {
+impl<T: Numeric, Tn: Tensor<T>> Op<T, Tn> for NoOp {
     fn children(&self) -> Vec<Flow<T, Tn>> {
         vec![]
     }
 }
 
 #[derive(Clone)]
-pub struct PowOp<T: Numeric, Tn: TensorOps<T>> {
+pub struct PowOp<T: Numeric, Tn: Tensor<T>> {
     n: T,
     from: Flow<T, Tn>,
 }
@@ -49,7 +49,7 @@ impl<T: Numeric> Op<T, Scalar<T>> for PowOp<T, Scalar<T>> {
 }
 
 #[derive(Clone)]
-pub struct ReluOp<T: Numeric, Tn: TensorOps<T>> {
+pub struct ReluOp<T: Numeric, Tn: Tensor<T>> {
     from: Flow<T, Tn>,
 }
 
@@ -92,7 +92,7 @@ impl<T: Numeric> Op<T, Scalar<T>> for ReluOp<T, Scalar<T>> {
 }
 
 #[derive(Clone)]
-pub struct AddOp<T: Numeric, Tn: TensorOps<T>> {
+pub struct AddOp<T: Numeric, Tn: Tensor<T>> {
     from: (Flow<T, Tn>, Flow<T, Tn>),
 }
 
@@ -126,7 +126,7 @@ impl<T: Numeric> Op<T, Scalar<T>> for AddOp<T, Scalar<T>> {
 }
 
 #[derive(Clone)]
-pub struct MulOp<T: Numeric, Tn: TensorOps<T>> {
+pub struct MulOp<T: Numeric, Tn: Tensor<T>> {
     from: (Flow<T, Tn>, Flow<T, Tn>),
 }
 

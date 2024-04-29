@@ -1,6 +1,6 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{num_elems, IndexError, ShapedTensor, Tensor, TensorShape};
+use crate::tensor::{num_elems, IndexError, ShapedTensor, TensorShape};
 use crate::vector::{vector_shape, Vector};
 use num::ToPrimitive;
 use std::ops::Mul;

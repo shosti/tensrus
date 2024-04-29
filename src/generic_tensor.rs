@@ -1,7 +1,7 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::tensor::{
-    num_elems, IndexError, ShapeError, ShapedTensor, TensorIterator, TensorOps, TensorShape,
+    num_elems, IndexError, ShapeError, ShapedTensor, TensorIterator, Tensor, TensorShape,
 };
 use num::ToPrimitive;
 use std::cell::RefCell;
@@ -98,7 +98,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<T, R, S>
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> TensorOps<T> for GenericTensor<T, R, S> {
+impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T> for GenericTensor<T, R, S> {
     fn zeros() -> Self {
         let storage = vec![T::zero(); Self::storage_size()];
         Self {
