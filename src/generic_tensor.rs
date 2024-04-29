@@ -177,25 +177,17 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Eq for GenericTensor<T, R, S> {}
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Add<T> for GenericTensor<T, R, S> {
+impl<T: Numeric, const R: usize, const S: TensorShape> Add for GenericTensor<T, R, S> {
     type Output = Self;
 
-    fn add(self, other: T) -> Self::Output {
-        Self::from_fn(|idx| self.get(idx) + other)
+    fn add(self, other: Self) -> Self::Output {
+        Self::from_fn(|idx| self.get(idx) + other.get(idx))
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Add<Scalar<T>> for GenericTensor<T, R, S> {
-    type Output = Self;
-
-    fn add(self, other: Scalar<T>) -> Self::Output {
-        Self::from_fn(|idx| self.get(idx) + other.val())
-    }
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape> AddAssign<T> for GenericTensor<T, R, S> {
-    fn add_assign(&mut self, other: T) {
-        self.update(&|v| v + other);
+impl<T: Numeric, const R: usize, const S: TensorShape> AddAssign for GenericTensor<T, R, S> {
+    fn add_assign(&mut self, other: Self) {
+        self.update_zip(&other, |x, y| x + y)
     }
 }
 
@@ -281,6 +273,24 @@ mod tests {
             t4,
             GenericTensor::<f64, 3, { [2, 3, 1, 0, 0] }>::from([000, 010, 020, 100, 110, 120]),
         );
+    }
+
+    #[test]
+    fn math() {
+        let mut x: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([1, 2, 3, 4]);
+        let y: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([5, 6, 7, 8]);
+        let a: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([6, 8, 10, 12]);
+
+        assert_eq!(x.clone() + y.clone(), a);
+
+        x += y;
+        assert_eq!(x.clone(), a);
+
+        let b: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([12, 16, 20, 24]);
+        assert_eq!(x.clone() * 2.0, b);
+
+        x *= 2.0;
+        assert_eq!(x, b);
     }
 
     #[test]

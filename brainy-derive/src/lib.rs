@@ -61,25 +61,17 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics std::ops::Add<T> for #name #type_generics #where_clause {
+        impl #impl_generics std::ops::Add for #name #type_generics #where_clause {
             type Output = Self;
 
-            fn add(self, other: T) -> Self::Output {
-                Self(self.0 + other)
+            fn add(self, other: Self) -> Self::Output {
+                Self(self.0 + other.0)
             }
         }
 
-        impl #impl_generics std::ops::Add<crate::scalar::Scalar<T>> for #name #type_generics #where_clause {
-            type Output = Self;
-
-            fn add(self, other: crate::scalar::Scalar<T>) -> Self::Output {
-                Self(self.0 + other)
-            }
-        }
-
-        impl #impl_generics std::ops::AddAssign<T> for #name #type_generics #where_clause {
-            fn add_assign(&mut self, other: T) {
-                self.0 += other;
+        impl #impl_generics std::ops::AddAssign for #name #type_generics #where_clause {
+            fn add_assign(&mut self, other: Self) {
+                self.0 += other.0;
             }
         }
 

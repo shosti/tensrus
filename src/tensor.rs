@@ -52,15 +52,7 @@ pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape> {
 }
 
 pub trait TensorOps<T: Numeric>:
-    Add<T>
-    + Add<Scalar<T>>
-    + AddAssign<T>
-    + Mul<T>
-    + Mul<Scalar<T>>
-    + MulAssign<T>
-    + Debug
-    + Clone
-    + 'static
+    Add + AddAssign + Mul<T> + Mul<Scalar<T>> + MulAssign<T> + Debug + Clone + 'static
 {
     fn zeros() -> Self;
     fn update<F: Fn(T) -> T>(&mut self, f: F);
