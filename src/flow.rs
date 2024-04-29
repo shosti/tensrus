@@ -147,7 +147,10 @@ impl<T: Numeric> Flow<T, Scalar<T>> {
     }
 }
 
-impl<T: Numeric> Add for Flow<T, Scalar<T>> {
+impl<T: Numeric, Tn> Add for Flow<T, Tn>
+where
+    Tn: Tensor<T> + Add<Output = Tn>,
+{
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {

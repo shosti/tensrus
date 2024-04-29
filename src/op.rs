@@ -1,5 +1,8 @@
 use crate::{flow::Flow, numeric::Numeric, scalar::Scalar, tensor::Tensor};
-use std::fmt::{Debug, Formatter};
+use std::{
+    fmt::{Debug, Formatter},
+    ops::Add,
+};
 
 pub trait Op<T: Numeric, Tn: Tensor<T>>: Debug {
     fn children(&self) -> Vec<Flow<T, Tn>>;
@@ -96,32 +99,41 @@ pub struct AddOp<T: Numeric, Tn: Tensor<T>> {
     from: (Flow<T, Tn>, Flow<T, Tn>),
 }
 
-impl<T: Numeric> AddOp<T, Scalar<T>> {
-    pub fn create_flow(a: Flow<T, Scalar<T>>, b: Flow<T, Scalar<T>>) -> Flow<T, Scalar<T>> {
-        let outval = Scalar::from(a.val() + b.val());
+impl<T: Numeric, Tn> AddOp<T, Tn>
+where
+    Tn: Tensor<T> + Add<Output = Tn>,
+{
+    pub fn create_flow(a: Flow<T, Tn>, b: Flow<T, Tn>) -> Flow<T, Tn> {
+        let out = a.clone().data + b.clone().data;
         let op = AddOp { from: (a, b) };
 
-        Flow::new_from_op(outval, op)
+        Flow::new_from_op(out, op)
     }
 }
 
-impl<T: Numeric> Debug for AddOp<T, Scalar<T>> {
+impl<T: Numeric, Tn: Tensor<T>> Debug for AddOp<T, Tn> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{} + {}", self.from.0.val(), self.from.1.val())
+        write!(f, "+")
     }
 }
 
-impl<T: Numeric> Op<T, Scalar<T>> for AddOp<T, Scalar<T>> {
-    fn children(&self) -> Vec<Flow<T, Scalar<T>>> {
+impl<T: Numeric, Tn: Tensor<T>> Op<T, Tn> for AddOp<T, Tn> {
+    fn children(&self) -> Vec<Flow<T, Tn>> {
         let mut out = vec![self.from.0.clone(), self.from.1.clone()];
         out.sort();
 
         out
     }
 
-    fn backward(&mut self, to_grad: &Scalar<T>, _to_data: &Scalar<T>) {
-        self.from.0.update_grad(|grad, _data| grad + to_grad.val());
-        self.from.1.update_grad(|grad, _data| grad + to_grad.val());
+    fn backward(&mut self, to_grad: &Tn, _to_data: &Tn) {
+        self.from
+            .0
+            .grad
+            .update_zip(to_grad, |from_grad, to_grad| from_grad + to_grad);
+        self.from
+            .1
+            .grad
+            .update_zip(to_grad, |from_grad, to_grad| from_grad + to_grad);
     }
 }
 
