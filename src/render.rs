@@ -27,10 +27,10 @@ impl Graph {
 
         for n in nodes.iter() {
             let label = format!(
-                "{} | data: {} | grad: {} | {:?}",
+                "{} | data: {:?} | grad: {:?} | {:?}",
                 n.id,
-                n.val(),
-                n.grad(),
+                n.data,
+                n.grad,
                 n.op()
             );
             let id = format!("id{}", n.id);

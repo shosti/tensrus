@@ -1,6 +1,7 @@
 #![feature(adt_const_params)]
 #![feature(generic_arg_infer)]
 #![feature(generic_const_exprs)]
+#![feature(trait_upcasting)]
 #![allow(incomplete_features)]
 #[macro_use]
 extern crate brainy_derive;

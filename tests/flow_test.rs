@@ -16,8 +16,8 @@ fn flow_sanity_test() {
     y.backward();
     render_graph(y.clone(), "thing".to_string());
 
-    assert_eq!(y.val(), -20.0);
-    assert_eq!(x.grad(), 46.0);
+    assert_eq!(y.data.val(), -20.0);
+    assert_eq!(x.grad.val(), 46.0);
 }
 
 #[test]
@@ -38,9 +38,9 @@ fn test_more_ops() {
 
     let tol = 0.00000001;
 
-    assert!((g.val() - 24.70408163265306).abs() < tol);
-    assert!((a.grad() - 138.83381924198252).abs() < tol);
-    assert!((b.grad() - 645.5772594752187).abs() < tol);
+    assert!((g.data.val() - 24.70408163265306).abs() < tol);
+    assert!((a.grad.val() - 138.83381924198252).abs() < tol);
+    assert!((b.grad.val() - 645.5772594752187).abs() < tol);
 }
 
 fn render_graph(x: Flow<f64, Scalar<f64>>, id: String) {

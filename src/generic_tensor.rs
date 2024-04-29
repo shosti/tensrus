@@ -5,6 +5,7 @@ use crate::tensor::{
     TensorShape,
 };
 use num::ToPrimitive;
+use std::any::Any;
 use std::cell::RefCell;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 use std::rc::Rc;
@@ -69,7 +70,11 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> BasicTensor<T> for GenericTensor<T, R, S> {}
+impl<T: Numeric, const R: usize, const S: TensorShape> BasicTensor<T> for GenericTensor<T, R, S> {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
 
 impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<T, R, S>
     for GenericTensor<T, R, S>

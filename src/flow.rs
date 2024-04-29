@@ -27,9 +27,9 @@ pub struct Flow<T: Numeric, Tn: Tensor<T>> {
 
 #[derive(Debug, Clone)]
 pub struct FlowRef<T: Numeric> {
-    id: u64,
-    data: Rc<dyn BasicTensor<T>>,
-    grad: Rc<dyn BasicTensor<T>>,
+    pub id: u64,
+    pub data: Rc<dyn BasicTensor<T>>,
+    pub grad: Rc<dyn BasicTensor<T>>,
     op: Rc<RefCell<dyn Op<T>>>,
 }
 
@@ -62,10 +62,6 @@ impl<T: Numeric, Tn: Tensor<T>> Flow<T, Tn> {
         id
     }
 
-    pub fn op(&self) -> String {
-        format!("{:?}", self.op.borrow())
-    }
-
     pub fn relu(&self) -> Self {
         ReluOp::create_flow(self.clone())
     }
@@ -85,39 +81,30 @@ impl<T: Numeric, Tn: Tensor<T>> Flow<T, Tn> {
     }
 
     // returns (nodes, edges)
-    pub fn trace(&self) -> (HashSet<Self>, HashSet<(Self, Self)>) {
+    pub fn trace(&self) -> (HashSet<FlowRef<T>>, HashSet<(FlowRef<T>, FlowRef<T>)>) {
         let mut nodes = HashSet::new();
         let mut edges = HashSet::new();
+        let val: FlowRef<T> = self.clone().into();
 
-        Self::build_trace(self, &mut nodes, &mut edges);
+        Self::build_trace(&val, &mut nodes, &mut edges);
 
         (nodes, edges)
     }
 
-    fn build_trace(val: &Self, nodes: &mut HashSet<Self>, edges: &mut HashSet<(Self, Self)>) {
-        // if !nodes.contains(val) {
-        //     nodes.insert(val.clone());
-        //     for child in val.op.borrow().children().iter() {
-        //         edges.insert((child.clone(), val.clone()));
-        //         Self::build_trace(child, nodes, edges);
-        //     }
-        // }
+    fn build_trace(val: &FlowRef<T>, nodes: &mut HashSet<FlowRef<T>>, edges: &mut HashSet<(FlowRef<T>, FlowRef<T>)>) {
+        if !nodes.contains(val) {
+            nodes.insert(val.clone());
+            for child in val.op.borrow().children().iter() {
+                edges.insert((child.clone(), val.clone()));
+                Self::build_trace(child, nodes, edges);
+            }
+        }
     }
 }
 
 impl<T: Numeric> From<T> for Flow<T, Scalar<T>> {
     fn from(val: T) -> Self {
         Flow::new(Scalar::from(val))
-    }
-}
-
-impl<T: Numeric> Flow<T, Scalar<T>> {
-    pub fn val(&self) -> T {
-        self.data.val()
-    }
-
-    pub fn grad(&self) -> T {
-        self.grad.val()
     }
 }
 
@@ -206,6 +193,12 @@ impl<T: Numeric, Tn: Tensor<T>> PartialEq for Flow<T, Tn> {
 }
 
 impl<T: Numeric, Tn: Tensor<T>> Eq for Flow<T, Tn> {}
+
+impl<T: Numeric> FlowRef<T> {
+    pub fn op(&self) -> String {
+        format!("{:?}", self.op.borrow())
+    }
+}
 
 impl<T: Numeric> Hash for FlowRef<T> {
     fn hash<H>(&self, state: &mut H)
