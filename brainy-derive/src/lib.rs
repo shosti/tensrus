@@ -28,8 +28,8 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let (impl_generics, type_generics, where_clause) = ast.generics.split_for_impl();
     let (f_impl_generics, _, _) = f_generics.split_for_impl();
     let (impl_generics_with_lifetime, _, _) = generics_with_lifetime.split_for_impl();
-    let rank = parse_rank(&ast);
-    let shape = parse_shape(&ast);
+    let rank = parse_rank(ast);
+    let shape = parse_shape(ast);
     let gen = quote! {
         impl #impl_generics crate::tensor::Tensor<T> for #name #type_generics #where_clause {
             fn zeros() -> Self {
@@ -42,6 +42,10 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
 
             fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F) {
                 self.0.update_zip(&other.0, f);
+            }
+
+            fn update_zip2<F: Fn(T, T, T) -> T>(&mut self, a: &Self, b: &Self, f: F) {
+                self.0.update_zip2(&a.0, &b.0, f);
             }
 
             fn deep_clone(&self) -> Self {

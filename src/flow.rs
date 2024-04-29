@@ -62,6 +62,10 @@ impl<T: Numeric, Tn: Tensor<T>> Flow<T, Tn> {
         format!("{:?}", self.op.borrow())
     }
 
+    pub fn relu(&self) -> Self {
+        ReluOp::create_flow(self.clone())
+    }
+
     pub fn update_from_grad(&self, epsilon: T) {
         self.data
             .clone()
@@ -140,10 +144,6 @@ impl<T: Numeric> Flow<T, Scalar<T>> {
 
     pub fn pow(&self, n: T) -> Self {
         PowOp::create_flow(self.clone(), n)
-    }
-
-    pub fn relu(&self) -> Self {
-        ReluOp::create_flow(self.clone())
     }
 }
 

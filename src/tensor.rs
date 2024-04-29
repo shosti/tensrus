@@ -39,6 +39,7 @@ pub trait Tensor<T: Numeric>:
     fn deep_clone(&self) -> Self;
     fn update<F: Fn(T) -> T>(&mut self, f: F);
     fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F);
+    fn update_zip2<F: Fn(T, T, T) -> T>(&mut self, a: &Self, b: &Self, f: F);
 }
 
 pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape> {

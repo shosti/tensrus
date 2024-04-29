@@ -118,7 +118,16 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T> for GenericTens
             .borrow_mut()
             .iter_mut()
             .zip(other.storage.borrow().iter())
-            .for_each(|(v1, v2)| *v1 = f(*v1, *v2))
+            .for_each(|(x, y)| *x = f(*x, *y))
+    }
+
+    fn update_zip2<F: Fn(T, T, T) -> T>(&mut self, a: &Self, b: &Self, f: F) {
+        self.storage
+            .borrow_mut()
+            .iter_mut()
+            .zip(a.storage.borrow().iter())
+            .zip(b.storage.borrow().iter())
+            .for_each(|((x, y), z)| *x = f(*x, *y, *z))
     }
 
     fn deep_clone(&self) -> Self {

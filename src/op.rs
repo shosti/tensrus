@@ -56,41 +56,47 @@ pub struct ReluOp<T: Numeric, Tn: Tensor<T>> {
     from: Flow<T, Tn>,
 }
 
-impl<T: Numeric> Debug for ReluOp<T, Scalar<T>> {
+impl<T: Numeric, Tn> Debug for ReluOp<T, Tn>
+where
+    Tn: Tensor<T>,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "ReLU({})", self.from.val())
+        write!(f, "ReLU({:?})", self.from.data)
     }
 }
 
-impl<T: Numeric> ReluOp<T, Scalar<T>> {
-    pub fn create_flow(from: Flow<T, Scalar<T>>) -> Flow<T, Scalar<T>> {
-        let data = from.val();
-        let outval = if data.is_sign_negative() {
-            Scalar::from(T::zero())
-        } else {
-            Scalar::from(data)
-        };
+impl<T: Numeric, Tn> ReluOp<T, Tn>
+where
+    Tn: Tensor<T>,
+{
+    pub fn create_flow(from: Flow<T, Tn>) -> Flow<T, Tn> {
+        let mut out = from.data.deep_clone();
+        out.update(|v| if v.is_sign_negative() { T::zero() } else { v });
+
         let op = ReluOp { from };
 
-        Flow::new_from_op(outval, op)
+        Flow::new_from_op(out, op)
     }
 }
 
-impl<T: Numeric> Op<T, Scalar<T>> for ReluOp<T, Scalar<T>> {
-    fn children(&self) -> Vec<Flow<T, Scalar<T>>> {
+impl<T: Numeric, Tn> Op<T, Tn> for ReluOp<T, Tn>
+where
+    Tn: Tensor<T>,
+{
+    fn children(&self) -> Vec<Flow<T, Tn>> {
         vec![self.from.clone()]
     }
 
-    fn backward(&mut self, to_grad: &Scalar<T>, to_data: &Scalar<T>) {
-        self.from.update_grad(|grad, _data| {
-            let diff = if to_data.val().is_sign_positive() && !to_data.val().is_zero() {
-                to_grad.val()
+    fn backward(&mut self, to_grad: &Tn, to_data: &Tn) {
+        self.from.grad.update_zip2(to_grad, to_data, |from_grad, to_grad, to_data| {
+            let diff = if to_data.is_sign_positive() && !to_data.is_zero() {
+                to_grad
             } else {
                 T::zero()
             };
 
-            grad + diff
-        });
+            from_grad + diff
+        })
     }
 }
 
