@@ -20,8 +20,8 @@ thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 #[derive(Debug, Clone)]
 pub struct Flow<T: Numeric, Tn: TensorOps<T>> {
     id: u64,
-    data: Tn,
-    grad: Tn,
+    pub data: Tn,
+    pub grad: Tn,
     op: Rc<RefCell<dyn Op<T, Tn>>>,
 }
 
