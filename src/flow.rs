@@ -35,7 +35,7 @@ impl<T: Numeric, Tn: Tensor<T>> Flow<T, Tn> {
         }
     }
 
-    pub fn new_from_op(data: Tn, op: impl Op<T, Tn> + 'static) -> Self {
+    pub fn new_from_op(data: Tn, op: impl Op<T, Tn>) -> Self {
         Self {
             id: Self::next_id(),
             data,

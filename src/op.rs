@@ -4,7 +4,7 @@ use std::{
     ops::Add,
 };
 
-pub trait Op<T: Numeric, Tn: Tensor<T>>: Debug {
+pub trait Op<T: Numeric, Tn: Tensor<T>>: Debug + 'static {
     fn children(&self) -> Vec<Flow<T, Tn>>;
     fn backward(&mut self, _to_grad: &Tn, _to_data: &Tn) {}
 }
