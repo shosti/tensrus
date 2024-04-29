@@ -43,6 +43,10 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F) {
                 self.0.update_zip(&other.0, f);
             }
+
+            fn deep_clone(&self) -> Self {
+                Self(self.0.deep_clone())
+            }
         }
 
         impl #impl_generics crate::tensor::ShapedTensor<T, #rank, #shape> for #name #type_generics #where_clause {
@@ -51,6 +55,13 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
             fn set(&self, idx: [usize; #rank], val: T) {
                 self.0.set(idx, val)
+            }
+
+            fn from_fn<F>(f: F) -> Self
+            where
+                F: Fn([usize; #rank]) -> T {
+
+                Self(crate::generic_tensor::GenericTensor::from_fn(f))
             }
         }
 

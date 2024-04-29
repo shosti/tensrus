@@ -66,21 +66,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
             storage: self.storage,
         })
     }
-
-    pub fn from_fn<F>(cb: F) -> Self
-    where
-        F: Fn([usize; R]) -> T,
-    {
-        (0..Self::storage_size())
-            .map(|i| cb(Self::idx_from_storage_idx(i).unwrap()))
-            .collect()
-    }
-
-    pub fn deep_clone(&self) -> Self {
-        Self {
-            storage: Rc::new(RefCell::new(self.storage.borrow().clone())),
-        }
-    }
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<T, R, S>
@@ -101,6 +86,15 @@ impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<T, R, S>
             }
             Err(_e) => panic!("set: out of bounds"),
         }
+    }
+
+    fn from_fn<F>(cb: F) -> Self
+    where
+        F: Fn([usize; R]) -> T,
+    {
+        (0..Self::storage_size())
+            .map(|i| cb(Self::idx_from_storage_idx(i).unwrap()))
+            .collect()
     }
 }
 
@@ -125,6 +119,12 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T> for GenericTens
             .iter_mut()
             .zip(other.storage.borrow().iter())
             .for_each(|(v1, v2)| *v1 = f(*v1, *v2))
+    }
+
+    fn deep_clone(&self) -> Self {
+        Self {
+            storage: Rc::new(RefCell::new(self.storage.borrow().clone())),
+        }
     }
 }
 
