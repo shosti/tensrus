@@ -129,8 +129,8 @@ impl<T: Numeric> MLP<T> {
 
     pub fn loss(
         &self,
-        ys: &Vec<Flow<T, Scalar<T>>>,
-        ypred: &Vec<Flow<T, Scalar<T>>>,
+        ys: &[Flow<T, Scalar<T>>],
+        ypred: &[Flow<T, Scalar<T>>],
     ) -> Flow<T, Scalar<T>> {
         std::iter::zip(ys.iter(), ypred.iter())
             .map(|(ygt, yout)| (yout.clone() - ygt.clone()).pow(T::from(2.0).unwrap()))

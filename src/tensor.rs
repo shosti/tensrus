@@ -46,9 +46,7 @@ pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape> {
     }
     fn shape(&self) -> [usize; R] {
         let mut s = [0; R];
-        for i in 0..R {
-            s[i] = S[i];
-        }
+        s[..].copy_from_slice(&S[..R]);
 
         s
     }

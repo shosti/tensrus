@@ -155,6 +155,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::zero_prefixed_literal)]
     fn from_fn() {
         let x: Matrix<f64, 3, 4> = Matrix::from_fn(|idx| {
             let [i, j] = idx;

@@ -26,10 +26,10 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         let mut res = [0; R];
         let mut i = idx;
 
-        for dim in 0..R {
+        for (dim, item) in res.iter_mut().enumerate() {
             let offset: usize = S[(dim + 1)..R].iter().product();
             let cur = i / offset;
-            res[dim] = cur;
+            *item = cur;
             i -= cur * offset;
         }
         debug_assert!(i == 0);
@@ -44,8 +44,8 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         }
 
         let mut i = 0;
-        for dim in 0..R {
-            if idx[dim] >= S[dim] {
+        for (dim, &cur) in idx.iter().enumerate() {
+            if cur >= S[dim] {
                 return Err(IndexError {});
             }
             let offset: usize = S[(dim + 1)..R].iter().product();
@@ -250,6 +250,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::zero_prefixed_literal)]
     fn from_fn() {
         let f = |idx| {
             let [i, j, k] = idx;
@@ -339,8 +340,8 @@ mod tests {
         let mut rng = rand::thread_rng();
         for _ in 0..10 {
             let mut idx = [0; R];
-            for dim in 0..R {
-                idx[dim] = rng.gen_range(0..S[dim]);
+            for (dim, cur) in idx.iter_mut().enumerate() {
+                *cur = rng.gen_range(0..S[dim]);
             }
             let val: f64 = rng.gen();
 

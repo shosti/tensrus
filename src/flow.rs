@@ -208,13 +208,7 @@ impl<T: Numeric, Tn: Tensor<T>> Hash for Flow<T, Tn> {
 
 impl<T: Numeric, Tn: Tensor<T>> PartialOrd for Flow<T, Tn> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        if self.id() < other.id() {
-            Some(Ordering::Less)
-        } else if self.id() == other.id() {
-            Some(Ordering::Equal)
-        } else {
-            Some(Ordering::Greater)
-        }
+        Some(self.id.cmp(&other.id))
     }
 }
 
