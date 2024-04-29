@@ -1,7 +1,7 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::tensor::{
-    num_elems, IndexError, ShapeError, ShapedTensor, TensorIterator, Tensor, TensorShape,
+    num_elems, IndexError, ShapeError, ShapedTensor, Tensor, TensorIterator, TensorShape,
 };
 use num::ToPrimitive;
 use std::cell::RefCell;
@@ -74,6 +74,12 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         (0..Self::storage_size())
             .map(|i| cb(Self::idx_from_storage_idx(i).unwrap()))
             .collect()
+    }
+
+    pub fn deep_clone(&self) -> Self {
+        Self {
+            storage: Rc::new(RefCell::new(self.storage.borrow().clone())),
+        }
     }
 }
 
@@ -291,6 +297,26 @@ mod tests {
 
         x *= 2.0;
         assert_eq!(x, b);
+    }
+
+    #[test]
+    fn clone() {
+        let mut x: GenericTensor<f64, 1, { [2; 5] }> = GenericTensor::from([1, 2]);
+        let y: GenericTensor<f64, 1, { [2; 5] }> = GenericTensor::from([1, 2]);
+        let z: GenericTensor<f64, 1, { [2; 5] }> = GenericTensor::from([2, 4]);
+
+        let x_clone = x.clone();
+        assert_eq!(x_clone, y);
+
+        x *= 2.0;
+        assert_eq!(x, z);
+        assert_eq!(x_clone, z);
+
+        let mut deep = x.deep_clone();
+        deep *= 0.5;
+
+        assert_eq!(deep, y);
+        assert_eq!(x, z);
     }
 
     #[test]
