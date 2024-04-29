@@ -32,8 +32,10 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
+pub trait BasicTensor<T: Numeric> {}
+
 pub trait Tensor<T: Numeric>:
-    Add + AddAssign + Mul<T> + Mul<Scalar<T>> + MulAssign<T> + Debug + Clone + 'static
+    BasicTensor<T> + Add + AddAssign + Mul<T> + Mul<Scalar<T>> + MulAssign<T> + Debug + Clone + 'static
 {
     fn zeros() -> Self;
     fn deep_clone(&self) -> Self;
@@ -42,7 +44,7 @@ pub trait Tensor<T: Numeric>:
     fn update_zip2<F: Fn(T, T, T) -> T>(&mut self, a: &Self, b: &Self, f: F);
 }
 
-pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape> {
+pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape>: BasicTensor<T> {
     fn rank(&self) -> usize {
         R
     }

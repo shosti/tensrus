@@ -1,7 +1,8 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::tensor::{
-    num_elems, IndexError, ShapeError, ShapedTensor, Tensor, TensorIterator, TensorShape,
+    num_elems, BasicTensor, IndexError, ShapeError, ShapedTensor, Tensor, TensorIterator,
+    TensorShape,
 };
 use num::ToPrimitive;
 use std::cell::RefCell;
@@ -67,6 +68,8 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         })
     }
 }
+
+impl<T: Numeric, const R: usize, const S: TensorShape> BasicTensor<T> for GenericTensor<T, R, S> {}
 
 impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<T, R, S>
     for GenericTensor<T, R, S>

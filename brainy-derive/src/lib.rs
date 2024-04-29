@@ -53,6 +53,9 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
+        impl #impl_generics crate::tensor::BasicTensor<T> for #name #type_generics #where_clause {
+        }
+
         impl #impl_generics crate::tensor::ShapedTensor<T, #rank, #shape> for #name #type_generics #where_clause {
             fn get(&self, idx: [usize; #rank]) -> T {
                 self.0.get(idx)
