@@ -28,8 +28,8 @@ pub struct Flow<T: Numeric, Tn: Tensor<T>> {
 #[derive(Debug, Clone)]
 pub struct FlowRef<T: Numeric> {
     pub id: u64,
-    pub data: Rc<dyn BasicTensor<T>>,
-    pub grad: Rc<dyn BasicTensor<T>>,
+    data: Rc<dyn BasicTensor<T>>,
+    grad: Rc<dyn BasicTensor<T>>,
     op: Rc<RefCell<dyn Op<T>>>,
 }
 
@@ -91,7 +91,11 @@ impl<T: Numeric, Tn: Tensor<T>> Flow<T, Tn> {
         (nodes, edges)
     }
 
-    fn build_trace(val: &FlowRef<T>, nodes: &mut HashSet<FlowRef<T>>, edges: &mut HashSet<(FlowRef<T>, FlowRef<T>)>) {
+    fn build_trace(
+        val: &FlowRef<T>,
+        nodes: &mut HashSet<FlowRef<T>>,
+        edges: &mut HashSet<(FlowRef<T>, FlowRef<T>)>,
+    ) {
         if !nodes.contains(val) {
             nodes.insert(val.clone());
             for child in val.op.borrow().children().iter() {
@@ -118,9 +122,7 @@ impl<T: Numeric> Flow<T, Scalar<T>> {
 
         self.grad.update(|_| T::one());
         for flow in topo.iter().rev() {
-            flow.op
-                .borrow_mut()
-                .backward(&flow);
+            flow.op.borrow_mut().backward(&flow);
         }
     }
 

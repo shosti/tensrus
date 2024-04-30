@@ -26,11 +26,13 @@ impl Graph {
         let mut es = Vec::new();
 
         for n in nodes.iter() {
+            let data: &Scalar<T> = n.data();
+            let grad: &Scalar<T> = n.grad();
             let label = format!(
                 "{} | data: {:?} | grad: {:?} | {:?}",
                 n.id,
-                n.data,
-                n.grad,
+                data,
+                grad,
                 n.op()
             );
             let id = format!("id{}", n.id);
