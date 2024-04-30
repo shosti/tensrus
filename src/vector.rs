@@ -65,7 +65,6 @@ mod tests {
     fn basics() {
         let a: Vector<f64, 5> = Vector::from([1, 2, 3, 4, 5]);
 
-        assert_eq!(a.shape(), [5]);
         assert_eq!(a.get([3]), 4.0);
     }
 

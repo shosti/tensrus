@@ -38,7 +38,7 @@ mod tests {
     fn basics() {
         let a: Scalar<f64> = Scalar::from(42);
 
-        assert_eq!(a.shape(), []);
+        assert_eq!(Scalar::<f64>::shape(), []);
         assert_eq!(a.get([]), 42.0);
         assert_eq!(a.val(), 42.0);
     }

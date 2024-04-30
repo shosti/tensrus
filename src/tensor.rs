@@ -48,14 +48,22 @@ pub trait Tensor<T: Numeric>:
 }
 
 pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape>: BasicTensor<T> {
-    fn rank(&self) -> usize {
+    fn rank() -> usize {
         R
     }
-    fn shape(&self) -> [usize; R] {
+    fn shape() -> [usize; R] {
         let mut s = [0; R];
         s[..].copy_from_slice(&S[..R]);
 
         s
+    }
+    fn stride() -> [usize; R] {
+        let mut res = [0; R];
+        for (dim, item) in res.iter_mut().enumerate() {
+            *item = S[(dim + 1)..R].iter().product();
+        }
+
+        res
     }
     fn get(&self, idx: [usize; R]) -> T;
     fn set(&self, idx: [usize; R], val: T);

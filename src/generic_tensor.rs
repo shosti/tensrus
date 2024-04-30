@@ -27,12 +27,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
 
         let mut res = [0; R];
         let mut i = idx;
+        let stride = Self::stride();
 
         for (dim, item) in res.iter_mut().enumerate() {
-            let offset: usize = S[(dim + 1)..R].iter().product();
-            let cur = i / offset;
+            let s: usize = stride[dim];
+            let cur = i / s;
             *item = cur;
-            i -= cur * offset;
+            i -= cur * s;
         }
         debug_assert!(i == 0);
         debug_assert!(Self::storage_idx(res).unwrap() == idx);
@@ -46,12 +47,12 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         }
 
         let mut i = 0;
+        let stride = Self::stride();
         for (dim, &cur) in idx.iter().enumerate() {
             if cur >= S[dim] {
                 return Err(IndexError {});
             }
-            let offset: usize = S[(dim + 1)..R].iter().product();
-            i += offset * idx[dim];
+            i += stride[dim] * idx[dim];
         }
 
         Ok(i)
@@ -240,6 +241,12 @@ impl<T: Numeric, const R: usize, const S: TensorShape> MulAssign<T> for GenericT
 mod tests {
     use super::*;
     use rand::prelude::*;
+
+    #[test]
+    fn basics() {
+        assert_eq!(GenericTensor::<f64, 2, { [2, 5, 0, 0, 0] }>::stride(), [5, 1]);
+        assert_eq!(GenericTensor::<f64, 3, { [2, 3, 3, 0, 0] }>::stride(), [9, 3, 1]);
+    }
 
     #[test]
     fn from_iterator() {

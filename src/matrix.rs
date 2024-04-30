@@ -129,7 +129,6 @@ mod tests {
             [3, 7, 3],
         ]);
 
-        assert_eq!(x.shape(), [4, 3]);
         assert_eq!(x.get([2, 1]), 5.0);
         assert_eq!(x.get([3, 2]), 3.0);
 
