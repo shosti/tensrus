@@ -120,7 +120,7 @@ impl<T: Numeric> Flow<T, Scalar<T>> {
         for flow in topo.iter().rev() {
             flow.op
                 .borrow_mut()
-                .backward(flow.grad.as_ref(), flow.data.as_ref());
+                .backward(&flow);
         }
     }
 
@@ -195,6 +195,16 @@ impl<T: Numeric, Tn: Tensor<T>> PartialEq for Flow<T, Tn> {
 impl<T: Numeric, Tn: Tensor<T>> Eq for Flow<T, Tn> {}
 
 impl<T: Numeric> FlowRef<T> {
+    pub fn data<Tn: Tensor<T>>(&self) -> &Tn {
+        let data: &Tn = self.data.as_any().downcast_ref().unwrap();
+        data
+    }
+
+    pub fn grad<Tn: Tensor<T>>(&self) -> &Tn {
+        let grad: &Tn = self.grad.as_any().downcast_ref().unwrap();
+        grad
+    }
+
     pub fn op(&self) -> String {
         format!("{:?}", self.op.borrow())
     }

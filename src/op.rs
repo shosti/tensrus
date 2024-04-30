@@ -2,7 +2,7 @@ use crate::{
     flow::{Flow, FlowRef},
     numeric::Numeric,
     scalar::Scalar,
-    tensor::{BasicTensor, Tensor},
+    tensor::Tensor,
 };
 use std::{
     fmt::{Debug, Formatter},
@@ -11,7 +11,7 @@ use std::{
 
 pub trait Op<T: Numeric>: Debug + 'static {
     fn children(&self) -> Vec<FlowRef<T>>;
-    fn backward(&mut self, _to_grad: &dyn BasicTensor<T>, _to_data: &dyn BasicTensor<T>) {}
+    fn backward(&mut self, _to: &FlowRef<T>) {}
 }
 
 #[derive(Clone, Debug)]
@@ -50,8 +50,8 @@ impl<T: Numeric> Op<T> for PowOp<T, Scalar<T>> {
         vec![from.into()]
     }
 
-    fn backward(&mut self, to_grad_uncast: &dyn BasicTensor<T>, _to_data: &dyn BasicTensor<T>) {
-        let to_grad: &Scalar<T> = to_grad_uncast.as_any().downcast_ref().unwrap();
+    fn backward(&mut self, to: &FlowRef<T>) {
+        let to_grad: &Scalar<T> = to.grad();
         self.from.update_grad(|grad, data| {
             grad + ((self.n * data.powf(self.n - T::one())) * to_grad.val())
         });
@@ -95,13 +95,9 @@ where
         vec![from.into()]
     }
 
-    fn backward(
-        &mut self,
-        to_grad_uncast: &dyn BasicTensor<T>,
-        to_data_uncast: &dyn BasicTensor<T>,
-    ) {
-        let to_grad: &Tn = to_grad_uncast.as_any().downcast_ref().unwrap();
-        let to_data: &Tn = to_data_uncast.as_any().downcast_ref().unwrap();
+    fn backward(&mut self, to: &FlowRef<T>) {
+        let to_grad: &Tn = to.grad();
+        let to_data: &Tn = to.data();
 
         self.from
             .grad
@@ -148,8 +144,8 @@ impl<T: Numeric, Tn: Tensor<T>> Op<T> for AddOp<T, Tn> {
         out
     }
 
-    fn backward(&mut self, to_grad_uncast: &dyn BasicTensor<T>, _to_data: &dyn BasicTensor<T>) {
-        let to_grad: &Tn = to_grad_uncast.as_any().downcast_ref().unwrap();
+    fn backward(&mut self, to: &FlowRef<T>) {
+        let to_grad: &Tn = to.grad();
         self.from
             .0
             .grad
@@ -189,8 +185,8 @@ impl<T: Numeric> Op<T> for MulOp<T, Scalar<T>> {
         out
     }
 
-    fn backward(&mut self, to_grad_uncast: &dyn BasicTensor<T>, _to_data: &dyn BasicTensor<T>) {
-        let to_grad: &Scalar<T> = to_grad_uncast.as_any().downcast_ref().unwrap();
+    fn backward(&mut self, to: &FlowRef<T>) {
+        let to_grad: &Scalar<T> = to.grad();
 
         let a_data = self.from.0.data.val();
         let b_data = self.from.1.data.val();
