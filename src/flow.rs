@@ -128,7 +128,7 @@ impl<T: Numeric> Flow<Scalar<T>> {
 
         self.grad.update(|_| T::one());
         for flow in topo.iter().rev() {
-            flow.op.borrow_mut().backward(&flow);
+            flow.op.borrow_mut().backward(flow);
         }
     }
 
