@@ -33,21 +33,35 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-pub trait BasicTensor<T: Numeric>: Debug {
+pub trait BasicTensor: Debug {
     fn as_any(&self) -> &dyn Any;
 }
 
-pub trait Tensor<T: Numeric>:
-    BasicTensor<T> + Add + AddAssign + Mul<T> + Mul<Scalar<T>> + MulAssign<T> + Clone + 'static
+pub trait Tensor:
+    BasicTensor
+    + Add
+    + AddAssign
+    + Mul<Self::T>
+    + Mul<Scalar<Self::T>>
+    + MulAssign<Self::T>
+    + Clone
+    + 'static
 {
+    type T: Numeric;
+
     fn zeros() -> Self;
     fn deep_clone(&self) -> Self;
-    fn update<F: Fn(T) -> T>(&mut self, f: F);
-    fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F);
-    fn update_zip2<F: Fn(T, T, T) -> T>(&mut self, a: &Self, b: &Self, f: F);
+    fn update<F: Fn(Self::T) -> Self::T>(&mut self, f: F);
+    fn update_zip<F: Fn(Self::T, Self::T) -> Self::T>(&mut self, other: &Self, f: F);
+    fn update_zip2<F: Fn(Self::T, Self::T, Self::T) -> Self::T>(
+        &mut self,
+        a: &Self,
+        b: &Self,
+        f: F,
+    );
 }
 
-pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape>: BasicTensor<T> {
+pub trait ShapedTensor<const R: usize, const S: TensorShape>: Tensor {
     fn rank() -> usize {
         R
     }
@@ -65,31 +79,29 @@ pub trait ShapedTensor<T: Numeric, const R: usize, const S: TensorShape>: BasicT
 
         res
     }
-    fn get(&self, idx: [usize; R]) -> T;
-    fn set(&self, idx: [usize; R], val: T);
+    fn get(&self, idx: [usize; R]) -> <Self as Tensor>::T;
+    fn set(&self, idx: [usize; R], val: <Self as Tensor>::T);
 
     fn from_fn<F>(cb: F) -> Self
     where
-        F: Fn([usize; R]) -> T;
+        F: Fn([usize; R]) -> <Self as Tensor>::T;
 }
 
-pub struct TensorIterator<'a, T: Numeric, const R: usize, const S: TensorShape, Tn>
+pub struct TensorIterator<'a, const R: usize, const S: TensorShape, Tn>
 where
-    Tn: ShapedTensor<T, R, S>,
+    Tn: ShapedTensor<R, S>,
 {
-    _ignored: std::marker::PhantomData<T>,
     t: &'a Tn,
     done: bool,
     cur: [usize; R],
 }
 
-impl<'a, T: Numeric, const R: usize, const S: TensorShape, Tn> TensorIterator<'a, T, R, S, Tn>
+impl<'a, const R: usize, const S: TensorShape, Tn> TensorIterator<'a, R, S, Tn>
 where
-    Tn: ShapedTensor<T, R, S>,
+    Tn: ShapedTensor<R, S>,
 {
     pub fn new(t: &'a Tn) -> Self {
         Self {
-            _ignored: std::marker::PhantomData,
             t,
             cur: [0; R],
             done: false,
@@ -97,12 +109,11 @@ where
     }
 }
 
-impl<'a, T: Numeric, const R: usize, const S: TensorShape, Tn> Iterator
-    for TensorIterator<'a, T, R, S, Tn>
+impl<'a, const R: usize, const S: TensorShape, Tn> Iterator for TensorIterator<'a, R, S, Tn>
 where
-    Tn: ShapedTensor<T, R, S>,
+    Tn: ShapedTensor<R, S>,
 {
-    type Item = T;
+    type Item = Tn::T;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.done {

@@ -31,7 +31,9 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let rank = parse_rank(ast);
     let shape = parse_shape(ast);
     let gen = quote! {
-        impl #impl_generics crate::tensor::Tensor<T> for #name #type_generics #where_clause {
+        impl #impl_generics crate::tensor::Tensor for #name #type_generics #where_clause {
+            type T = T;
+
             fn zeros() -> Self {
                 Self(crate::generic_tensor::GenericTensor::zeros())
             }
@@ -53,13 +55,13 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics crate::tensor::BasicTensor<T> for #name #type_generics #where_clause {
+        impl #impl_generics crate::tensor::BasicTensor for #name #type_generics #where_clause {
             fn as_any(&self) -> &dyn std::any::Any {
                 self
             }
         }
 
-        impl #impl_generics crate::tensor::ShapedTensor<T, #rank, #shape> for #name #type_generics #where_clause {
+        impl #impl_generics crate::tensor::ShapedTensor<#rank, #shape> for #name #type_generics #where_clause {
             fn get(&self, idx: [usize; #rank]) -> T {
                 self.0.get(idx)
             }
@@ -87,7 +89,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
 
         impl #impl_generics_with_lifetime IntoIterator for &'a #name #type_generics #where_clause {
             type Item = T;
-            type IntoIter = crate::tensor::TensorIterator<'a, T, #rank, #shape, #name #type_generics>;
+            type IntoIter = crate::tensor::TensorIterator<'a, #rank, #shape, #name #type_generics>;
 
             fn into_iter(self) -> Self::IntoIter {
                 Self::IntoIter::new(self)

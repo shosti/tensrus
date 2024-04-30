@@ -71,13 +71,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> BasicTensor<T> for GenericTensor<T, R, S> {
+impl<T: Numeric, const R: usize, const S: TensorShape> BasicTensor for GenericTensor<T, R, S> {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<T, R, S>
+impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<R, S>
     for GenericTensor<T, R, S>
 {
     fn get(&self, idx: [usize; R]) -> T {
@@ -107,7 +107,9 @@ impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<T, R, S>
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Tensor<T> for GenericTensor<T, R, S> {
+impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<T, R, S> {
+    type T = T;
+
     fn zeros() -> Self {
         let storage = vec![T::zero(); Self::storage_size()];
         Self {
@@ -192,7 +194,7 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
     for &'a GenericTensor<T, R, S>
 {
     type Item = T;
-    type IntoIter = TensorIterator<'a, T, R, S, GenericTensor<T, R, S>>;
+    type IntoIter = TensorIterator<'a, R, S, GenericTensor<T, R, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter::new(self)

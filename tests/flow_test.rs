@@ -32,7 +32,7 @@ fn test_more_ops() {
     d = d.clone() + (Flow::from(3.0) * d.clone() + (b.clone() - a.clone()).relu());
     let e = c.clone() - d.clone();
     let f = e.pow(2.0);
-    let mut g: Flow<f64, _> = f.clone() / Flow::from(2.0);
+    let mut g: Flow<Scalar<f64>> = f.clone() / Flow::from(2.0);
     g = g.clone() + (Flow::from(10.0) / f.clone());
     g.backward();
 
@@ -43,7 +43,7 @@ fn test_more_ops() {
     assert!((b.grad.val() - 645.5772594752187).abs() < tol);
 }
 
-fn render_graph(x: Flow<f64, Scalar<f64>>, id: String) {
+fn render_graph(x: Flow<Scalar<f64>>, id: String) {
     let g = Graph::new(x.clone());
     let dotfile = format!("/tmp/{}.dot", id);
     let mut f = File::create(&dotfile).unwrap();

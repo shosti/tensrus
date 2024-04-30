@@ -19,7 +19,7 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub fn new<T: Numeric>(val: Flow<T, Scalar<T>>) -> Self {
+    pub fn new<T: Numeric>(val: Flow<Scalar<T>>) -> Self {
         let (nodes, edges) = val.trace();
 
         let mut ns = HashMap::new();
