@@ -19,7 +19,7 @@ use std::{
 thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 
 #[derive(Debug, Clone)]
-pub struct Flow<Tn: Tensor> {
+pub struct Var<Tn: Tensor> {
     pub id: u64,
     pub data: Tn,
     pub grad: Tn,
@@ -27,14 +27,14 @@ pub struct Flow<Tn: Tensor> {
 }
 
 #[derive(Debug, Clone)]
-pub struct FlowRef {
+pub struct VarRef {
     pub id: u64,
     data: Rc<dyn BasicTensor>,
     grad: Rc<dyn BasicTensor>,
     op: Rc<RefCell<dyn Op>>,
 }
 
-impl<Tn: Tensor> Flow<Tn> {
+impl<Tn: Tensor> Var<Tn> {
     pub fn new(data: Tn) -> Self {
         Self {
             id: Self::next_id(),
@@ -85,12 +85,12 @@ impl<Tn: Tensor> Flow<Tn> {
     pub fn trace(
         &self,
     ) -> (
-        HashSet<FlowRef>,
-        HashSet<(FlowRef, FlowRef)>,
+        HashSet<VarRef>,
+        HashSet<(VarRef, VarRef)>,
     ) {
         let mut nodes = HashSet::new();
         let mut edges = HashSet::new();
-        let val: FlowRef = self.clone().into();
+        let val: VarRef = self.clone().into();
 
         Self::build_trace(&val, &mut nodes, &mut edges);
 
@@ -98,9 +98,9 @@ impl<Tn: Tensor> Flow<Tn> {
     }
 
     fn build_trace(
-        val: &FlowRef,
-        nodes: &mut HashSet<FlowRef>,
-        edges: &mut HashSet<(FlowRef, FlowRef)>,
+        val: &VarRef,
+        nodes: &mut HashSet<VarRef>,
+        edges: &mut HashSet<(VarRef, VarRef)>,
     ) {
         if !nodes.contains(val) {
             nodes.insert(val.clone());
@@ -112,17 +112,17 @@ impl<Tn: Tensor> Flow<Tn> {
     }
 }
 
-impl<T: Numeric> From<T> for Flow<Scalar<T>> {
+impl<T: Numeric> From<T> for Var<Scalar<T>> {
     fn from(val: T) -> Self {
-        Flow::new(Scalar::from(val))
+        Var::new(Scalar::from(val))
     }
 }
 
-impl<T: Numeric> Flow<Scalar<T>> {
+impl<T: Numeric> Var<Scalar<T>> {
     pub fn backward(&mut self) {
         let mut topo = Vec::new();
         let mut visited = HashSet::new();
-        let cur: FlowRef = self.clone().into();
+        let cur: VarRef = self.clone().into();
 
         Self::build_topo(&cur, &mut topo, &mut visited);
 
@@ -132,7 +132,7 @@ impl<T: Numeric> Flow<Scalar<T>> {
         }
     }
 
-    fn build_topo(cur: &FlowRef, topo: &mut Vec<FlowRef>, visited: &mut HashSet<u64>) {
+    fn build_topo(cur: &VarRef, topo: &mut Vec<VarRef>, visited: &mut HashSet<u64>) {
         if visited.contains(&cur.id) {
             return;
         }
@@ -149,7 +149,7 @@ impl<T: Numeric> Flow<Scalar<T>> {
     }
 }
 
-impl<Tn> Add for Flow<Tn>
+impl<Tn> Add for Var<Tn>
 where
     Tn: Tensor + Add<Output = Tn>,
 {
@@ -160,7 +160,7 @@ where
     }
 }
 
-impl<T: Numeric> Mul for Flow<Scalar<T>> {
+impl<T: Numeric> Mul for Var<Scalar<T>> {
     type Output = Self;
 
     fn mul(self, other: Self) -> Self::Output {
@@ -168,7 +168,7 @@ impl<T: Numeric> Mul for Flow<Scalar<T>> {
     }
 }
 
-impl<T: Numeric> Div for Flow<Scalar<T>> {
+impl<T: Numeric> Div for Var<Scalar<T>> {
     type Output = Self;
 
     fn div(self, other: Self) -> Self::Output {
@@ -178,7 +178,7 @@ impl<T: Numeric> Div for Flow<Scalar<T>> {
     }
 }
 
-impl<T: Numeric> Sub for Flow<Scalar<T>> {
+impl<T: Numeric> Sub for Var<Scalar<T>> {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self::Output {
@@ -186,23 +186,23 @@ impl<T: Numeric> Sub for Flow<Scalar<T>> {
     }
 }
 
-impl<T: Numeric> Neg for Flow<Scalar<T>> {
+impl<T: Numeric> Neg for Var<Scalar<T>> {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
-        self * Flow::new(Scalar::from(-T::one()))
+        self * Var::new(Scalar::from(-T::one()))
     }
 }
 
-impl<Tn: Tensor> PartialEq for Flow<Tn> {
+impl<Tn: Tensor> PartialEq for Var<Tn> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-impl<Tn: Tensor> Eq for Flow<Tn> {}
+impl<Tn: Tensor> Eq for Var<Tn> {}
 
-impl FlowRef {
+impl VarRef {
     pub fn data<Tn: Tensor>(&self) -> &Tn {
         let data: &Tn = self.data.as_any().downcast_ref().unwrap();
         data
@@ -218,7 +218,7 @@ impl FlowRef {
     }
 }
 
-impl Hash for FlowRef {
+impl Hash for VarRef {
     fn hash<H>(&self, state: &mut H)
     where
         H: Hasher,
@@ -227,31 +227,31 @@ impl Hash for FlowRef {
     }
 }
 
-impl PartialOrd for FlowRef {
+impl PartialOrd for VarRef {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.id.cmp(&other.id))
     }
 }
 
-impl Ord for FlowRef {
+impl Ord for VarRef {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
     }
 }
 
-impl PartialEq for FlowRef {
+impl PartialEq for VarRef {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
 
-impl Eq for FlowRef {}
+impl Eq for VarRef {}
 
-impl<T: Numeric> Sum for Flow<Scalar<T>> {
-    fn sum<I: Iterator<Item = Flow<Scalar<T>>>>(mut iter: I) -> Self {
+impl<T: Numeric> Sum for Var<Scalar<T>> {
+    fn sum<I: Iterator<Item = Var<Scalar<T>>>>(mut iter: I) -> Self {
         let first = iter.next();
         if first.is_none() {
-            return Flow::from(T::zero());
+            return Var::from(T::zero());
         }
         let mut res = first.unwrap();
 
@@ -263,8 +263,8 @@ impl<T: Numeric> Sum for Flow<Scalar<T>> {
     }
 }
 
-impl<Tn: Tensor> From<Flow<Tn>> for FlowRef {
-    fn from(flow: Flow<Tn>) -> Self {
+impl<Tn: Tensor> From<Var<Tn>> for VarRef {
+    fn from(flow: Var<Tn>) -> Self {
         Self {
             id: flow.id,
             data: Rc::new(flow.data.clone()),

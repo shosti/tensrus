@@ -6,7 +6,7 @@
 #[macro_use]
 extern crate brainy_derive;
 
-pub mod flow;
+pub mod var;
 pub mod generic_tensor;
 pub mod matrix;
 pub mod nn;

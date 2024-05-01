@@ -1,5 +1,5 @@
 use crate::{
-    flow::{Flow, FlowRef},
+    var::{Var, VarRef},
     numeric::Numeric,
     scalar::Scalar,
     tensor::Tensor,
@@ -10,15 +10,15 @@ use std::{
 };
 
 pub trait Op: Debug + 'static {
-    fn children(&self) -> Vec<FlowRef>;
-    fn backward(&mut self, _to: &FlowRef) {}
+    fn children(&self) -> Vec<VarRef>;
+    fn backward(&mut self, _to: &VarRef) {}
 }
 
 #[derive(Clone, Debug)]
 pub struct NoOp {}
 
 impl Op for NoOp {
-    fn children(&self) -> Vec<FlowRef> {
+    fn children(&self) -> Vec<VarRef> {
         vec![]
     }
 }
@@ -26,15 +26,15 @@ impl Op for NoOp {
 #[derive(Clone)]
 pub struct PowOp<Tn: Tensor> {
     n: Tn::T,
-    from: Flow<Tn>,
+    from: Var<Tn>,
 }
 
 impl<T: Numeric> PowOp<Scalar<T>> {
-    pub fn create_flow(from: Flow<Scalar<T>>, n: T) -> Flow<Scalar<T>> {
+    pub fn create_flow(from: Var<Scalar<T>>, n: T) -> Var<Scalar<T>> {
         let data = Scalar::from(from.data.val().powf(n));
         let op = PowOp { n, from };
 
-        Flow::new_from_op(data, op)
+        Var::new_from_op(data, op)
     }
 }
 
@@ -45,12 +45,12 @@ impl<T: Numeric> Debug for PowOp<Scalar<T>> {
 }
 
 impl<T: Numeric> Op for PowOp<Scalar<T>> {
-    fn children(&self) -> Vec<FlowRef> {
+    fn children(&self) -> Vec<VarRef> {
         let from = self.from.clone();
         vec![from.into()]
     }
 
-    fn backward(&mut self, to: &FlowRef) {
+    fn backward(&mut self, to: &VarRef) {
         let to_grad: &Scalar<T> = to.grad();
         self.from.update_grad(|grad, data| {
             grad + ((self.n * data.powf(self.n - T::one())) * to_grad.val())
@@ -60,7 +60,7 @@ impl<T: Numeric> Op for PowOp<Scalar<T>> {
 
 #[derive(Clone)]
 pub struct ReluOp<Tn: Tensor> {
-    from: Flow<Tn>,
+    from: Var<Tn>,
 }
 
 impl<T: Numeric, Tn> Debug for ReluOp<Tn>
@@ -76,13 +76,13 @@ impl<T: Numeric, Tn> ReluOp<Tn>
 where
     Tn: Tensor<T = T>,
 {
-    pub fn create_flow(from: Flow<Tn>) -> Flow<Tn> {
+    pub fn create_flow(from: Var<Tn>) -> Var<Tn> {
         let mut out = from.data.deep_clone();
         out.update(|v| if v.is_sign_negative() { T::zero() } else { v });
 
         let op = ReluOp { from };
 
-        Flow::new_from_op(out, op)
+        Var::new_from_op(out, op)
     }
 }
 
@@ -90,12 +90,12 @@ impl<T: Numeric, Tn> Op for ReluOp<Tn>
 where
     Tn: Tensor<T = T>,
 {
-    fn children(&self) -> Vec<FlowRef> {
+    fn children(&self) -> Vec<VarRef> {
         let from = self.from.clone();
         vec![from.into()]
     }
 
-    fn backward(&mut self, to: &FlowRef) {
+    fn backward(&mut self, to: &VarRef) {
         let to_grad: &Tn = to.grad();
         let to_data: &Tn = to.data();
 
@@ -115,18 +115,18 @@ where
 
 #[derive(Clone)]
 pub struct AddOp<Tn: Tensor> {
-    from: (Flow<Tn>, Flow<Tn>),
+    from: (Var<Tn>, Var<Tn>),
 }
 
 impl<T: Numeric, Tn> AddOp<Tn>
 where
     Tn: Tensor<T = T> + Add<Output = Tn>,
 {
-    pub fn create_flow(a: Flow<Tn>, b: Flow<Tn>) -> Flow<Tn> {
+    pub fn create_flow(a: Var<Tn>, b: Var<Tn>) -> Var<Tn> {
         let out = a.clone().data + b.clone().data;
         let op = AddOp { from: (a, b) };
 
-        Flow::new_from_op(out, op)
+        Var::new_from_op(out, op)
     }
 }
 
@@ -137,14 +137,14 @@ impl<Tn: Tensor> Debug for AddOp<Tn> {
 }
 
 impl<Tn: Tensor> Op for AddOp<Tn> {
-    fn children(&self) -> Vec<FlowRef> {
+    fn children(&self) -> Vec<VarRef> {
         let mut out = vec![self.from.0.clone().into(), self.from.1.clone().into()];
         out.sort();
 
         out
     }
 
-    fn backward(&mut self, to: &FlowRef) {
+    fn backward(&mut self, to: &VarRef) {
         let to_grad: &Tn = to.grad();
         self.from
             .0
@@ -159,7 +159,7 @@ impl<Tn: Tensor> Op for AddOp<Tn> {
 
 #[derive(Clone)]
 pub struct MulOp<Tn: Tensor> {
-    from: (Flow<Tn>, Flow<Tn>),
+    from: (Var<Tn>, Var<Tn>),
 }
 
 impl<T: Numeric> Debug for MulOp<Scalar<T>> {
@@ -169,23 +169,23 @@ impl<T: Numeric> Debug for MulOp<Scalar<T>> {
 }
 
 impl<T: Numeric> MulOp<Scalar<T>> {
-    pub fn create_flow(a: Flow<Scalar<T>>, b: Flow<Scalar<T>>) -> Flow<Scalar<T>> {
+    pub fn create_flow(a: Var<Scalar<T>>, b: Var<Scalar<T>>) -> Var<Scalar<T>> {
         let outval = Scalar::from(a.data.val() * b.data.val());
         let op = MulOp { from: (a, b) };
 
-        Flow::new_from_op(outval, op)
+        Var::new_from_op(outval, op)
     }
 }
 
 impl<T: Numeric> Op for MulOp<Scalar<T>> {
-    fn children(&self) -> Vec<FlowRef> {
+    fn children(&self) -> Vec<VarRef> {
         let mut out = vec![self.from.0.clone().into(), self.from.1.clone().into()];
         out.sort();
 
         out
     }
 
-    fn backward(&mut self, to: &FlowRef) {
+    fn backward(&mut self, to: &VarRef) {
         let to_grad: &Scalar<T> = to.grad();
 
         let a_data = self.from.0.data.val();

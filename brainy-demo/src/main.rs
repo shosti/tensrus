@@ -1,19 +1,19 @@
+use brainy::flow::Flow;
 use brainy::nn::{Module, MLP};
 use brainy::scalar::Scalar;
-use brainy::flow::Flow;
 
 fn main() {
-    let xs: Vec<Vec<Flow<f64, Scalar<f64>>>> = [
+    let xs: Vec<Vec<Flow<Scalar<f64>>>> = [
         [2.0, 3.0, -1.0],
         [3.0, -1.0, 0.5],
         [0.5, 1.0, 1.0],
         [1.0, 1.0, -1.0],
     ]
     .iter()
-    .map(|row| row.iter().map(|&n| Flow::from(n)).collect())
+    .map(|row| row.iter().map(|&n| Flow::new(Scalar::from(n))).collect())
     .collect();
 
-    let ys: Vec<Flow<f64, Scalar<f64>>> = [1.0, -1.0, -1.0, 1.0]
+    let ys: Vec<Flow<Scalar<f64>>> = [1.0, -1.0, -1.0, 1.0]
         .iter()
         .map(|&n| Flow::from(n))
         .collect();

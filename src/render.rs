@@ -1,4 +1,4 @@
-use crate::flow::Flow;
+use crate::var::Var;
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use dot::{render, Edges, GraphWalk, Id, LabelText, Labeller, Nodes, RankDir};
@@ -19,7 +19,7 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub fn new<T: Numeric>(val: Flow<Scalar<T>>) -> Self {
+    pub fn new<T: Numeric>(val: Var<Scalar<T>>) -> Self {
         let (nodes, edges) = val.trace();
 
         let mut ns = HashMap::new();
