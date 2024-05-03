@@ -1,8 +1,9 @@
 use crate::{
-    var::{Var, VarRef},
+    matrix::{matrix_shape, Matrix},
     numeric::Numeric,
     scalar::Scalar,
-    tensor::Tensor,
+    tensor::{num_elems, Tensor},
+    var::{Var, VarRef},
 };
 use std::{
     fmt::{Debug, Formatter},
@@ -197,5 +198,66 @@ impl<T: Numeric> Op for MulOp<Scalar<T>> {
         self.from
             .1
             .update_grad(|grad, _data| grad + a_data * to_grad.val());
+    }
+}
+
+#[derive(Clone)]
+pub struct MatMulOp<T: Numeric, const M: usize, const N: usize, const P: usize>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); num_elems(2, matrix_shape(N, P))]:,
+{
+    from: (Var<Matrix<T, M, N>>, Var<Matrix<T, N, P>>),
+}
+
+impl<T: Numeric, const M: usize, const N: usize, const P: usize> MatMulOp<T, M, N, P>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); num_elems(2, matrix_shape(N, P))]:,
+    [(); num_elems(2, matrix_shape(M, P))]:,
+{
+    pub fn create_flow(a: Var<Matrix<T, M, N>>, b: Var<Matrix<T, N, P>>) -> Var<Matrix<T, M, P>> {
+        let outval = a.clone().data * b.clone().data;
+
+        let op = Self { from: (a, b) };
+
+        Var::new_from_op(outval, op)
+    }
+}
+
+impl<T: Numeric, const M: usize, const N: usize, const P: usize> Debug for MatMulOp<T, M, N, P>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); num_elems(2, matrix_shape(N, P))]:,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "*")
+    }
+}
+
+impl<T: Numeric, const M: usize, const N: usize, const P: usize> Op for MatMulOp<T, M, N, P>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); num_elems(2, matrix_shape(N, P))]:,
+{
+    fn children(&self) -> Vec<VarRef> {
+        let mut out = vec![self.from.0.clone().into(), self.from.1.clone().into()];
+        out.sort();
+
+        out
+    }
+
+    fn backward(&mut self, _to: &VarRef) {
+        // let to_grad: &Matrix<T, M, P> = to.grad();
+
+        // let a_data = self.from.0.data;
+        // let b_data = self.from.1.data;
+
+        // self.from
+        //     .0
+        //     .update_grad(|grad, _data| grad + b_data * to_grad.val());
+        // self.from
+        //     .1
+        //     .update_grad(|grad, _data| grad + a_data * to_grad.val());
     }
 }
