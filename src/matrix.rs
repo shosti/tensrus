@@ -89,13 +89,17 @@ where
     [(); num_elems(2, matrix_shape(M, N))]:,
     [(); num_elems(2, matrix_shape(N, P))]:,
     [(); num_elems(2, matrix_shape(M, P))]:,
-    [(); num_elems(1, vector_shape(M))]:,
-    [(); num_elems(1, vector_shape(N))]:,
 {
     type Output = Matrix<T, M, P>;
 
     fn mul(self, other: Matrix<T, N, P>) -> Self::Output {
-        Self::Output::from_fn(|[i, j]| self.row(i).unwrap().dot(&other.col(j).unwrap()))
+        Self::Output::from_fn(|[i, j]| {
+            let mut res = T::zero();
+            for k in 0..N {
+                res += self.get([i, k]) * other.get([k, j]);
+            }
+            res
+        })
     }
 }
 
@@ -108,7 +112,13 @@ where
     type Output = Vector<T, M>;
 
     fn mul(self, other: Vector<T, N>) -> Self::Output {
-        Self::Output::from_fn(|[i]| self.row(i).unwrap().dot(&other))
+        Self::Output::from_fn(|[i]| {
+            let mut res = T::zero();
+            for k in 0..N {
+                res += self.get([i, k]) * other.get([k]);
+            }
+            res
+        })
     }
 }
 
