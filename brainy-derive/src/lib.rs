@@ -4,13 +4,13 @@ extern crate syn;
 extern crate quote;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
-use quote::ToTokens;
 use syn::{
-    punctuated::Punctuated, DeriveInput, Expr, Generics, Ident, Lifetime, LifetimeParam, Lit, Meta,
-    Path, PathArguments, PathSegment, TraitBound, TypeParam, TypeParamBound,
+    punctuated::Punctuated, AngleBracketedGenericArguments, DeriveInput, Expr, Generics, Ident,
+    Lifetime, LifetimeParam, LitInt, Path, PathArguments, PathSegment, TraitBound, TypeParam,
+    TypeParamBound,
 };
 
-#[proc_macro_derive(Tensor, attributes(tensor_rank, tensor_shape))]
+#[proc_macro_derive(Tensor)]
 pub fn tensor_macro_derive(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
     impl_tensor_macro(&ast)
@@ -18,6 +18,8 @@ pub fn tensor_macro_derive(input: TokenStream) -> TokenStream {
 
 fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let name = &ast.ident;
+    let (wrapped_type, wrapped_type_args) = get_wrapped_type(ast);
+    let rank = get_rank(&wrapped_type_args);
 
     let mut f_generics = ast.generics.clone();
     push_to_primitive_f_param(&mut f_generics);
@@ -28,8 +30,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let (impl_generics, type_generics, where_clause) = ast.generics.split_for_impl();
     let (f_impl_generics, _, _) = f_generics.split_for_impl();
     let (impl_generics_with_lifetime, _, _) = generics_with_lifetime.split_for_impl();
-    let rank = parse_rank(ast);
-    let shape = parse_shape(ast);
     let gen = quote! {
         impl #impl_generics crate::tensor::Tensor for #name #type_generics #where_clause {
             type T = T;
@@ -60,22 +60,22 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
 
             fn default_idx() -> Self::Idx {
-                crate::generic_tensor::GenericTensor::<T, #rank, #shape>::default_idx()
+                #wrapped_type::#wrapped_type_args::default_idx()
             }
 
             fn next_idx(idx: Self::Idx) -> Option<Self::Idx> {
-                crate::generic_tensor::GenericTensor::<T, #rank, #shape>::next_idx(idx)
+                #wrapped_type::#wrapped_type_args::next_idx(idx)
             }
 
             fn repeat(n: T) -> Self {
-                Self(crate::generic_tensor::GenericTensor::repeat(n))
+                Self(#wrapped_type::repeat(n))
             }
 
             fn from_fn<F>(f: F) -> Self
             where
                 F: Fn([usize; #rank]) -> T {
 
-                Self(crate::generic_tensor::GenericTensor::from_fn(f))
+                Self(#wrapped_type::from_fn(f))
             }
         }
 
@@ -192,49 +192,54 @@ fn push_lifetime_param(generics: &mut Generics) {
     generics.params.insert(0, param.into());
 }
 
-fn parse_rank(ast: &DeriveInput) -> usize {
-    let rank_attr = ast
-        .attrs
-        .iter()
-        .find(|&attr| attr.path().is_ident("tensor_rank"))
-        .expect("tensor_rank attribute must be set");
-    if let Meta::NameValue(ref val) = rank_attr.meta {
-        if let Expr::Lit(ref lit) = val.value {
-            if let Lit::Int(ref int) = lit.lit {
-                return int
-                    .base10_parse()
-                    .expect("unable to parse tensor_rank value");
-            }
-        }
-    };
-
-    panic!("tensor_rank attribute is the wrong format (should be #[tensor_rank = <integer>]");
-}
-
-fn parse_shape(ast: &DeriveInput) -> ShapeParam {
-    let shape_attr = ast
-        .attrs
-        .iter()
-        .find(|&attr| attr.path().is_ident("tensor_shape"))
-        .expect("tensor_shape attribute must be set");
-
-    if let Meta::NameValue(ref val) = shape_attr.meta {
-        if let Expr::Lit(ref lit) = val.value {
-            if let Lit::Str(ref s) = lit.lit {
-                return ShapeParam(s.value());
-            }
-        }
-    };
-
-    panic!("tensor_shape must be a string");
-}
-
-struct ShapeParam(String);
-
-impl ToTokens for ShapeParam {
-    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let expr_str = format!("{{ {} }}", self.0);
-        let expr: syn::Expr = syn::parse_str(expr_str.as_str()).expect("Failed to parse code");
-        expr.to_tokens(tokens);
+fn get_wrapped_type(ast: &DeriveInput) -> (Ident, AngleBracketedGenericArguments) {
+    let data: &syn::DataStruct;
+    if let syn::Data::Struct(d) = &ast.data {
+        data = d;
+    } else {
+        panic!("Tensor can only be derived for struct types");
     }
+    let field: &syn::Field;
+    if let syn::Fields::Unnamed(ref f) = data.fields {
+        field = f
+            .unnamed
+            .first()
+            .expect("Wrapped tensor type should be the first wrapped field");
+    } else {
+        panic!("Tensor can only be derived for wrapper structs");
+    }
+    let type_path: &syn::TypePath;
+    if let syn::Type::Path(ref p) = field.ty {
+        type_path = p;
+    } else {
+        panic!("Invalid wrapped type when deriving Tensor");
+    }
+
+    let last_segment = type_path.path.segments.last().unwrap();
+    let args: &AngleBracketedGenericArguments;
+    if let syn::PathArguments::AngleBracketed(ref a) = last_segment.arguments {
+        args = a;
+    } else {
+        panic!("Expected wrapped Tensor type to have generic arguments");
+    }
+
+    (last_segment.ident.clone(), args.clone())
+}
+
+fn get_rank(args: &AngleBracketedGenericArguments) -> LitInt {
+    let rank_arg = &args.args[1];
+    let rank_expr: &syn::ExprLit;
+    if let syn::GenericArgument::Const(Expr::Lit(ref e)) = rank_arg {
+        rank_expr = e;
+    } else {
+        panic!("Deriving Tensor: expected wrapped type's second generic argument to be a constant specifying the tensor's rank");
+    }
+    let lit: &LitInt;
+    if let syn::Lit::Int(ref l) = rank_expr.lit {
+        lit = l;
+    } else {
+        panic!("Deriving Tensor: expected rank to be an integer");
+    }
+
+    lit.clone()
 }
