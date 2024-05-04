@@ -11,6 +11,21 @@ pub struct GenericTensor<T: Numeric, const R: usize, const S: TensorShape> {
     storage: Rc<RefCell<Vec<T>>>,
 }
 
+// Returns the tensor shape when downranking by 1
+pub const fn subtensor_shape(r: usize, s: TensorShape) -> TensorShape {
+    if r == 0 {
+        panic!("cannot take subtensor of tensor of rank 0");
+    }
+    let mut out = [0; 5];
+    let mut i = r - 1;
+    while i > 0 {
+        out[i - 1] = s[i];
+        i -= 1;
+    }
+
+    out
+}
+
 impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
     fn storage_size() -> usize {
         num_elems(R, S)
@@ -73,6 +88,24 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         Ok(GenericTensor {
             storage: self.storage,
         })
+    }
+
+    pub fn subtensor(
+        &self,
+        i: usize,
+    ) -> Result<GenericTensor<T, { R - 1 }, { subtensor_shape(R, S) }>, IndexError> {
+        if i >= S[0] {
+            return Err(IndexError {});
+        }
+
+        let storage = self.storage.borrow();
+        let out: GenericTensor<T, { R - 1 }, { subtensor_shape(R, S) }> =
+            GenericTensor::from_fn(|idx| {
+                let mut self_idx = [i; R];
+                self_idx[1..R].copy_from_slice(&idx[..(R - 1)]);
+                storage[Self::storage_idx(self_idx).unwrap()]
+            });
+        Ok(out)
     }
 }
 
@@ -404,5 +437,24 @@ mod tests {
 
         let want: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([2, 4, 6, 8]);
         assert_eq!(t, want);
+    }
+
+    #[test]
+    fn subtensor() {
+        let t3: GenericTensor<f64, 3, { [2, 3, 4, 0, 0] }> = (1..25).collect();
+
+        let t2 = t3.subtensor(1).unwrap();
+        let t2_expected: GenericTensor<f64, 2, { [3, 4, 0, 0, 0] }> = (13..25).collect();
+        assert_eq!(t2, t2_expected);
+        assert_eq!(t3.subtensor(2), Err(IndexError {}));
+
+        let t1 = t2.subtensor(1).unwrap();
+        let t1_expected: GenericTensor<f64, 1, { [4, 0, 0, 0, 0] }> =
+            GenericTensor::from([17, 18, 19, 20]);
+        assert_eq!(t1, t1_expected);
+
+        let t0 = t1.subtensor(1).unwrap();
+        let t0_expected: GenericTensor<f64, 0, { [0; 5] }> = GenericTensor::from([18]);
+        assert_eq!(t0, t0_expected);
     }
 }
