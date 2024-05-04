@@ -6,7 +6,6 @@
 #[macro_use]
 extern crate brainy_derive;
 
-pub mod var;
 pub mod generic_tensor;
 pub mod matrix;
 pub mod nn;
@@ -15,6 +14,7 @@ pub mod op;
 pub mod render;
 pub mod scalar;
 pub mod tensor;
+pub mod var;
 pub mod vector;
 
 // use nn::{Module, MLP};

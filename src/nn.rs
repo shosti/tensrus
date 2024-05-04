@@ -1,6 +1,6 @@
-use crate::var::Var;
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
+use crate::var::Var;
 use rand::distributions::{Distribution, Uniform};
 use rand::SeedableRng;
 
@@ -127,11 +127,7 @@ impl<T: Numeric> MLP<T> {
         }
     }
 
-    pub fn loss(
-        &self,
-        ys: &[Var<Scalar<T>>],
-        ypred: &[Var<Scalar<T>>],
-    ) -> Var<Scalar<T>> {
+    pub fn loss(&self, ys: &[Var<Scalar<T>>], ypred: &[Var<Scalar<T>>]) -> Var<Scalar<T>> {
         std::iter::zip(ys.iter(), ypred.iter())
             .map(|(ygt, yout)| (yout.clone() - ygt.clone()).pow(T::from(2.0).unwrap()))
             .sum()

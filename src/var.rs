@@ -82,12 +82,7 @@ impl<Tn: Tensor> Var<Tn> {
     }
 
     // returns (nodes, edges)
-    pub fn trace(
-        &self,
-    ) -> (
-        HashSet<VarRef>,
-        HashSet<(VarRef, VarRef)>,
-    ) {
+    pub fn trace(&self) -> (HashSet<VarRef>, HashSet<(VarRef, VarRef)>) {
         let mut nodes = HashSet::new();
         let mut edges = HashSet::new();
         let val: VarRef = self.clone().into();

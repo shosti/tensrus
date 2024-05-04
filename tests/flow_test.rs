@@ -1,8 +1,8 @@
 extern crate brainy;
 
-use brainy::var::Var;
 use brainy::render::Graph;
 use brainy::scalar::Scalar;
+use brainy::var::Var;
 use std::fs::File;
 use std::process::Command;
 

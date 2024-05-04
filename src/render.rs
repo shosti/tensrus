@@ -1,6 +1,6 @@
-use crate::var::Var;
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
+use crate::var::Var;
 use dot::{render, Edges, GraphWalk, Id, LabelText, Labeller, Nodes, RankDir};
 use std::borrow::Cow;
 use std::collections::hash_map::HashMap;
