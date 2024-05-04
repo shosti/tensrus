@@ -35,23 +35,23 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             type T = T;
             type Idx = [usize; #rank];
 
-            fn get(&self, idx: [usize; #rank]) -> T {
+            fn get(&self, idx: Self::Idx) -> Self::T {
                 self.0.get(idx)
             }
 
-            fn set(&self, idx: [usize; #rank], val: T) {
+            fn set(&self, idx: Self::Idx, val: Self::T) {
                 self.0.set(idx, val)
             }
 
-            fn update<F: Fn(T) -> T>(&mut self, f: F) {
+            fn update<F: Fn(Self::T) -> Self::T>(&mut self, f: F) {
                 self.0.update(f);
             }
 
-            fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F) {
+            fn update_zip<F: Fn(Self::T, Self::T) -> Self::T>(&mut self, other: &Self, f: F) {
                 self.0.update_zip(&other.0, f);
             }
 
-            fn update_zip2<F: Fn(T, T, T) -> T>(&mut self, a: &Self, b: &Self, f: F) {
+            fn update_zip2<F: Fn(Self::T, Self::T, Self::T) -> Self::T>(&mut self, a: &Self, b: &Self, f: F) {
                 self.0.update_zip2(&a.0, &b.0, f);
             }
 
@@ -67,13 +67,13 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 #wrapped_type::#wrapped_type_args::next_idx(idx)
             }
 
-            fn repeat(n: T) -> Self {
+            fn repeat(n: Self::T) -> Self {
                 Self(#wrapped_type::repeat(n))
             }
 
             fn from_fn<F>(f: F) -> Self
             where
-                F: Fn([usize; #rank]) -> T {
+                F: Fn(Self::Idx) -> Self::T {
 
                 Self(#wrapped_type::from_fn(f))
             }
