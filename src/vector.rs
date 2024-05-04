@@ -51,14 +51,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn basics() {
+    fn test_basics() {
         let a: Vector<f64, 5> = Vector::from([1, 2, 3, 4, 5]);
 
         assert_eq!(a.get([3]), 4.0);
     }
 
     #[test]
-    fn mul_assign() {
+    fn test_mul_assign() {
         let mut a = Vector::from([2, 4, 6, 8]);
         a *= 3.0;
 
@@ -66,14 +66,14 @@ mod tests {
     }
 
     #[test]
-    fn from_fn() {
+    fn test_from_fn() {
         let a: Vector<_, 4> = Vector::from_fn(|idx| idx[0] as f32 * 2.0);
 
         assert_eq!(a, Vector::from([0, 2, 4, 6]));
     }
 
     #[test]
-    fn dot_product() {
+    fn test_dot_product() {
         let a: Vector<f64, _> = Vector::from([1, 2, 3]);
         let b: Vector<f64, _> = Vector::from([4, 5, 6]);
 

@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     #[rustfmt::skip]
-    fn matrix_basics() {
+    fn test_matrix_basics() {
         let x: Matrix<f64, _, _> = Matrix::from([
             [3, 4, 5],
             [2, 7, 9],
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     #[rustfmt::skip]
-    fn from_iter() {
+    fn test_from_iter() {
         let x: Matrix<f64, 3, 2> = [1, 2, 3].into_iter().cycle().collect();
         let y: Matrix<f64, _, _> = Matrix::from([
             [1.0, 2.0],
@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     #[allow(clippy::zero_prefixed_literal)]
-    fn from_fn() {
+    fn test_from_fn() {
         let x: Matrix<f64, 3, 4> = Matrix::from_fn(|idx| {
             let [i, j] = idx;
             let s = format!("{}{}", i, j);
@@ -166,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn elem_mutiply() {
+    fn test_elem_mutiply() {
         let mut x = Matrix::from([[2, 4, 6], [8, 10, 12]]);
         let y = Matrix::from([[4, 8, 12], [16, 20, 24]]);
 
@@ -175,7 +175,7 @@ mod tests {
     }
 
     #[test]
-    fn matrix_vector_conversions() {
+    fn test_matrix_vector_conversions() {
         let x: Matrix<f64, _, _> = Matrix::from([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]);
 
         assert_eq!(x.col(0), Ok(Vector::from([1, 4, 7, 10])));
@@ -190,7 +190,7 @@ mod tests {
     }
 
     #[test]
-    fn matrix_multiply() {
+    fn test_matrix_multiply() {
         let x: Matrix<f64, _, _> = Matrix::from([[1, 2], [3, 4], [5, 6]]);
         let y: Matrix<f64, _, _> = Matrix::from([[7, 8, 9, 10], [9, 10, 11, 12]]);
         let res: Matrix<f64, _, _> =
@@ -200,7 +200,7 @@ mod tests {
     }
 
     #[test]
-    fn matrix_vector_multiply() {
+    fn test_matrix_vector_multiply() {
         let a: Matrix<f64, _, _> = Matrix::from([[1, -1, 2], [0, -3, 1]]);
         let x: Vector<f64, _> = Vector::from([2, 1, 0]);
 
@@ -208,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    fn transpose() {
+    fn test_transpose() {
         let x: Matrix<f64, _, _> = Matrix::from([[1, 2, 3], [4, 5, 6]]);
         let y: Matrix<f64, _, _> = Matrix::from([[1, 4], [2, 5], [3, 6]]);
 

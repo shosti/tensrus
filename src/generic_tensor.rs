@@ -229,7 +229,6 @@ where
 impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTensor<T, R, S> {
     fn eq(&self, other: &Self) -> bool {
         for i in 0..Self::storage_size() {
-            // TODO: use helpers once they're there
             if self.storage.borrow()[i] != other.storage.borrow()[i] {
                 return false;
             }
@@ -293,7 +292,7 @@ mod tests {
     use rand::prelude::*;
 
     #[test]
-    fn basics() {
+    fn test_basics() {
         assert_eq!(
             GenericTensor::<f64, 2, { [2, 5, 0, 0, 0] }>::stride(),
             [5, 1]
@@ -305,7 +304,7 @@ mod tests {
     }
 
     #[test]
-    fn from_iterator() {
+    fn test_from_iterator() {
         let xs: [i64; 3] = [1, 2, 3];
         let iter = xs.iter().cycle().copied();
 
@@ -331,7 +330,7 @@ mod tests {
 
     #[test]
     #[allow(clippy::zero_prefixed_literal)]
-    fn from_fn() {
+    fn test_from_fn() {
         let f = |idx| {
             let [i, j, k] = idx;
             let s = format!("{}{}{}", i, j, k);
@@ -363,7 +362,7 @@ mod tests {
     }
 
     #[test]
-    fn math() {
+    fn test_math() {
         let mut x: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([1, 2, 3, 4]);
         let y: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([5, 6, 7, 8]);
         let a: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([6, 8, 10, 12]);
@@ -381,7 +380,7 @@ mod tests {
     }
 
     #[test]
-    fn clone() {
+    fn test_clone() {
         let mut x: GenericTensor<f64, 1, { [2; 5] }> = GenericTensor::from([1, 2]);
         let y: GenericTensor<f64, 1, { [2; 5] }> = GenericTensor::from([1, 2]);
         let z: GenericTensor<f64, 1, { [2; 5] }> = GenericTensor::from([2, 4]);
@@ -401,7 +400,7 @@ mod tests {
     }
 
     #[test]
-    fn to_iter() {
+    fn test_to_iter() {
         let t: GenericTensor<f64, 2, { [2; 5] }> = (0..4).collect();
         let vals: Vec<f64> = t.into_iter().collect();
         assert_eq!(vals, vec![0.0, 1.0, 2.0, 3.0]);
@@ -431,7 +430,7 @@ mod tests {
     }
 
     #[test]
-    fn update() {
+    fn test_update() {
         let mut t: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([1, 2, 3, 4]);
         t.update(&|val| val * 2.0);
 
@@ -440,7 +439,7 @@ mod tests {
     }
 
     #[test]
-    fn subtensor() {
+    fn test_subtensor() {
         let t3: GenericTensor<f64, 3, { [2, 3, 4, 0, 0] }> = (1..25).collect();
 
         let t2 = t3.subtensor(1).unwrap();
