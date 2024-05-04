@@ -162,12 +162,12 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<
         }
     }
 
-    fn from_fn<F>(cb: F) -> Self
+    fn from_fn<F>(f: F) -> Self
     where
         F: Fn([usize; R]) -> T,
     {
         (0..Self::storage_size())
-            .map(|i| cb(Self::idx_from_storage_idx(i).unwrap()))
+            .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
             .collect()
     }
 }

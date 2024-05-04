@@ -51,13 +51,20 @@ pub trait Tensor:
     type T: Numeric;
     type Idx: Copy + 'static;
 
+    fn repeat(n: Self::T) -> Self;
     fn zeros() -> Self {
         Self::repeat(Self::T::zero())
     }
     fn ones() -> Self {
         Self::repeat(Self::T::one())
     }
+    fn from_fn<F>(f: F) -> Self
+    where
+        F: Fn(Self::Idx) -> Self::T;
     fn deep_clone(&self) -> Self;
+
+    fn get(&self, idx: Self::Idx) -> Self::T;
+    fn set(&self, idx: Self::Idx, val: Self::T);
     fn update<F: Fn(Self::T) -> Self::T>(&mut self, f: F);
     fn update_zip<F: Fn(Self::T, Self::T) -> Self::T>(&mut self, other: &Self, f: F);
     fn update_zip2<F: Fn(Self::T, Self::T, Self::T) -> Self::T>(
@@ -69,16 +76,6 @@ pub trait Tensor:
 
     fn default_idx() -> Self::Idx;
     fn next_idx(idx: Self::Idx) -> Option<Self::Idx>;
-
-    fn get(&self, idx: Self::Idx) -> Self::T;
-
-    fn set(&self, idx: Self::Idx, val: Self::T);
-
-    fn repeat(n: Self::T) -> Self;
-
-    fn from_fn<F>(cb: F) -> Self
-    where
-        F: Fn(Self::Idx) -> Self::T;
 }
 
 pub struct TensorIterator<'a, Tn>
