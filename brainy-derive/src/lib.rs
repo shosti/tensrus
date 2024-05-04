@@ -85,9 +85,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics crate::tensor::ShapedTensor<#rank, #shape> for #name #type_generics #where_clause {
-        }
-
         impl #f_impl_generics FromIterator<F> for #name #type_generics #where_clause
         {
             fn from_iter<I>(iter: I) -> Self

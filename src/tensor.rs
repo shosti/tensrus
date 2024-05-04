@@ -73,26 +73,6 @@ pub trait Tensor:
         F: Fn(Self::Idx) -> Self::T;
 }
 
-pub trait ShapedTensor<const R: usize, const S: TensorShape>: Tensor {
-    fn rank() -> usize {
-        R
-    }
-    fn shape() -> [usize; R] {
-        let mut s = [0; R];
-        s[..].copy_from_slice(&S[..R]);
-
-        s
-    }
-    fn stride() -> [usize; R] {
-        let mut res = [0; R];
-        for (dim, item) in res.iter_mut().enumerate() {
-            *item = S[(dim + 1)..R].iter().product();
-        }
-
-        res
-    }
-}
-
 pub struct TensorIterator<'a, Tn>
 where
     Tn: Tensor,

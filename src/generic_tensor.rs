@@ -1,8 +1,7 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::tensor::{
-    num_elems, BasicTensor, IndexError, ShapeError, ShapedTensor, Tensor, TensorIterator,
-    TensorShape,
+    num_elems, BasicTensor, IndexError, ShapeError, Tensor, TensorIterator, TensorShape,
 };
 use num::ToPrimitive;
 use std::any::Any;
@@ -18,6 +17,15 @@ pub struct GenericTensor<T: Numeric, const R: usize, const S: TensorShape> {
 impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
     fn storage_size() -> usize {
         num_elems(R, S)
+    }
+
+    fn stride() -> [usize; R] {
+        let mut res = [0; R];
+        for (dim, item) in res.iter_mut().enumerate() {
+            *item = S[(dim + 1)..R].iter().product();
+        }
+
+        res
     }
 
     fn idx_from_storage_idx(idx: usize) -> Result<[usize; R], IndexError> {
@@ -75,11 +83,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> BasicTensor for GenericTe
     fn as_any(&self) -> &dyn Any {
         self
     }
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<R, S>
-    for GenericTensor<T, R, S>
-{
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<T, R, S> {
@@ -267,8 +270,14 @@ mod tests {
 
     #[test]
     fn basics() {
-        assert_eq!(GenericTensor::<f64, 2, { [2, 5, 0, 0, 0] }>::stride(), [5, 1]);
-        assert_eq!(GenericTensor::<f64, 3, { [2, 3, 3, 0, 0] }>::stride(), [9, 3, 1]);
+        assert_eq!(
+            GenericTensor::<f64, 2, { [2, 5, 0, 0, 0] }>::stride(),
+            [5, 1]
+        );
+        assert_eq!(
+            GenericTensor::<f64, 3, { [2, 3, 3, 0, 0] }>::stride(),
+            [9, 3, 1]
+        );
     }
 
     #[test]
