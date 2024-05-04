@@ -43,10 +43,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 self.0.set(idx, val)
             }
 
-            fn zeros() -> Self {
-                Self(crate::generic_tensor::GenericTensor::zeros())
-            }
-
             fn update<F: Fn(T) -> T>(&mut self, f: F) {
                 self.0.update(f);
             }

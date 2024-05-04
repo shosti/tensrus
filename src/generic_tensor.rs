@@ -106,13 +106,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<
         }
     }
 
-    fn zeros() -> Self {
-        let storage = vec![T::zero(); Self::storage_size()];
-        Self {
-            storage: Rc::new(RefCell::new(storage)),
-        }
-    }
-
     fn update<F: Fn(T) -> T>(&mut self, f: F) {
         self.storage
             .borrow_mut()

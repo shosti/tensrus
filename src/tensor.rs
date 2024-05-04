@@ -1,3 +1,4 @@
+use num::{One, Zero};
 use std::any::Any;
 use std::fmt::Debug;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
@@ -50,7 +51,12 @@ pub trait Tensor:
     type T: Numeric;
     type Idx: Copy + 'static;
 
-    fn zeros() -> Self;
+    fn zeros() -> Self {
+        Self::from_fn(|_| Self::T::zero())
+    }
+    fn ones() -> Self {
+        Self::from_fn(|_| Self::T::one())
+    }
     fn deep_clone(&self) -> Self;
     fn update<F: Fn(Self::T) -> Self::T>(&mut self, f: F);
     fn update_zip<F: Fn(Self::T, Self::T) -> Self::T>(&mut self, other: &Self, f: F);
