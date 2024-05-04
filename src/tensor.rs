@@ -52,10 +52,10 @@ pub trait Tensor:
     type Idx: Copy + 'static;
 
     fn zeros() -> Self {
-        Self::from_fn(|_| Self::T::zero())
+        Self::repeat(Self::T::zero())
     }
     fn ones() -> Self {
-        Self::from_fn(|_| Self::T::one())
+        Self::repeat(Self::T::one())
     }
     fn deep_clone(&self) -> Self;
     fn update<F: Fn(Self::T) -> Self::T>(&mut self, f: F);
@@ -73,6 +73,8 @@ pub trait Tensor:
     fn get(&self, idx: Self::Idx) -> Self::T;
 
     fn set(&self, idx: Self::Idx, val: Self::T);
+
+    fn repeat(n: Self::T) -> Self;
 
     fn from_fn<F>(cb: F) -> Self
     where

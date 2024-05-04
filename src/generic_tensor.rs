@@ -155,6 +155,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<
         Some(cur)
     }
 
+    fn repeat(n: T) -> Self {
+        let storage = vec![n; Self::storage_size()];
+        Self {
+            storage: Rc::new(RefCell::new(storage)),
+        }
+    }
+
     fn from_fn<F>(cb: F) -> Self
     where
         F: Fn([usize; R]) -> T,

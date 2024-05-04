@@ -67,6 +67,10 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 crate::generic_tensor::GenericTensor::<T, #rank, #shape>::next_idx(idx)
             }
 
+            fn repeat(n: T) -> Self {
+                Self(crate::generic_tensor::GenericTensor::repeat(n))
+            }
+
             fn from_fn<F>(f: F) -> Self
             where
                 F: Fn([usize; #rank]) -> T {
