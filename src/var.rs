@@ -2,10 +2,11 @@ use crate::{
     numeric::Numeric,
     op::{AddOp, MulOp, NoOp, Op, PowOp, ReluOp},
     scalar::Scalar,
-    tensor::{BasicTensor, Tensor},
+    tensor::Tensor,
 };
 use num::Zero;
 use std::{
+    any::Any,
     cell::RefCell,
     cmp::Ordering,
     collections::HashSet,
@@ -29,8 +30,8 @@ pub struct Var<Tn: Tensor> {
 #[derive(Debug, Clone)]
 pub struct VarRef {
     pub id: u64,
-    data: Rc<dyn BasicTensor>,
-    grad: Rc<dyn BasicTensor>,
+    data: Rc<dyn Any>,
+    grad: Rc<dyn Any>,
     op: Rc<RefCell<dyn Op>>,
 }
 
@@ -199,12 +200,12 @@ impl<Tn: Tensor> Eq for Var<Tn> {}
 
 impl VarRef {
     pub fn data<Tn: Tensor>(&self) -> &Tn {
-        let data: &Tn = self.data.as_any().downcast_ref().unwrap();
+        let data: &Tn = self.data.downcast_ref().unwrap();
         data
     }
 
     pub fn grad<Tn: Tensor>(&self) -> &Tn {
-        let grad: &Tn = self.grad.as_any().downcast_ref().unwrap();
+        let grad: &Tn = self.grad.downcast_ref().unwrap();
         grad
     }
 

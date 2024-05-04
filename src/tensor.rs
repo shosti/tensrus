@@ -1,5 +1,4 @@
 use num::{One, Zero};
-use std::any::Any;
 use std::fmt::Debug;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
@@ -34,19 +33,8 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-pub trait BasicTensor: Debug {
-    fn as_any(&self) -> &dyn Any;
-}
-
 pub trait Tensor:
-    BasicTensor
-    + Add
-    + AddAssign
-    + Mul<Self::T>
-    + Mul<Scalar<Self::T>>
-    + MulAssign<Self::T>
-    + Clone
-    + 'static
+    Debug + Clone + Add + AddAssign + Mul<Self::T> + Mul<Scalar<Self::T>> + MulAssign<Self::T> + 'static
 {
     type T: Numeric;
     type Idx: Copy + 'static;

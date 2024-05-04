@@ -1,10 +1,7 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use crate::tensor::{
-    num_elems, BasicTensor, IndexError, ShapeError, Tensor, TensorIterator, TensorShape,
-};
+use crate::tensor::{num_elems, IndexError, ShapeError, Tensor, TensorIterator, TensorShape};
 use num::ToPrimitive;
-use std::any::Any;
 use std::cell::RefCell;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 use std::rc::Rc;
@@ -76,12 +73,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         Ok(GenericTensor {
             storage: self.storage,
         })
-    }
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape> BasicTensor for GenericTensor<T, R, S> {
-    fn as_any(&self) -> &dyn Any {
-        self
     }
 }
 
