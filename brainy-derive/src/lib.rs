@@ -33,6 +33,15 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let gen = quote! {
         impl #impl_generics crate::tensor::Tensor for #name #type_generics #where_clause {
             type T = T;
+            type Idx = [usize; #rank];
+
+            fn get(&self, idx: [usize; #rank]) -> T {
+                self.0.get(idx)
+            }
+
+            fn set(&self, idx: [usize; #rank], val: T) {
+                self.0.set(idx, val)
+            }
 
             fn zeros() -> Self {
                 Self(crate::generic_tensor::GenericTensor::zeros())
@@ -53,6 +62,21 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             fn deep_clone(&self) -> Self {
                 Self(self.0.deep_clone())
             }
+
+            fn default_idx() -> Self::Idx {
+                crate::generic_tensor::GenericTensor::<T, #rank, #shape>::default_idx()
+            }
+
+            fn next_idx(idx: Self::Idx) -> Option<Self::Idx> {
+                crate::generic_tensor::GenericTensor::<T, #rank, #shape>::next_idx(idx)
+            }
+
+            fn from_fn<F>(f: F) -> Self
+            where
+                F: Fn([usize; #rank]) -> T {
+
+                Self(crate::generic_tensor::GenericTensor::from_fn(f))
+            }
         }
 
         impl #impl_generics crate::tensor::BasicTensor for #name #type_generics #where_clause {
@@ -62,19 +86,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         }
 
         impl #impl_generics crate::tensor::ShapedTensor<#rank, #shape> for #name #type_generics #where_clause {
-            fn get(&self, idx: [usize; #rank]) -> T {
-                self.0.get(idx)
-            }
-            fn set(&self, idx: [usize; #rank], val: T) {
-                self.0.set(idx, val)
-            }
-
-            fn from_fn<F>(f: F) -> Self
-            where
-                F: Fn([usize; #rank]) -> T {
-
-                Self(crate::generic_tensor::GenericTensor::from_fn(f))
-            }
         }
 
         impl #f_impl_generics FromIterator<F> for #name #type_generics #where_clause
@@ -89,7 +100,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
 
         impl #impl_generics_with_lifetime IntoIterator for &'a #name #type_generics #where_clause {
             type Item = T;
-            type IntoIter = crate::tensor::TensorIterator<'a, #rank, #shape, #name #type_generics>;
+            type IntoIter = crate::tensor::TensorIterator<'a, #name #type_generics>;
 
             fn into_iter(self) -> Self::IntoIter {
                 Self::IntoIter::new(self)

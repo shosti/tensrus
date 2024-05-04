@@ -1,6 +1,6 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{num_elems, ShapedTensor, TensorShape};
+use crate::tensor::{num_elems, Tensor, TensorShape};
 use num::ToPrimitive;
 
 pub const fn vector_shape(n: usize) -> TensorShape {
@@ -18,14 +18,6 @@ impl<T: Numeric, const N: usize> Vector<T, N>
 where
     [(); num_elems(1, vector_shape(N))]:,
 {
-    pub fn from_fn<F>(cb: F) -> Self
-    where
-        F: Fn([usize; 1]) -> T,
-    {
-        let t: GenericTensor<T, 1, { vector_shape(N) }> = GenericTensor::from_fn(cb);
-        Self(t)
-    }
-
     pub fn dot(&self, other: &Self) -> T {
         let mut res = T::zero();
         for i in 0..N {
@@ -59,7 +51,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tensor::ShapedTensor;
 
     #[test]
     fn basics() {

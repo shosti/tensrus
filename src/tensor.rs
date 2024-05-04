@@ -48,6 +48,7 @@ pub trait Tensor:
     + 'static
 {
     type T: Numeric;
+    type Idx: Copy + 'static;
 
     fn zeros() -> Self;
     fn deep_clone(&self) -> Self;
@@ -59,6 +60,17 @@ pub trait Tensor:
         b: &Self,
         f: F,
     );
+
+    fn default_idx() -> Self::Idx;
+    fn next_idx(idx: Self::Idx) -> Option<Self::Idx>;
+
+    fn get(&self, idx: Self::Idx) -> Self::T;
+
+    fn set(&self, idx: Self::Idx, val: Self::T);
+
+    fn from_fn<F>(cb: F) -> Self
+    where
+        F: Fn(Self::Idx) -> Self::T;
 }
 
 pub trait ShapedTensor<const R: usize, const S: TensorShape>: Tensor {
@@ -79,65 +91,44 @@ pub trait ShapedTensor<const R: usize, const S: TensorShape>: Tensor {
 
         res
     }
-    fn get(&self, idx: [usize; R]) -> <Self as Tensor>::T;
-    fn set(&self, idx: [usize; R], val: <Self as Tensor>::T);
-
-    fn from_fn<F>(cb: F) -> Self
-    where
-        F: Fn([usize; R]) -> <Self as Tensor>::T;
 }
 
-pub struct TensorIterator<'a, const R: usize, const S: TensorShape, Tn>
+pub struct TensorIterator<'a, Tn>
 where
-    Tn: ShapedTensor<R, S>,
+    Tn: Tensor,
 {
     t: &'a Tn,
-    done: bool,
-    cur: [usize; R],
+    cur: Option<Tn::Idx>,
 }
 
-impl<'a, const R: usize, const S: TensorShape, Tn> TensorIterator<'a, R, S, Tn>
+impl<'a, Tn> TensorIterator<'a, Tn>
 where
-    Tn: ShapedTensor<R, S>,
+    Tn: Tensor,
 {
     pub fn new(t: &'a Tn) -> Self {
         Self {
             t,
-            cur: [0; R],
-            done: false,
+            cur: Some(Tn::default_idx()),
         }
     }
 }
 
-impl<'a, const R: usize, const S: TensorShape, Tn> Iterator for TensorIterator<'a, R, S, Tn>
+impl<'a, Tn> Iterator for TensorIterator<'a, Tn>
 where
-    Tn: ShapedTensor<R, S>,
+    Tn: Tensor,
 {
     type Item = Tn::T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.done {
-            return None;
-        }
+        match &self.cur {
+            None => None,
+            Some(idx) => {
+                let cur_idx = *idx;
+                let item = self.t.get(cur_idx);
+                self.cur = Tn::next_idx(cur_idx);
 
-        let item = self.t.get(self.cur);
-        if R == 0 {
-            self.done = true;
-            return Some(item);
-        }
-
-        self.cur[R - 1] += 1;
-        for dim in (0..R).rev() {
-            if self.cur[dim] == S[dim] {
-                if dim == 0 {
-                    self.done = true;
-                    break;
-                }
-                self.cur[dim] = 0;
-                self.cur[dim - 1] += 1;
+                Some(item)
             }
         }
-
-        Some(item)
     }
 }

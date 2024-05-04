@@ -1,6 +1,6 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{ShapedTensor, TensorShape};
+use crate::tensor::{Tensor, TensorShape};
 use num::ToPrimitive;
 
 pub const fn scalar_shape() -> TensorShape {

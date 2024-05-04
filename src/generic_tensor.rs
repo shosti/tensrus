@@ -80,6 +80,12 @@ impl<T: Numeric, const R: usize, const S: TensorShape> BasicTensor for GenericTe
 impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<R, S>
     for GenericTensor<T, R, S>
 {
+}
+
+impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<T, R, S> {
+    type T = T;
+    type Idx = [usize; R];
+
     fn get(&self, idx: [usize; R]) -> T {
         match Self::storage_idx(idx) {
             Ok(i) => self.storage.borrow()[i],
@@ -96,19 +102,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> ShapedTensor<R, S>
             Err(_e) => panic!("set: out of bounds"),
         }
     }
-
-    fn from_fn<F>(cb: F) -> Self
-    where
-        F: Fn([usize; R]) -> T,
-    {
-        (0..Self::storage_size())
-            .map(|i| cb(Self::idx_from_storage_idx(i).unwrap()))
-            .collect()
-    }
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<T, R, S> {
-    type T = T;
 
     fn zeros() -> Self {
         let storage = vec![T::zero(); Self::storage_size()];
@@ -145,6 +138,34 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<
         Self {
             storage: Rc::new(RefCell::new(self.storage.borrow().clone())),
         }
+    }
+
+    fn default_idx() -> Self::Idx {
+        [0; R]
+    }
+    fn next_idx(idx: Self::Idx) -> Option<Self::Idx> {
+        let mut cur = idx;
+        cur[R - 1] += 1;
+        for dim in (0..R).rev() {
+            if cur[dim] == S[dim] {
+                if dim == 0 {
+                    return None;
+                }
+                cur[dim] = 0;
+                cur[dim - 1] += 1;
+            }
+        }
+
+        Some(cur)
+    }
+
+    fn from_fn<F>(cb: F) -> Self
+    where
+        F: Fn([usize; R]) -> T,
+    {
+        (0..Self::storage_size())
+            .map(|i| cb(Self::idx_from_storage_idx(i).unwrap()))
+            .collect()
     }
 }
 
@@ -194,7 +215,7 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
     for &'a GenericTensor<T, R, S>
 {
     type Item = T;
-    type IntoIter = TensorIterator<'a, R, S, GenericTensor<T, R, S>>;
+    type IntoIter = TensorIterator<'a, GenericTensor<T, R, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter::new(self)

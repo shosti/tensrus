@@ -1,6 +1,6 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{num_elems, IndexError, ShapedTensor, TensorShape};
+use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
 use crate::vector::{vector_shape, Vector};
 use num::ToPrimitive;
 use std::ops::Mul;
@@ -22,14 +22,6 @@ impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N>
 where
     [(); num_elems(2, matrix_shape(M, N))]:,
 {
-    pub fn from_fn<F>(cb: F) -> Self
-    where
-        F: Fn([usize; 2]) -> T,
-    {
-        let t: GenericTensor<T, 2, { matrix_shape(M, N) }> = GenericTensor::from_fn(cb);
-        Self(t)
-    }
-
     pub fn row(&self, i: usize) -> Result<Vector<T, N>, IndexError>
     where
         [(); num_elems(1, vector_shape(N))]:,
@@ -126,7 +118,6 @@ where
 mod tests {
     use super::*;
     use crate::tensor::IndexError;
-    use crate::tensor::ShapedTensor;
     use crate::vector::Vector;
 
     #[test]
