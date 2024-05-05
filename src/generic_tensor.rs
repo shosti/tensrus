@@ -1,6 +1,7 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use crate::tensor::{num_elems, IndexError, ShapeError, Tensor, TensorIterator, TensorShape};
+use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, TensorShape};
+use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
 use std::cell::RefCell;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
@@ -78,16 +79,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         Ok(i)
     }
 
-    pub fn reshape<const R2: usize, const S2: TensorShape>(
-        self,
-    ) -> Result<GenericTensor<T, R2, S2>, ShapeError> {
-        if num_elems(R, S) != num_elems(R2, S2) {
-            return Err(ShapeError {});
-        }
-
-        Ok(GenericTensor {
+    pub fn reshape<const R2: usize, const S2: TensorShape>(self) -> GenericTensor<T, R2, S2>
+    where
+        Assert<{ num_elems(R, S) == num_elems(R2, S2) }>: IsTrue,
+    {
+        GenericTensor {
             storage: self.storage,
-        })
+        }
     }
 
     pub fn subtensor(
@@ -455,5 +453,15 @@ mod tests {
         let t0 = t1.subtensor(1).unwrap();
         let t0_expected: GenericTensor<f64, 0, { [0; 5] }> = GenericTensor::from([18]);
         assert_eq!(t0, t0_expected);
+    }
+
+    #[test]
+    fn test_reshape() {
+        let t = GenericTensor::<f64, 2, { [3, 2, 0, 0, 0] }>::from([1, 2, 3, 4, 5, 6]);
+        let t2 = t.clone().reshape::<2, { [2, 3, 0, 0, 0] }>();
+        let t3 = t.clone().reshape::<1, { [6, 0, 0, 0, 0] }>();
+
+        assert_eq!(t.get([1, 0]), t2.get([0, 2]));
+        assert_eq!(t.get([2, 1]), t3.get([5]));
     }
 }

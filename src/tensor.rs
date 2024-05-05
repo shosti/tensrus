@@ -8,9 +8,6 @@ use crate::scalar::Scalar;
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
 
-#[derive(Debug, PartialEq)]
-pub struct ShapeError {}
-
 pub type TensorShape = [usize; 5];
 
 pub const fn vector_shape(n: usize) -> TensorShape {

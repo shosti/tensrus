@@ -2,6 +2,7 @@
 #![feature(generic_arg_infer)]
 #![feature(generic_const_exprs)]
 #![feature(trait_upcasting)]
+#![feature(const_trait_impl)]
 #![allow(incomplete_features)]
 #[macro_use]
 extern crate brainy_derive;
@@ -16,6 +17,7 @@ pub mod scalar;
 pub mod tensor;
 pub mod var;
 pub mod vector;
+mod type_assert;
 
 // use nn::{Module, MLP};
 // use render::Graph;
