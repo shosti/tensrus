@@ -39,25 +39,29 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 self.0.get(idx)
             }
 
-            fn set(&self, idx: Self::Idx, val: Self::T) {
-                self.0.set(idx, val)
+            fn set(self, idx: Self::Idx, val: Self::T) -> Self {
+                Self(self.0.set(idx, val))
             }
 
-            fn update<F: Fn(Self::T) -> Self::T>(&mut self, f: F) {
-                self.0.update(f);
+            fn map<F: Fn(Self::T) -> Self::T>(self, f: F) -> Self {
+                Self(self.0.map(f))
             }
 
-            fn update_zip<F: Fn(Self::T, Self::T) -> Self::T>(&mut self, other: &Self, f: F) {
-                self.0.update_zip(&other.0, f);
+            fn reduce<'a, F: Fn(Vec<Self::T>) -> Self::T>(self, others: Vec<&'a Self>, f: F) -> Self {
+                Self(self.0.reduce(others.iter().map(|t| &t.0).collect(), f))
             }
 
-            fn update_zip2<F: Fn(Self::T, Self::T, Self::T) -> Self::T>(&mut self, a: &Self, b: &Self, f: F) {
-                self.0.update_zip2(&a.0, &b.0, f);
-            }
+            // fn update_zip<F: Fn(Self::T, Self::T) -> Self::T>(&mut self, other: &Self, f: F) {
+            //     self.0.update_zip(&other.0, f);
+            // }
 
-            fn deep_clone(&self) -> Self {
-                Self(self.0.deep_clone())
-            }
+            // fn update_zip2<F: Fn(Self::T, Self::T, Self::T) -> Self::T>(&mut self, a: &Self, b: &Self, f: F) {
+            //     self.0.update_zip2(&a.0, &b.0, f);
+            // }
+
+            // fn deep_clone(&self) -> Self {
+            //     Self(self.0.deep_clone())
+            // }
 
             fn default_idx() -> Self::Idx {
                 #wrapped_type::#wrapped_type_args::default_idx()
@@ -98,17 +102,11 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics std::ops::Add for #name #type_generics #where_clause {
+        impl #impl_generics_with_lifetime std::ops::Add<&'a Self> for #name #type_generics #where_clause {
             type Output = Self;
 
-            fn add(self, other: Self) -> Self::Output {
-                Self(self.0 + other.0)
-            }
-        }
-
-        impl #impl_generics std::ops::AddAssign for #name #type_generics #where_clause {
-            fn add_assign(&mut self, other: Self) {
-                self.0 += other.0;
+            fn add(self, other: &Self) -> Self::Output {
+                Self(self.0 + &other.0)
             }
         }
 
@@ -125,12 +123,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
 
             fn mul(self, other: crate::scalar::Scalar<T>) -> Self::Output {
                 Self(self.0 * other)
-            }
-        }
-
-        impl #impl_generics std::ops::MulAssign<T> for #name #type_generics #where_clause {
-            fn mul_assign(&mut self, other: T) {
-                self.0 *= other;
             }
         }
 

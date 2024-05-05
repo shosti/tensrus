@@ -15,9 +15,9 @@ pub mod op;
 pub mod render;
 pub mod scalar;
 pub mod tensor;
+mod type_assert;
 pub mod var;
 pub mod vector;
-mod type_assert;
 
 // use nn::{Module, MLP};
 // use render::Graph;

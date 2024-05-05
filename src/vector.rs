@@ -58,14 +58,6 @@ mod tests {
     }
 
     #[test]
-    fn test_mul_assign() {
-        let mut a = Vector::from([2, 4, 6, 8]);
-        a *= 3.0;
-
-        assert_eq!(a, Vector::from([6, 12, 18, 24]));
-    }
-
-    #[test]
     fn test_from_fn() {
         let a: Vector<_, 4> = Vector::from_fn(|idx| idx[0] as f32 * 2.0);
 

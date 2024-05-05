@@ -1,9 +1,8 @@
 use num::{One, Zero};
 use std::fmt::Debug;
-use std::ops::{Add, AddAssign, Mul, MulAssign};
+use std::ops::{Add, Mul};
 
 use crate::numeric::Numeric;
-use crate::scalar::Scalar;
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
@@ -31,7 +30,7 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
 }
 
 pub trait Tensor:
-    Debug + Clone + Add + AddAssign + Mul<Self::T> + Mul<Scalar<Self::T>> + MulAssign<Self::T> + 'static
+    Debug + Clone + for<'a> Add<&'a Self, Output = Self> + Mul<Self::T> + 'static
 {
     type T: Numeric;
     type Idx: Copy + 'static;
@@ -46,21 +45,42 @@ pub trait Tensor:
     fn from_fn<F>(f: F) -> Self
     where
         F: Fn(Self::Idx) -> Self::T;
-    fn deep_clone(&self) -> Self;
 
     fn get(&self, idx: Self::Idx) -> Self::T;
-    fn set(&self, idx: Self::Idx, val: Self::T);
-    fn update<F: Fn(Self::T) -> Self::T>(&mut self, f: F);
-    fn update_zip<F: Fn(Self::T, Self::T) -> Self::T>(&mut self, other: &Self, f: F);
-    fn update_zip2<F: Fn(Self::T, Self::T, Self::T) -> Self::T>(
-        &mut self,
-        a: &Self,
-        b: &Self,
-        f: F,
-    );
+
+    fn map<F: Fn(Self::T) -> Self::T>(self, f: F) -> Self;
+    fn zip<'a>(self, other: &'a Self) -> TensorZipper<'a, Self> {
+        TensorZipper::new(self, other)
+    }
+    fn set(self, idx: Self::Idx, val: Self::T) -> Self;
+    fn reduce<'a, F: Fn(Vec<Self::T>) -> Self::T>(self, others: Vec<&'a Self>, f: F) -> Self;
 
     fn default_idx() -> Self::Idx;
     fn next_idx(idx: Self::Idx) -> Option<Self::Idx>;
+}
+
+pub struct TensorZipper<'a, Tn: Tensor> {
+    t: Tn,
+    others: Vec<&'a Tn>,
+}
+
+impl<'a, Tn: Tensor> TensorZipper<'a, Tn> {
+    pub fn new(t: Tn, other: &'a Tn) -> Self {
+        Self {
+            t,
+            others: vec![other],
+        }
+    }
+
+    pub fn zip(self, other: &'a Tn) -> Self {
+        let mut others = self.others;
+        others.push(other);
+        Self { t: self.t, others }
+    }
+
+    pub fn map<F: Fn(Vec<Tn::T>) -> Tn::T>(self, f: F) -> Tn {
+        self.t.reduce::<F>(self.others, f)
+    }
 }
 
 pub struct TensorIterator<'a, Tn>

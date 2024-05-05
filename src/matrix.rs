@@ -82,8 +82,8 @@ where
     }
 }
 
-impl<T: Numeric, const M: usize, const N: usize, const P: usize> Mul<Matrix<T, N, P>>
-    for Matrix<T, M, N>
+impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<&'a Matrix<T, N, P>>
+    for &'a Matrix<T, M, N>
 where
     [(); num_elems(2, matrix_shape(M, N))]:,
     [(); num_elems(2, matrix_shape(N, P))]:,
@@ -91,7 +91,7 @@ where
 {
     type Output = Matrix<T, M, P>;
 
-    fn mul(self, other: Matrix<T, N, P>) -> Self::Output {
+    fn mul(self, other: &Matrix<T, N, P>) -> Self::Output {
         Self::Output::from_fn(|[i, j]| {
             let mut res = T::zero();
             for k in 0..N {
@@ -102,7 +102,7 @@ where
     }
 }
 
-impl<T: Numeric, const M: usize, const N: usize> Mul<Vector<T, N>> for Matrix<T, M, N>
+impl<'a, T: Numeric, const M: usize, const N: usize> Mul<&'a Vector<T, N>> for &'a Matrix<T, M, N>
 where
     [(); num_elems(2, matrix_shape(M, N))]:,
     [(); num_elems(1, vector_shape(N))]:,
@@ -110,7 +110,7 @@ where
 {
     type Output = Vector<T, M>;
 
-    fn mul(self, other: Vector<T, N>) -> Self::Output {
+    fn mul(self, other: &Vector<T, N>) -> Self::Output {
         Self::Output::from_fn(|[i]| {
             let mut res = T::zero();
             for k in 0..N {
@@ -183,8 +183,8 @@ mod tests {
             rng.gen_range(-1000.0..1000.0)
         });
 
-        assert_eq!(i.clone() * x.clone(), x);
-        assert_eq!(x.clone() * i.clone(), x);
+        assert_eq!(&i * &x, x);
+        assert_eq!(&x * &i, x);
     }
 
     #[test]
@@ -197,15 +197,6 @@ mod tests {
         });
         let y = Matrix::from([[00, 01, 02, 03], [10, 11, 12, 13], [20, 21, 22, 23]]);
 
-        assert_eq!(x, y);
-    }
-
-    #[test]
-    fn test_elem_mutiply() {
-        let mut x = Matrix::from([[2, 4, 6], [8, 10, 12]]);
-        let y = Matrix::from([[4, 8, 12], [16, 20, 24]]);
-
-        x *= 2.0;
         assert_eq!(x, y);
     }
 
@@ -231,7 +222,7 @@ mod tests {
         let res: Matrix<f64, _, _> =
             Matrix::from([[25, 28, 31, 34], [57, 64, 71, 78], [89, 100, 111, 122]]);
 
-        assert_eq!(x * y, res);
+        assert_eq!(&x * &y, res);
     }
 
     #[test]
@@ -239,7 +230,7 @@ mod tests {
         let a: Matrix<f64, _, _> = Matrix::from([[1, -1, 2], [0, -3, 1]]);
         let x: Vector<f64, _> = Vector::from([2, 1, 0]);
 
-        assert_eq!(a * x, Vector::from([1, -3]));
+        assert_eq!(&a * &x, Vector::from([1, -3]));
     }
 
     #[test]

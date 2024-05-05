@@ -5,10 +5,7 @@ use crate::{
     tensor::{num_elems, Tensor},
     var::{Var, VarRef},
 };
-use std::{
-    fmt::{Debug, Formatter},
-    ops::Add,
-};
+use std::fmt::{Debug, Formatter};
 
 pub trait Op: Debug + 'static {
     fn children(&self) -> Vec<VarRef>;
@@ -32,7 +29,7 @@ pub struct PowOp<Tn: Tensor> {
 
 impl<T: Numeric> PowOp<Scalar<T>> {
     pub fn create_flow(from: Var<Scalar<T>>, n: T) -> Var<Scalar<T>> {
-        let data = Scalar::from(from.data.val().powf(n));
+        let data = Scalar::from(from.data.borrow().val().powf(n));
         let op = PowOp { n, from };
 
         Var::new_from_op(data, op)
@@ -41,7 +38,7 @@ impl<T: Numeric> PowOp<Scalar<T>> {
 
 impl<T: Numeric> Debug for PowOp<Scalar<T>> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{} ^ {}", self.from.data.val(), self.n)
+        write!(f, "{} ^ {}", self.from.data.borrow().val(), self.n)
     }
 }
 
@@ -78,8 +75,11 @@ where
     Tn: Tensor<T = T>,
 {
     pub fn create_flow(from: Var<Tn>) -> Var<Tn> {
-        let mut out = from.data.deep_clone();
-        out.update(|v| if v.is_sign_negative() { T::zero() } else { v });
+        let out = from
+            .data
+            .borrow()
+            .clone()
+            .map(|v| if v.is_sign_negative() { T::zero() } else { v });
 
         let op = ReluOp { from };
 
@@ -96,21 +96,21 @@ where
         vec![from.into()]
     }
 
-    fn backward(&mut self, to: &VarRef) {
-        let to_grad: &Tn = to.grad();
-        let to_data: &Tn = to.data();
+    fn backward(&mut self, _to: &VarRef) {
+        // let to_grad: &Tn = to.grad();
+        // let to_data: &Tn = to.data();
 
-        self.from
-            .grad
-            .update_zip2(to_grad, to_data, |from_grad, to_grad, to_data| {
-                let diff = if to_data.is_sign_positive() && !to_data.is_zero() {
-                    to_grad
-                } else {
-                    T::zero()
-                };
+        // self.from
+        //     .grad
+        //     .update_zip2(to_grad, to_data, |from_grad, to_grad, to_data| {
+        //         let diff = if to_data.is_sign_positive() && !to_data.is_zero() {
+        //             to_grad
+        //         } else {
+        //             T::zero()
+        //         };
 
-                from_grad + diff
-            })
+        //         from_grad + diff
+        //     })
     }
 }
 
@@ -119,13 +119,12 @@ pub struct AddOp<Tn: Tensor> {
     from: (Var<Tn>, Var<Tn>),
 }
 
-impl<T: Numeric, Tn> AddOp<Tn>
-where
-    Tn: Tensor<T = T> + Add<Output = Tn>,
-{
-    pub fn create_flow(a: Var<Tn>, b: Var<Tn>) -> Var<Tn> {
-        let out = a.clone().data + b.clone().data;
-        let op = AddOp { from: (a, b) };
+impl<Tn: Tensor> AddOp<Tn> {
+    pub fn create_flow(a: &Var<Tn>, b: &Var<Tn>) -> Var<Tn> {
+        let out = a.data.borrow().clone() + &*b.data.borrow();
+        let op = AddOp {
+            from: (a.clone(), b.clone()),
+        };
 
         Var::new_from_op(out, op)
     }
@@ -145,16 +144,16 @@ impl<Tn: Tensor> Op for AddOp<Tn> {
         out
     }
 
-    fn backward(&mut self, to: &VarRef) {
-        let to_grad: &Tn = to.grad();
-        self.from
-            .0
-            .grad
-            .update_zip(to_grad, |from_grad, to_grad| from_grad + to_grad);
-        self.from
-            .1
-            .grad
-            .update_zip(to_grad, |from_grad, to_grad| from_grad + to_grad);
+    fn backward(&mut self, _to: &VarRef) {
+        // let to_grad: &Tn = to.grad();
+        // self.from
+        //     .0
+        //     .grad
+        //     .update_zip(to_grad, |from_grad, to_grad| from_grad + to_grad);
+        // self.from
+        //     .1
+        //     .grad
+        //     .update_zip(to_grad, |from_grad, to_grad| from_grad + to_grad);
     }
 }
 
@@ -165,13 +164,18 @@ pub struct MulOp<Tn: Tensor> {
 
 impl<T: Numeric> Debug for MulOp<Scalar<T>> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{} * {}", self.from.0.data.val(), self.from.1.data.val())
+        write!(
+            f,
+            "{} * {}",
+            self.from.0.data.borrow().val(),
+            self.from.1.data.borrow().val()
+        )
     }
 }
 
 impl<T: Numeric> MulOp<Scalar<T>> {
     pub fn create_flow(a: Var<Scalar<T>>, b: Var<Scalar<T>>) -> Var<Scalar<T>> {
-        let outval = Scalar::from(a.data.val() * b.data.val());
+        let outval = Scalar::from(a.data.borrow().val() * b.data.borrow().val());
         let op = MulOp { from: (a, b) };
 
         Var::new_from_op(outval, op)
@@ -189,8 +193,8 @@ impl<T: Numeric> Op for MulOp<Scalar<T>> {
     fn backward(&mut self, to: &VarRef) {
         let to_grad: &Scalar<T> = to.grad();
 
-        let a_data = self.from.0.data.val();
-        let b_data = self.from.1.data.val();
+        let a_data = self.from.0.data.borrow().val();
+        let b_data = self.from.1.data.borrow().val();
 
         self.from
             .0
@@ -217,7 +221,7 @@ where
     [(); num_elems(2, matrix_shape(M, P))]:,
 {
     pub fn create_flow(a: Var<Matrix<T, M, N>>, b: Var<Matrix<T, N, P>>) -> Var<Matrix<T, M, P>> {
-        let outval = a.clone().data * b.clone().data;
+        let outval = &*a.data.borrow() * &*b.data.borrow();
 
         let op = Self { from: (a, b) };
 

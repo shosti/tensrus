@@ -4,7 +4,7 @@ use crate::{
     scalar::Scalar,
     tensor::Tensor,
 };
-use num::Zero;
+
 use std::{
     any::Any,
     cell::RefCell,
@@ -22,8 +22,8 @@ thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 #[derive(Debug, Clone)]
 pub struct Var<Tn: Tensor> {
     pub id: u64,
-    pub data: Tn,
-    pub grad: Tn,
+    pub data: Rc<RefCell<Tn>>,
+    pub grad: Option<Rc<RefCell<Tn>>>,
     op: Rc<RefCell<dyn Op>>,
 }
 
@@ -39,8 +39,8 @@ impl<Tn: Tensor> Var<Tn> {
     pub fn new(data: Tn) -> Self {
         Self {
             id: Self::next_id(),
-            data,
-            grad: Tn::zeros(),
+            data: Rc::new(RefCell::new(data)),
+            grad: None,
             op: Rc::new(RefCell::new(NoOp {})),
         }
     }
@@ -48,8 +48,8 @@ impl<Tn: Tensor> Var<Tn> {
     pub fn new_from_op(data: Tn, op: impl Op) -> Self {
         Self {
             id: Self::next_id(),
-            data,
-            grad: Tn::zeros(),
+            data: Rc::new(RefCell::new(data)),
+            grad: None,
             op: Rc::new(RefCell::new(op)),
         }
     }
@@ -68,18 +68,25 @@ impl<Tn: Tensor> Var<Tn> {
         ReluOp::create_flow(self.clone())
     }
 
-    pub fn update_from_grad(&self, epsilon: Tn::T) {
-        self.data
-            .clone()
-            .update_zip(&self.grad, |data, grad| data + grad * -epsilon);
+    pub fn update_from_grad(&mut self, epsilon: Tn::T) {
+        if let Some(grad_ref) = self.grad.take() {
+            let grad = Rc::try_unwrap(grad_ref).unwrap();
+            let new_data = grad.into_inner().zip(&self.data.borrow()).map(|vals| {
+                let grad = vals[0];
+                let data = vals[1];
+                data + grad * -epsilon
+            });
+            self.data = Rc::new(RefCell::new(new_data));
+        }
     }
 
+    pub fn update_grad(&mut self, _f: impl Fn(Tn::T, Tn::T) -> Tn::T) {
+        // match self.grad.ta
+    }
+
+    // TODO: We don't need this I think?
     pub fn zero_grad(&mut self) {
-        self.grad.update(|_| Tn::T::zero());
-    }
-
-    pub fn update_grad(&mut self, f: impl Fn(Tn::T, Tn::T) -> Tn::T) {
-        self.grad.update_zip(&self.data, f);
+        self.grad = None;
     }
 
     // returns (nodes, edges)
@@ -116,43 +123,40 @@ impl<T: Numeric> From<T> for Var<Scalar<T>> {
 
 impl<T: Numeric> Var<Scalar<T>> {
     pub fn backward(&mut self) {
-        let mut topo = Vec::new();
-        let mut visited = HashSet::new();
-        let cur: VarRef = self.clone().into();
+        // let mut topo = Vec::new();
+        // let mut visited = HashSet::new();
+        // let cur: VarRef = self.clone().into();
 
-        Self::build_topo(&cur, &mut topo, &mut visited);
+        // Self::build_topo(&cur, &mut topo, &mut visited);
 
-        self.grad.update(|_| T::one());
-        for flow in topo.iter().rev() {
-            flow.op.borrow_mut().backward(flow);
-        }
+        // self.grad.update(|_| T::one());
+        // for flow in topo.iter().rev() {
+        //     flow.op.borrow_mut().backward(flow);
+        // }
     }
 
-    fn build_topo(cur: &VarRef, topo: &mut Vec<VarRef>, visited: &mut HashSet<u64>) {
-        if visited.contains(&cur.id) {
-            return;
-        }
+    // fn build_topo(cur: &VarRef, topo: &mut Vec<VarRef>, visited: &mut HashSet<u64>) {
+    //     if visited.contains(&cur.id) {
+    //         return;
+    //     }
 
-        visited.insert(cur.id);
-        for child in cur.op.borrow().children().iter() {
-            Self::build_topo(child, topo, visited);
-        }
-        topo.push(cur.clone());
-    }
+    //     visited.insert(cur.id);
+    //     for child in cur.op.borrow().children().iter() {
+    //         Self::build_topo(child, topo, visited);
+    //     }
+    //     topo.push(cur.clone());
+    // }
 
     pub fn pow(&self, n: T) -> Self {
         PowOp::create_flow(self.clone(), n)
     }
 }
 
-impl<Tn> Add for Var<Tn>
-where
-    Tn: Tensor + Add<Output = Tn>,
-{
+impl<Tn: Tensor> Add for Var<Tn> {
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
-        AddOp::create_flow(self, other)
+        AddOp::create_flow(&self, &other)
     }
 }
 
@@ -244,18 +248,19 @@ impl PartialEq for VarRef {
 impl Eq for VarRef {}
 
 impl<T: Numeric> Sum for Var<Scalar<T>> {
-    fn sum<I: Iterator<Item = Var<Scalar<T>>>>(mut iter: I) -> Self {
-        let first = iter.next();
-        if first.is_none() {
-            return Var::from(T::zero());
-        }
-        let mut res = first.unwrap();
+    fn sum<I: Iterator<Item = Var<Scalar<T>>>>(mut _iter: I) -> Self {
+        todo!()
+        // let first = iter.next();
+        // if first.is_none() {
+        //     return Var::from(T::zero());
+        // }
+        // let mut res = first.unwrap();
 
-        for next in iter {
-            res = res + next;
-        }
+        // for next in iter {
+        //     res = res + next;
+        // }
 
-        res
+        // res
     }
 }
 

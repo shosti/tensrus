@@ -3,13 +3,11 @@ use crate::scalar::Scalar;
 use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, TensorShape};
 use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
-use std::cell::RefCell;
-use std::ops::{Add, AddAssign, Mul, MulAssign};
-use std::rc::Rc;
+use std::ops::{Add, Mul};
 
 #[derive(Debug, Clone)]
 pub struct GenericTensor<T: Numeric, const R: usize, const S: TensorShape> {
-    storage: Rc<RefCell<Vec<T>>>,
+    storage: Vec<T>,
 }
 
 // Returns the tensor shape when downranking by 1
@@ -96,12 +94,11 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
             return Err(IndexError {});
         }
 
-        let storage = self.storage.borrow();
         let out: GenericTensor<T, { R - 1 }, { subtensor_shape(R, S) }> =
             GenericTensor::from_fn(|idx| {
                 let mut self_idx = [i; R];
                 self_idx[1..R].copy_from_slice(&idx[..(R - 1)]);
-                storage[Self::storage_idx(self_idx).unwrap()]
+                self.storage[Self::storage_idx(self_idx).unwrap()]
             });
         Ok(out)
     }
@@ -113,49 +110,42 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<
 
     fn get(&self, idx: [usize; R]) -> T {
         match Self::storage_idx(idx) {
-            Ok(i) => self.storage.borrow()[i],
+            Ok(i) => self.storage[i],
             Err(_e) => panic!("get: out of bounds"),
         }
     }
 
-    fn set(&self, idx: [usize; R], val: T) {
+    fn set(self, idx: [usize; R], val: T) -> Self {
         match Self::storage_idx(idx) {
             Ok(i) => {
-                let mut storage = self.storage.borrow_mut();
+                let mut storage = self.storage;
                 storage[i] = val;
+                Self { storage }
             }
             Err(_e) => panic!("set: out of bounds"),
         }
     }
 
-    fn update<F: Fn(T) -> T>(&mut self, f: F) {
-        self.storage
-            .borrow_mut()
-            .iter_mut()
-            .for_each(|v| *v = f(*v));
+    fn map<F: Fn(T) -> T>(self, f: F) -> Self {
+        let mut storage = self.storage;
+        storage.iter_mut().for_each(|v| *v = f(*v));
+
+        Self { storage }
     }
 
-    fn update_zip<F: Fn(T, T) -> T>(&mut self, other: &Self, f: F) {
-        self.storage
-            .borrow_mut()
-            .iter_mut()
-            .zip(other.storage.borrow().iter())
-            .for_each(|(x, y)| *x = f(*x, *y))
-    }
+    fn reduce<'a, F: Fn(Vec<Self::T>) -> Self::T>(self, others: Vec<&'a Self>, f: F) -> Self {
+        let mut storage = self.storage;
+        storage.iter_mut().enumerate().for_each(|(i, v)| {
+            let mut vals = vec![*v];
+            for other in others.iter() {
+                vals.push(other.storage[i]);
+            }
+            let out = f(vals);
 
-    fn update_zip2<F: Fn(T, T, T) -> T>(&mut self, a: &Self, b: &Self, f: F) {
-        self.storage
-            .borrow_mut()
-            .iter_mut()
-            .zip(a.storage.borrow().iter())
-            .zip(b.storage.borrow().iter())
-            .for_each(|((x, y), z)| *x = f(*x, *y, *z))
-    }
+            *v = out
+        });
 
-    fn deep_clone(&self) -> Self {
-        Self {
-            storage: Rc::new(RefCell::new(self.storage.borrow().clone())),
-        }
+        Self { storage }
     }
 
     fn default_idx() -> Self::Idx {
@@ -179,9 +169,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<
 
     fn repeat(n: T) -> Self {
         let storage = vec![n; Self::storage_size()];
-        Self {
-            storage: Rc::new(RefCell::new(storage)),
-        }
+        Self { storage }
     }
 
     fn from_fn<F>(f: F) -> Self
@@ -218,16 +206,14 @@ where
             .chain(std::iter::repeat(T::zero()))
             .take(Self::storage_size())
             .collect();
-        Self {
-            storage: Rc::new(RefCell::new(vals)),
-        }
+        Self { storage: vals }
     }
 }
 
 impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTensor<T, R, S> {
     fn eq(&self, other: &Self) -> bool {
         for i in 0..Self::storage_size() {
-            if self.storage.borrow()[i] != other.storage.borrow()[i] {
+            if self.storage[i] != other.storage[i] {
                 return false;
             }
         }
@@ -248,17 +234,13 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
 
 impl<T: Numeric, const R: usize, const S: TensorShape> Eq for GenericTensor<T, R, S> {}
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Add for GenericTensor<T, R, S> {
+impl<'a, T: Numeric, const R: usize, const S: TensorShape> Add<&'a Self>
+    for GenericTensor<T, R, S>
+{
     type Output = Self;
 
-    fn add(self, other: Self) -> Self::Output {
-        Self::from_fn(|idx| self.get(idx) + other.get(idx))
-    }
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape> AddAssign for GenericTensor<T, R, S> {
-    fn add_assign(&mut self, other: Self) {
-        self.update_zip(&other, |x, y| x + y)
+    fn add(self, other: &Self) -> Self::Output {
+        self.zip(other).map(|vs| vs[0] + vs[1])
     }
 }
 
@@ -275,12 +257,6 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Mul<Scalar<T>> for Generi
 
     fn mul(self, other: Scalar<T>) -> Self::Output {
         Self::from_fn(|idx| self.get(idx) * other.val())
-    }
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape> MulAssign<T> for GenericTensor<T, R, S> {
-    fn mul_assign(&mut self, other: T) {
-        self.update(&|v| v * other);
     }
 }
 
@@ -365,36 +341,16 @@ mod tests {
         let y: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([5, 6, 7, 8]);
         let a: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([6, 8, 10, 12]);
 
-        assert_eq!(x.clone() + y.clone(), a);
+        assert_eq!(x.clone() + &y, a);
 
-        x += y;
+        x = x + &y;
         assert_eq!(x.clone(), a);
 
         let b: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([12, 16, 20, 24]);
         assert_eq!(x.clone() * 2.0, b);
 
-        x *= 2.0;
+        x = x * 2.0;
         assert_eq!(x, b);
-    }
-
-    #[test]
-    fn test_clone() {
-        let mut x: GenericTensor<f64, 1, { [2; 5] }> = GenericTensor::from([1, 2]);
-        let y: GenericTensor<f64, 1, { [2; 5] }> = GenericTensor::from([1, 2]);
-        let z: GenericTensor<f64, 1, { [2; 5] }> = GenericTensor::from([2, 4]);
-
-        let x_clone = x.clone();
-        assert_eq!(x_clone, y);
-
-        x *= 2.0;
-        assert_eq!(x, z);
-        assert_eq!(x_clone, z);
-
-        let mut deep = x.deep_clone();
-        deep *= 0.5;
-
-        assert_eq!(deep, y);
-        assert_eq!(x, z);
     }
 
     #[test]
@@ -415,25 +371,26 @@ mod tests {
 
     fn test_get_and_set<const R: usize, const S: TensorShape>(t: GenericTensor<f64, R, S>) {
         let mut rng = rand::thread_rng();
+        let mut x = t;
         for _ in 0..10 {
             let mut idx = [0; R];
             for (dim, cur) in idx.iter_mut().enumerate() {
                 *cur = rng.gen_range(0..S[dim]);
             }
             let val: f64 = rng.gen();
+            x = x.set(idx, val);
 
-            t.set(idx, val);
-            assert_eq!(t.get(idx), val);
+            assert_eq!(x.get(idx), val);
         }
     }
 
     #[test]
-    fn test_update() {
-        let mut t: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([1, 2, 3, 4]);
-        t.update(&|val| val * 2.0);
+    fn test_map() {
+        let t: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([1, 2, 3, 4]);
+        let u = t.map(&|val| val * 2.0);
 
         let want: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([2, 4, 6, 8]);
-        assert_eq!(t, want);
+        assert_eq!(u, want);
     }
 
     #[test]
