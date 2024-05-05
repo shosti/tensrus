@@ -51,6 +51,15 @@ where
     }
 }
 
+impl<T: Numeric, const N: usize> Matrix<T, N, N>
+where
+    [(); num_elems(2, matrix_shape(N, N))]:,
+{
+    pub fn identity() -> Self {
+        Self::from_fn(|[i, j]| if i == j { T::one() } else { T::zero() })
+    }
+}
+
 impl<T: Numeric, const M: usize, const N: usize, F: ToPrimitive> From<[F; M * N]>
     for Matrix<T, M, N>
 where
@@ -117,6 +126,7 @@ mod tests {
     use super::*;
     use crate::tensor::IndexError;
     use crate::vector::Vector;
+    use rand::{thread_rng, Rng};
 
     #[test]
     #[rustfmt::skip]
@@ -150,6 +160,31 @@ mod tests {
             [2.0, 3.0],
         ]);
         assert_eq!(x, y);
+    }
+
+    #[test]
+    fn test_identity() {
+        test_identity_with_size::<1>();
+        test_identity_with_size::<2>();
+        test_identity_with_size::<3>();
+        test_identity_with_size::<4>();
+        test_identity_with_size::<5>();
+        test_identity_with_size::<6>();
+        test_identity_with_size::<10>();
+    }
+
+    fn test_identity_with_size<const N: usize>()
+    where
+        [(); num_elems(2, matrix_shape(N, N))]:,
+    {
+        let i = Matrix::<f64, N, N>::identity();
+        let x = Matrix::<f64, N, N>::from_fn(|_| {
+            let mut rng = thread_rng();
+            rng.gen_range(-1000.0..1000.0)
+        });
+
+        assert_eq!(i.clone() * x.clone(), x);
+        assert_eq!(x.clone() * i.clone(), x);
     }
 
     #[test]
