@@ -29,7 +29,7 @@ pub struct PowOp<Tn: Tensor> {
 
 impl<T: Numeric> PowOp<Scalar<T>> {
     pub fn create_flow(from: Var<Scalar<T>>, n: T) -> Var<Scalar<T>> {
-        let data = Scalar::from(from.data.borrow().val().powf(n));
+        let data = Scalar::from(from.data.val().powf(n));
         let op = PowOp { n, from };
 
         Var::new_from_op(data, op)
@@ -38,7 +38,7 @@ impl<T: Numeric> PowOp<Scalar<T>> {
 
 impl<T: Numeric> Debug for PowOp<Scalar<T>> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{} ^ {}", self.from.data.borrow().val(), self.n)
+        write!(f, "{} ^ {}", self.from.data.val(), self.n)
     }
 }
 
@@ -77,7 +77,6 @@ where
     pub fn create_flow(from: Var<Tn>) -> Var<Tn> {
         let out = from
             .data
-            .borrow()
             .clone()
             .map(|v| if v.is_sign_negative() { T::zero() } else { v });
 
@@ -121,7 +120,7 @@ pub struct AddOp<Tn: Tensor> {
 
 impl<Tn: Tensor> AddOp<Tn> {
     pub fn create_flow(a: &Var<Tn>, b: &Var<Tn>) -> Var<Tn> {
-        let out = a.data.borrow().clone() + &*b.data.borrow();
+        let out = a.data.clone() + &b.data;
         let op = AddOp {
             from: (a.clone(), b.clone()),
         };
@@ -167,15 +166,15 @@ impl<T: Numeric> Debug for MulOp<Scalar<T>> {
         write!(
             f,
             "{} * {}",
-            self.from.0.data.borrow().val(),
-            self.from.1.data.borrow().val()
+            self.from.0.data.val(),
+            self.from.1.data.val()
         )
     }
 }
 
 impl<T: Numeric> MulOp<Scalar<T>> {
     pub fn create_flow(a: Var<Scalar<T>>, b: Var<Scalar<T>>) -> Var<Scalar<T>> {
-        let outval = Scalar::from(a.data.borrow().val() * b.data.borrow().val());
+        let outval = Scalar::from(a.data.val() * b.data.val());
         let op = MulOp { from: (a, b) };
 
         Var::new_from_op(outval, op)
@@ -193,8 +192,8 @@ impl<T: Numeric> Op for MulOp<Scalar<T>> {
     fn backward(&mut self, to: &VarRef) {
         let to_grad: &Scalar<T> = to.grad();
 
-        let a_data = self.from.0.data.borrow().val();
-        let b_data = self.from.1.data.borrow().val();
+        let a_data = self.from.0.data.val();
+        let b_data = self.from.1.data.val();
 
         self.from
             .0
@@ -221,7 +220,7 @@ where
     [(); num_elems(2, matrix_shape(M, P))]:,
 {
     pub fn create_flow(a: Var<Matrix<T, M, N>>, b: Var<Matrix<T, N, P>>) -> Var<Matrix<T, M, P>> {
-        let outval = &*a.data.borrow() * &*b.data.borrow();
+        let outval = &a.data * &b.data;
 
         let op = Self { from: (a, b) };
 

@@ -22,8 +22,8 @@ thread_local!(static NEXT_ID: RefCell<u64> = const { RefCell::new(1) });
 #[derive(Debug, Clone)]
 pub struct Var<Tn: Tensor> {
     pub id: u64,
-    pub data: Rc<RefCell<Tn>>,
-    pub grad: Option<Rc<RefCell<Tn>>>,
+    pub data: Tn,
+    pub grad: Option<Tn>,
     op: Rc<RefCell<dyn Op>>,
 }
 
@@ -39,7 +39,7 @@ impl<Tn: Tensor> Var<Tn> {
     pub fn new(data: Tn) -> Self {
         Self {
             id: Self::next_id(),
-            data: Rc::new(RefCell::new(data)),
+            data,
             grad: None,
             op: Rc::new(RefCell::new(NoOp {})),
         }
@@ -48,7 +48,7 @@ impl<Tn: Tensor> Var<Tn> {
     pub fn new_from_op(data: Tn, op: impl Op) -> Self {
         Self {
             id: Self::next_id(),
-            data: Rc::new(RefCell::new(data)),
+            data,
             grad: None,
             op: Rc::new(RefCell::new(op)),
         }
@@ -69,14 +69,13 @@ impl<Tn: Tensor> Var<Tn> {
     }
 
     pub fn update_from_grad(&mut self, epsilon: Tn::T) {
-        if let Some(grad_ref) = self.grad.take() {
-            let grad = Rc::try_unwrap(grad_ref).unwrap();
-            let new_data = grad.into_inner().zip(&self.data.borrow()).map(|vals| {
+        if let Some(grad) = self.grad.take() {
+            let new_data = grad.zip(&self.data).map(|vals| {
                 let grad = vals[0];
                 let data = vals[1];
                 data + grad * -epsilon
             });
-            self.data = Rc::new(RefCell::new(new_data));
+            self.data = new_data;
         }
     }
 
