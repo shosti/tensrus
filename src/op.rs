@@ -5,6 +5,7 @@ use crate::{
     tensor::{num_elems, Tensor},
     var::{Var, VarRef},
 };
+use num::{Float, Zero};
 use std::fmt::{Debug, Formatter};
 
 pub trait Op: Debug + 'static {
@@ -61,24 +62,27 @@ pub struct ReluOp<Tn: Tensor> {
     from: Var<Tn>,
 }
 
-impl<T: Numeric, Tn> Debug for ReluOp<Tn>
+impl<Tn> Debug for ReluOp<Tn>
 where
-    Tn: Tensor<T = T>,
+    Tn: Tensor,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "ReLU({:?})", self.from.data)
     }
 }
 
-impl<T: Numeric, Tn> ReluOp<Tn>
+impl<Tn> ReluOp<Tn>
 where
-    Tn: Tensor<T = T>,
+    Tn: Tensor,
 {
     pub fn create_flow(from: Var<Tn>) -> Var<Tn> {
-        let out = from
-            .data
-            .clone()
-            .map(|v| if v.is_sign_negative() { T::zero() } else { v });
+        let out = from.data.clone().map(|v| {
+            if v.is_sign_negative() {
+                Tn::T::zero()
+            } else {
+                v
+            }
+        });
 
         let op = ReluOp { from };
 
@@ -86,9 +90,9 @@ where
     }
 }
 
-impl<T: Numeric, Tn> Op for ReluOp<Tn>
+impl<Tn> Op for ReluOp<Tn>
 where
-    Tn: Tensor<T = T>,
+    Tn: Tensor,
 {
     fn children(&self) -> Vec<VarRef> {
         let from = self.from.clone();
@@ -163,12 +167,7 @@ pub struct MulOp<Tn: Tensor> {
 
 impl<T: Numeric> Debug for MulOp<Scalar<T>> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(
-            f,
-            "{} * {}",
-            self.from.0.data.val(),
-            self.from.1.data.val()
-        )
+        write!(f, "{} * {}", self.from.0.data.val(), self.from.1.data.val())
     }
 }
 
