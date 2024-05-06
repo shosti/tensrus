@@ -43,11 +43,11 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 Self(self.0.set(idx, val))
             }
 
-            fn map<F: Fn(Self::T) -> Self::T>(self, f: F) -> Self {
+            fn map(self, f: impl Fn(Self::T) -> Self::T) -> Self {
                 Self(self.0.map(f))
             }
 
-            fn reduce<'a, F: Fn(Vec<Self::T>) -> Self::T>(self, others: Vec<&'a Self>, f: F) -> Self {
+            fn reduce<'a>(self, others: Vec<&'a Self>, f: impl Fn(Vec<Self::T>) -> Self::T) -> Self {
                 Self(self.0.reduce(others.iter().map(|t| &t.0).collect(), f))
             }
 
@@ -75,10 +75,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 Self(#wrapped_type::repeat(n))
             }
 
-            fn from_fn<F>(f: F) -> Self
-            where
-                F: Fn(Self::Idx) -> Self::T {
-
+            fn from_fn(f: impl Fn(Self::Idx) -> T) -> Self {
                 Self(#wrapped_type::from_fn(f))
             }
         }

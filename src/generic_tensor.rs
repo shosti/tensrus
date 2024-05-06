@@ -126,14 +126,14 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<
         }
     }
 
-    fn map<F: Fn(T) -> T>(self, f: F) -> Self {
+    fn map(self, f: impl Fn(T) -> T) -> Self {
         let mut storage = self.storage;
         storage.iter_mut().for_each(|v| *v = f(*v));
 
         Self { storage }
     }
 
-    fn reduce<'a, F: Fn(Vec<Self::T>) -> Self::T>(self, others: Vec<&'a Self>, f: F) -> Self {
+    fn reduce<'a>(self, others: Vec<&'a Self>, f: impl Fn(Vec<T>) -> T) -> Self {
         let mut storage = self.storage;
         storage.iter_mut().enumerate().for_each(|(i, v)| {
             let mut vals = vec![*v];
@@ -172,10 +172,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<
         Self { storage }
     }
 
-    fn from_fn<F>(f: F) -> Self
-    where
-        F: Fn([usize; R]) -> T,
-    {
+    fn from_fn(f: impl Fn(Self::Idx) -> T) -> Self {
         (0..Self::storage_size())
             .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
             .collect()

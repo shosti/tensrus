@@ -42,18 +42,16 @@ pub trait Tensor:
     fn ones() -> Self {
         Self::repeat(Self::T::one())
     }
-    fn from_fn<F>(f: F) -> Self
-    where
-        F: Fn(Self::Idx) -> Self::T;
+    fn from_fn(f: impl Fn(Self::Idx) -> Self::T) -> Self;
 
     fn get(&self, idx: Self::Idx) -> Self::T;
 
-    fn map<F: Fn(Self::T) -> Self::T>(self, f: F) -> Self;
+    fn map(self, f: impl Fn(Self::T) -> Self::T) -> Self;
     fn zip<'a>(self, other: &'a Self) -> TensorZipper<'a, Self> {
         TensorZipper::new(self, other)
     }
     fn set(self, idx: Self::Idx, val: Self::T) -> Self;
-    fn reduce<'a, F: Fn(Vec<Self::T>) -> Self::T>(self, others: Vec<&'a Self>, f: F) -> Self;
+    fn reduce<'a>(self, others: Vec<&'a Self>, f: impl Fn(Vec<Self::T>) -> Self::T) -> Self;
 
     fn default_idx() -> Self::Idx;
     fn next_idx(idx: Self::Idx) -> Option<Self::Idx>;
@@ -78,8 +76,8 @@ impl<'a, Tn: Tensor> TensorZipper<'a, Tn> {
         Self { t: self.t, others }
     }
 
-    pub fn map<F: Fn(Vec<Tn::T>) -> Tn::T>(self, f: F) -> Tn {
-        self.t.reduce::<F>(self.others, f)
+    pub fn map(self, f: impl Fn(Vec<Tn::T>) -> Tn::T) -> Tn {
+        self.t.reduce(self.others, f)
     }
 }
 
