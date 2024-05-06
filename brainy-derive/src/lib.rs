@@ -51,18 +51,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 Self(self.0.reduce(others.iter().map(|t| &t.0).collect(), f))
             }
 
-            // fn update_zip<F: Fn(Self::T, Self::T) -> Self::T>(&mut self, other: &Self, f: F) {
-            //     self.0.update_zip(&other.0, f);
-            // }
-
-            // fn update_zip2<F: Fn(Self::T, Self::T, Self::T) -> Self::T>(&mut self, a: &Self, b: &Self, f: F) {
-            //     self.0.update_zip2(&a.0, &b.0, f);
-            // }
-
-            // fn deep_clone(&self) -> Self {
-            //     Self(self.0.deep_clone())
-            // }
-
             fn default_idx() -> Self::Idx {
                 #wrapped_type::#wrapped_type_args::default_idx()
             }
