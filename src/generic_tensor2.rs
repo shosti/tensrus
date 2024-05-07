@@ -209,3 +209,166 @@ where
         self.zip(other).map(|vs| vs[0] + vs[1])
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::prelude::*;
+
+    #[test]
+    fn test_basics() {
+        // assert_eq!(
+        //     GenericTensor::<f64, { Shape::Rank2([2, 5]) }>::stride(),
+        //     [5, 1]
+        // );
+        // assert_eq!(
+        //     GenericTensor::<f64, 3, { [2, 3, 3, 0, 0] }>::stride(),
+        //     [9, 3, 1]
+        // );
+    }
+
+    // #[test]
+    // fn test_from_iterator() {
+    //     let xs: [i64; 3] = [1, 2, 3];
+    //     let iter = xs.iter().cycle().copied();
+
+    //     let t1: GenericTensor<f64, 0, { [0; 5] }> = iter.clone().collect();
+    //     assert_eq!(t1, GenericTensor::<f64, 0, { [0; 5] }>::from([1.0]));
+
+    //     let t2: GenericTensor<f64, 2, { [4, 2, 0, 0, 0] }> = iter.clone().collect();
+    //     assert_eq!(
+    //         t2,
+    //         GenericTensor::<f64, 2, { [4, 2, 0, 0, 0] }>::from([
+    //             1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0
+    //         ])
+    //     );
+
+    //     let t3: GenericTensor<f64, 2, { [4, 2, 0, 0, 0] }> = xs.iter().copied().collect();
+    //     assert_eq!(
+    //         t3,
+    //         GenericTensor::<f64, 2, { [4, 2, 0, 0, 0] }>::from([
+    //             1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    //         ])
+    //     );
+    // }
+
+    // #[test]
+    // #[allow(clippy::zero_prefixed_literal)]
+    // fn test_from_fn() {
+    //     let f = |idx| {
+    //         let [i, j, k] = idx;
+    //         let s = format!("{}{}{}", i, j, k);
+    //         s.parse().unwrap()
+    //     };
+    //     let t1: GenericTensor<f64, 3, { [2; 5] }> = GenericTensor::from_fn(f);
+    //     assert_eq!(
+    //         t1,
+    //         GenericTensor::<f64, 3, { [2; 5] }>::from([000, 001, 010, 011, 100, 101, 110, 111]),
+    //     );
+
+    //     let t2: GenericTensor<f64, 3, { [1, 2, 3, 0, 0] }> = GenericTensor::from_fn(f);
+    //     assert_eq!(
+    //         t2,
+    //         GenericTensor::<f64, 3, { [1, 2, 3, 0, 0] }>::from([000, 001, 002, 010, 011, 012]),
+    //     );
+
+    //     let t3: GenericTensor<f64, 3, { [3, 2, 1, 0, 0] }> = GenericTensor::from_fn(f);
+    //     assert_eq!(
+    //         t3,
+    //         GenericTensor::<f64, 3, { [3, 2, 1, 0, 0] }>::from([000, 010, 100, 110, 200, 210]),
+    //     );
+
+    //     let t4: GenericTensor<f64, 3, { [2, 3, 1, 0, 0] }> = GenericTensor::from_fn(f);
+    //     assert_eq!(
+    //         t4,
+    //         GenericTensor::<f64, 3, { [2, 3, 1, 0, 0] }>::from([000, 010, 020, 100, 110, 120]),
+    //     );
+    // }
+
+    // #[test]
+    // fn test_math() {
+    //     let mut x: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([1, 2, 3, 4]);
+    //     let y: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([5, 6, 7, 8]);
+    //     let a: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([6, 8, 10, 12]);
+
+    //     assert_eq!(x.clone() + &y, a);
+
+    //     x = x + &y;
+    //     assert_eq!(x.clone(), a);
+
+    //     let b: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([12, 16, 20, 24]);
+    //     assert_eq!(x.clone() * 2.0, b);
+
+    //     x = x * 2.0;
+    //     assert_eq!(x, b);
+    // }
+
+    // #[test]
+    // fn test_to_iter() {
+    //     let t: GenericTensor<f64, 2, { [2; 5] }> = (0..4).collect();
+    //     let vals: Vec<f64> = t.into_iter().collect();
+    //     assert_eq!(vals, vec![0.0, 1.0, 2.0, 3.0]);
+    // }
+
+    // #[test]
+    // fn get_and_set() {
+    //     test_get_and_set(GenericTensor::<f64, 0, { [0; 5] }>::zeros());
+    //     test_get_and_set(GenericTensor::<f64, 1, { [24; 5] }>::zeros());
+    //     test_get_and_set(GenericTensor::<f64, 2, { [8, 72, 0, 0, 0] }>::zeros());
+    //     test_get_and_set(GenericTensor::<f64, 3, { [243, 62, 101, 0, 0] }>::zeros());
+    //     test_get_and_set(GenericTensor::<f64, 4, { [1, 99, 232, 8, 0] }>::zeros());
+    // }
+
+    // fn test_get_and_set<const R: usize, const S: TensorShape>(t: GenericTensor<f64, R, S>) {
+    //     let mut rng = rand::thread_rng();
+    //     let mut x = t;
+    //     for _ in 0..10 {
+    //         let mut idx = [0; R];
+    //         for (dim, cur) in idx.iter_mut().enumerate() {
+    //             *cur = rng.gen_range(0..S[dim]);
+    //         }
+    //         let val: f64 = rng.gen();
+    //         x = x.set(idx, val);
+
+    //         assert_eq!(x.get(idx), val);
+    //     }
+    // }
+
+    // #[test]
+    // fn test_map() {
+    //     let t: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([1, 2, 3, 4]);
+    //     let u = t.map(&|val| val * 2.0);
+
+    //     let want: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([2, 4, 6, 8]);
+    //     assert_eq!(u, want);
+    // }
+
+    // #[test]
+    // fn test_subtensor() {
+    //     let t3: GenericTensor<f64, 3, { [2, 3, 4, 0, 0] }> = (1..25).collect();
+
+    //     let t2 = t3.subtensor(1).unwrap();
+    //     let t2_expected: GenericTensor<f64, 2, { [3, 4, 0, 0, 0] }> = (13..25).collect();
+    //     assert_eq!(t2, t2_expected);
+    //     assert_eq!(t3.subtensor(2), Err(IndexError {}));
+
+    //     let t1 = t2.subtensor(1).unwrap();
+    //     let t1_expected: GenericTensor<f64, 1, { [4, 0, 0, 0, 0] }> =
+    //         GenericTensor::from([17, 18, 19, 20]);
+    //     assert_eq!(t1, t1_expected);
+
+    //     let t0 = t1.subtensor(1).unwrap();
+    //     let t0_expected: GenericTensor<f64, 0, { [0; 5] }> = GenericTensor::from([18]);
+    //     assert_eq!(t0, t0_expected);
+    // }
+
+    // #[test]
+    // fn test_reshape() {
+    //     let t = GenericTensor::<f64, 2, { [3, 2, 0, 0, 0] }>::from([1, 2, 3, 4, 5, 6]);
+    //     let t2 = t.clone().reshape::<2, { [2, 3, 0, 0, 0] }>();
+    //     let t3 = t.clone().reshape::<1, { [6, 0, 0, 0, 0] }>();
+
+    //     assert_eq!(t.get([1, 0]), t2.get([0, 2]));
+    //     assert_eq!(t.get([2, 1]), t3.get([5]));
+    // }
+}

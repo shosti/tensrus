@@ -81,3 +81,22 @@ seq!(R in 0..6 {
         }
     }
 });
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_len() {
+        assert_eq!(Shape::Rank0([]).len(), 1);
+        assert_eq!(Shape::Rank2([2, 5]).len(), 10);
+        assert_eq!(Shape::Rank3([2, 3, 3]).len(), 18);
+    }
+
+    #[test]
+    fn test_stride() {
+        assert_eq!(Shape::Rank0([]).stride(), []);
+        assert_eq!(Shape::Rank2([2, 5]).stride(), [5, 1]);
+        assert_eq!(Shape::Rank3([2, 3, 3]).stride(), [9, 3, 1]);
+    }
+}
