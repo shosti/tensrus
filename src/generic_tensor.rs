@@ -7,7 +7,7 @@ use std::ops::{Add, Mul};
 
 #[derive(Debug, Clone)]
 pub struct GenericTensor<T: Numeric, const R: usize, const S: TensorShape> {
-    storage: Vec<T>,
+    pub(crate) storage: Vec<T>,
 }
 
 // Returns the tensor shape when downranking by 1

@@ -2,6 +2,7 @@ use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
 use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
 use crate::vector::{vector_shape, Vector};
+use cblas::{Layout, Transpose};
 use num::ToPrimitive;
 use std::ops::Mul;
 
@@ -92,13 +93,27 @@ where
     type Output = Matrix<T, M, P>;
 
     fn mul(self, other: &Matrix<T, N, P>) -> Self::Output {
-        Self::Output::from_fn(|[i, j]| {
-            let mut res = T::zero();
-            for k in 0..N {
-                res += self.get([i, k]) * other.get([k, j]);
-            }
-            res
-        })
+        let mut out = Self::Output::zeros();
+
+        unsafe {
+            T::gemm(
+                Layout::RowMajor,
+                Transpose::None,
+                Transpose::None,
+                M as i32,
+                P as i32,
+                N as i32,
+                T::one(),
+                &self.0.storage,
+                N as i32,
+                &other.0.storage,
+                P as i32,
+                T::one(),
+                &mut out.0.storage,
+                P as i32,
+            );
+        }
+        out
     }
 }
 
