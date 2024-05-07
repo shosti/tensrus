@@ -32,43 +32,44 @@ where
         res
     }
 
-    // fn idx_from_storage_idx(idx: usize) -> Result<[usize; R], IndexError> {
-    //     if idx >= Self::storage_size() {
-    //         return Err(IndexError {});
-    //     }
+    fn idx_from_storage_idx(idx: usize) -> Result<[usize; S.rank()], IndexError> {
+        if idx >= Self::storage_size() {
+            return Err(IndexError {});
+        }
 
-    //     let mut res = [0; R];
-    //     let mut i = idx;
-    //     let stride = Self::stride();
+        let mut res = [0; S.rank()];
+        let mut i = idx;
+        let stride = Self::stride();
 
-    //     for (dim, item) in res.iter_mut().enumerate() {
-    //         let s: usize = stride[dim];
-    //         let cur = i / s;
-    //         *item = cur;
-    //         i -= cur * s;
-    //     }
-    //     debug_assert!(i == 0);
-    //     debug_assert!(Self::storage_idx(res).unwrap() == idx);
+        for (dim, item) in res.iter_mut().enumerate() {
+            let s: usize = stride[dim];
+            let cur = i / s;
+            *item = cur;
+            i -= cur * s;
+        }
+        debug_assert!(i == 0);
+        debug_assert!(Self::storage_idx(res).unwrap() == idx);
 
-    //     Ok(res)
-    // }
+        Ok(res)
+    }
 
-    // fn storage_idx(idx: [usize; R]) -> Result<usize, IndexError> {
-    //     if R == 0 {
-    //         return Ok(0);
-    //     }
+    fn storage_idx(idx: [usize; S.rank()]) -> Result<usize, IndexError> {
+        if S.rank() == 0 {
+            return Ok(0);
+        }
 
-    //     let mut i = 0;
-    //     let stride = Self::stride();
-    //     for (dim, &cur) in idx.iter().enumerate() {
-    //         if cur >= S[dim] {
-    //             return Err(IndexError {});
-    //         }
-    //         i += stride[dim] * idx[dim];
-    //     }
+        let mut i = 0;
+        let stride = Self::stride();
+        let dims: Dims<{ S.rank() }> = S.into();
+        for (dim, &cur) in idx.iter().enumerate() {
+            if cur >= dims[dim] {
+                return Err(IndexError {});
+            }
+            i += stride[dim] * idx[dim];
+        }
 
-    //     Ok(i)
-    // }
+        Ok(i)
+    }
 
     // pub fn reshape<const R2: usize, const S2: TensorShape>(self) -> GenericTensor<T, R2, S2>
     // where
