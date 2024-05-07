@@ -203,7 +203,7 @@ fn get_wrapped_type(ast: &DeriveInput) -> (Ident, AngleBracketedGenericArguments
     (last_segment.ident.clone(), args.clone())
 }
 
-fn get_rank(args: &AngleBracketedGenericArguments) -> LitInt {
+fn get_rank(args: &AngleBracketedGenericArguments) -> Expr {
     let rank_arg = &args.args[1];
     let rank_expr: &syn::ExprLit;
     if let syn::GenericArgument::Const(Expr::Lit(ref e)) = rank_arg {

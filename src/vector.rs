@@ -1,6 +1,7 @@
-use crate::generic_tensor::GenericTensor;
+use crate::generic_tensor2::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{num_elems, Tensor, TensorShape};
+use crate::tensor::{num_elems, Tensor};
+use crate::shape::Shape;
 use num::ToPrimitive;
 
 pub const fn vector_shape(n: usize) -> TensorShape {

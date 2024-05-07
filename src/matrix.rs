@@ -1,25 +1,26 @@
-use crate::generic_tensor::GenericTensor;
+use crate::generic_tensor2::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{num_elems, IndexError, Tensor, TensorShape};
+use crate::shape::Shape;
+use crate::tensor::{num_elems, IndexError, Tensor};
 use crate::vector::{vector_shape, Vector};
 use cblas::{Layout, Transpose};
 use num::ToPrimitive;
 use std::ops::Mul;
 
-pub const fn matrix_shape(m: usize, n: usize) -> TensorShape {
-    [m, n, 0, 0, 0]
+pub const fn matrix_shape(m: usize, n: usize) -> Shape {
+    Shape::Rank2([m, n])
 }
 
 #[derive(Tensor, PartialEq, Debug)]
 pub struct Matrix<T: Numeric, const M: usize, const N: usize>(
-    GenericTensor<T, 2, { matrix_shape(M, N) }>,
+    GenericTensor<T, { matrix_shape(M, N) }>,
 )
 where
-    [(); num_elems(2, matrix_shape(M, N))]:;
+    [(); matrix_shape(M, N).len()]:;
 
 impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N>
 where
-    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); matrix_shape(M, N).len()]:,
 {
     pub fn row(&self, i: usize) -> Result<Vector<T, N>, IndexError>
     where
@@ -64,7 +65,7 @@ where
 impl<T: Numeric, const M: usize, const N: usize, F: ToPrimitive> From<[F; M * N]>
     for Matrix<T, M, N>
 where
-    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); matrix_shape(M, N).len()]:,
 {
     fn from(arr: [F; M * N]) -> Self {
         let t: GenericTensor<T, 2, { matrix_shape(M, N) }> = arr.into_iter().collect();
@@ -74,7 +75,7 @@ where
 
 impl<T: Numeric, const M: usize, const N: usize, F> From<[[F; N]; M]> for Matrix<T, M, N>
 where
-    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); matrix_shape(M, N).len()]:,
     F: ToPrimitive,
 {
     fn from(arrs: [[F; N]; M]) -> Self {
@@ -86,7 +87,7 @@ where
 impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<&'a Matrix<T, N, P>>
     for &'a Matrix<T, M, N>
 where
-    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); matrix_shape(M, N).len()]:,
     [(); num_elems(2, matrix_shape(N, P))]:,
     [(); num_elems(2, matrix_shape(M, P))]:,
 {
@@ -119,9 +120,9 @@ where
 
 impl<'a, T: Numeric, const M: usize, const N: usize> Mul<&'a Vector<T, N>> for &'a Matrix<T, M, N>
 where
-    [(); num_elems(2, matrix_shape(M, N))]:,
-    [(); num_elems(1, vector_shape(N))]:,
-    [(); num_elems(1, vector_shape(M))]:,
+    [(); matrix_shape(M, N).len()]:,
+    [(); vector_shape(N).len()]:,
+    [(); vector_shape(M).len()]:,
 {
     type Output = Vector<T, M>;
 
@@ -203,7 +204,7 @@ mod tests {
 
     fn test_identity_with_size<const N: usize>()
     where
-        [(); num_elems(2, matrix_shape(N, N))]:,
+        [(); matrix_shape(N, N).len()]:,
     {
         let i = Matrix::<f64, N, N>::identity();
         let x = Matrix::<f64, N, N>::from_fn(|_| {

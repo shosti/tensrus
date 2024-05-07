@@ -9,7 +9,7 @@ use std::ops::{Add, Mul};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct GenericTensor<T: Numeric, const S: Shape> {
-    storage: Vec<T>,
+    pub(crate) storage: Vec<T>,
 }
 
 impl<T: Numeric, const S: Shape> GenericTensor<T, S>
