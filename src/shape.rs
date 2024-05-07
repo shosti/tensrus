@@ -82,7 +82,7 @@ seq!(R in 0..6 {
                                 return Shape::Rank~R2(new_dims);
                             }
                         });
-                        panic!("cannot take subshape");
+                        panic!(concat!("cannot take subshape of shape with rank ", stringify!(R)));
                     },
                 )*
             }

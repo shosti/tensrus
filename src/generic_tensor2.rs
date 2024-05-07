@@ -4,6 +4,7 @@ use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::shape::Shape;
 use crate::tensor::{IndexError, Tensor, TensorIterator};
+use crate::type_assert::{Assert, IsTrue};
 use std::ops::{Add, Mul};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -57,14 +58,14 @@ where
         Ok(i)
     }
 
-    // pub fn reshape<const R2: usize, const S2: TensorShape>(self) -> GenericTensor<T, R2, S2>
-    // where
-    //     Assert<{ num_elems(R, S) == num_elems(R2, S2) }>: IsTrue,
-    // {
-    //     GenericTensor {
-    //         storage: self.storage,
-    //     }
-    // }
+    pub fn reshape<const S2: Shape>(self) -> GenericTensor<T, S2>
+    where
+        Assert<{ S.len() == S2.len() }>: IsTrue,
+    {
+        GenericTensor {
+            storage: self.storage,
+        }
+    }
 
     pub fn subtensor(&self, i: usize) -> Result<GenericTensor<T, { S.subshape() }>, IndexError>
     where
@@ -381,13 +382,13 @@ mod tests {
         assert_eq!(t0, t0_expected);
     }
 
-    // #[test]
-    // fn test_reshape() {
-    //     let t = GenericTensor::<f64, 2, { [3, 2, 0, 0, 0] }>::from([1, 2, 3, 4, 5, 6]);
-    //     let t2 = t.clone().reshape::<2, { [2, 3, 0, 0, 0] }>();
-    //     let t3 = t.clone().reshape::<1, { [6, 0, 0, 0, 0] }>();
+    #[test]
+    fn test_reshape() {
+        let t = GenericTensor::<f64, { Shape::Rank2([3, 2]) }>::from([1, 2, 3, 4, 5, 6]);
+        let t2 = t.clone().reshape::<{ Shape::Rank2([2, 3]) }>();
+        let t3 = t.clone().reshape::<{ Shape::Rank1([6]) }>();
 
-    //     assert_eq!(t.get([1, 0]), t2.get([0, 2]));
-    //     assert_eq!(t.get([2, 1]), t3.get([5]));
-    // }
+        assert_eq!(t.get([1, 0]), t2.get([0, 2]));
+        assert_eq!(t.get([2, 1]), t3.get([5]));
+    }
 }
