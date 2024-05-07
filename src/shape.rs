@@ -1,9 +1,10 @@
 use seq_macro::seq;
+use std::ops::{Index, Range};
 use std::marker::ConstParamTy;
 
 #[derive(ConstParamTy, PartialEq, Eq)]
 pub struct Dims<const R: usize> {
-    pub dims: [usize; R],
+    dims: [usize; R],
 }
 
 impl<const R: usize> Dims<R> {
@@ -17,6 +18,14 @@ impl<const R: usize> Dims<R> {
         }
 
         n
+    }
+}
+
+impl<const R: usize> Index<usize> for Dims<R> {
+    type Output = usize;
+
+    fn index(&self, i: usize) -> &Self::Output {
+        &self.dims[i]
     }
 }
 

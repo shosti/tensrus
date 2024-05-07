@@ -1,29 +1,35 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
+use crate::shape::{Dims, Shape};
 use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, TensorShape};
-use crate::shape::Shape;
 use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
 use std::ops::{Add, Mul};
 
 pub struct GenericTensor2<T: Numeric, const S: Shape> {
-    storage: Vec<T>
+    storage: Vec<T>,
 }
 
-
-impl<T: Numeric, const S: Shape> GenericTensor2<T, S> {
+impl<T: Numeric, const S: Shape> GenericTensor2<T, S>
+where
+    Shape: Into<Dims<{ S.rank() }>>,
+{
     fn storage_size() -> usize {
         S.len()
     }
 
     fn stride() -> [usize; S.rank()] {
-        todo!()
-        // let mut res = [0; S.rank()];
-        // for (dim, item) in res.iter_mut().enumerate() {
-        //     *item = S[(dim + 1)..S.rank()].iter().product();
-        // }
+        let mut res = [0; S.rank()];
+        let dims: Dims<{ S.rank() }> = S.into();
+        for (dim, item) in res.iter_mut().enumerate() {
+            let mut n = 1;
+            for d in  (dim + 1)..S.rank() {
+                n *= dims[d];
+            }
+            *item = n;
+        }
 
-        // res
+        res
     }
 
     // fn idx_from_storage_idx(idx: usize) -> Result<[usize; R], IndexError> {
@@ -90,22 +96,6 @@ impl<T: Numeric, const S: Shape> GenericTensor2<T, S> {
     //     Ok(out)
     // }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 #[derive(Debug, Clone)]
 pub struct GenericTensor<T: Numeric, const R: usize, const S: TensorShape> {
