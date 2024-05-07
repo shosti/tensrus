@@ -8,43 +8,35 @@ pub trait Numeric:
     + std::ops::MulAssign
     + std::ops::AddAssign
     + rand::distributions::uniform::SampleUniform
+    + BLASOps
     + 'static
-{
-    unsafe fn gemm(
-        layout: Layout,
-        transa: Transpose,
-        transb: Transpose,
-        m: i32,
-        n: i32,
-        k: i32,
-        alpha: Self,
-        a: &[Self],
-        lda: i32,
-        b: &[Self],
-        ldb: i32,
-        beta: Self,
-        c: &mut [Self],
-        ldc: i32,
-    );
+{}
 
-    unsafe fn gemv(
-        layout: Layout,
-        transa: Transpose,
-        m: i32,
-        n: i32,
-        alpha: Self,
-        a: &[Self],
-        lda: i32,
-        x: &[Self],
-        incx: i32,
-        beta: Self,
-        y: &mut [Self],
-        incy: i32,
-    );
+impl Numeric for f32 {}
+impl Numeric for f64 {}
+
+macro_rules! blas_ops {
+    ( $( $name:ident ( $( $var:ident : $t:ty , )* ) , )* ) => {
+        pub trait BLASOps: Sized {
+            $( unsafe fn $name ( $( $var : $t , )* ) ; )*
+        }
+
+        impl BLASOps for f32 {
+            $( unsafe fn $name ( $( $var : $t , )* ) {
+                concat_idents!(s, $name) ( $( $var ),* )
+            } )*
+        }
+
+        impl BLASOps for f64 {
+            $( unsafe fn $name ( $( $var : $t , )* ) {
+                concat_idents!(d, $name) ( $( $var ),* )
+            } )*
+        }
+    };
 }
 
-impl Numeric for f32 {
-    unsafe fn gemm(
+blas_ops! {
+    gemm(
         layout: Layout,
         transa: Transpose,
         transb: Transpose,
@@ -59,13 +51,8 @@ impl Numeric for f32 {
         beta: Self,
         c: &mut [Self],
         ldc: i32,
-    ) {
-        sgemm(
-            layout, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc,
-        )
-    }
-
-    unsafe fn gemv(
+    ),
+    gemv(
         layout: Layout,
         transa: Transpose,
         m: i32,
@@ -78,46 +65,5 @@ impl Numeric for f32 {
         beta: Self,
         y: &mut [Self],
         incy: i32,
-    ) {
-        sgemv(layout, transa, m, n, alpha, a, lda, x, incx, beta, y, incy)
-    }
-}
-impl Numeric for f64 {
-    unsafe fn gemm(
-        layout: Layout,
-        transa: Transpose,
-        transb: Transpose,
-        m: i32,
-        n: i32,
-        k: i32,
-        alpha: Self,
-        a: &[Self],
-        lda: i32,
-        b: &[Self],
-        ldb: i32,
-        beta: Self,
-        c: &mut [Self],
-        ldc: i32,
-    ) {
-        dgemm(
-            layout, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc,
-        )
-    }
-
-    unsafe fn gemv(
-        layout: Layout,
-        transa: Transpose,
-        m: i32,
-        n: i32,
-        alpha: Self,
-        a: &[Self],
-        lda: i32,
-        x: &[Self],
-        incx: i32,
-        beta: Self,
-        y: &mut [Self],
-        incy: i32,
-    ) {
-        dgemv(layout, transa, m, n, alpha, a, lda, x, incx, beta, y, incy)
-    }
+    ),
 }

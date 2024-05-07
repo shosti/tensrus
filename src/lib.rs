@@ -3,6 +3,7 @@
 #![feature(generic_const_exprs)]
 #![feature(trait_upcasting)]
 #![feature(const_trait_impl)]
+#![feature(concat_idents)]
 #![allow(incomplete_features)]
 #[macro_use]
 extern crate brainy_derive;
