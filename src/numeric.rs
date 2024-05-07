@@ -10,7 +10,8 @@ pub trait Numeric:
     + rand::distributions::uniform::SampleUniform
     + BLASOps
     + 'static
-{}
+{
+}
 
 impl Numeric for f32 {}
 impl Numeric for f64 {}

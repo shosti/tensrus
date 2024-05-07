@@ -13,7 +13,6 @@ pub struct IndexError {}
 //           Rank3([
 // }
 
-
 pub type TensorShape = [usize; 5];
 
 pub const fn vector_shape(n: usize) -> TensorShape {

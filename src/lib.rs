@@ -9,17 +9,18 @@
 extern crate brainy_derive;
 
 pub mod generic_tensor;
+pub mod generic_tensor2;
 pub mod matrix;
 pub mod nn;
 pub mod numeric;
 pub mod op;
 pub mod render;
 pub mod scalar;
+pub mod shape;
 pub mod tensor;
 mod type_assert;
 pub mod var;
 pub mod vector;
-pub mod shape;
 
 // use nn::{Module, MLP};
 // use render::Graph;
