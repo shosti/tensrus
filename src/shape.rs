@@ -24,7 +24,7 @@ seq!(R in 0..6 {
     #[derive(ConstParamTy, PartialEq, Eq)]
     pub enum Shape {
         #(
-            Rank~R(Dims<R>),
+            Rank~R([usize; R]),
         )*
     }
 
@@ -41,24 +41,22 @@ seq!(R in 0..6 {
             match self {
                 #(
                     Self::Rank~R(dims) => {
-                        dims.len()
-                    },
-                )*
-            }
-        }
-
-        pub const fn dims<const RANK: usize>(self) -> Dims<RANK> {
-            match self {
-                #(
-                    Self::Rank~R(dims) => {
-                        if RANK == R {
-                            return dims;
-                        }
-
-                        panic!("no dimensions for given rank");
+                        Dims { dims }.len()
                     },
                 )*
             }
         }
     }
+
+    #(
+        impl Into<Dims<R>> for Shape {
+            fn into(self) -> Dims<R> {
+                if let Self::Rank~R(dims) = self {
+                    Dims { dims }
+                } else {
+                    panic!("converting to invalid dimension");
+                }
+            }
+        }
+    )*
 });
