@@ -6,6 +6,13 @@ use crate::numeric::Numeric;
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
+// pub enum TensorShape2 {
+//     Rank0([usize; 0),
+//     Rank1([usize; 1]),
+//     Rank2([usize; 2]),
+//           Rank3([
+// }
+
 
 pub type TensorShape = [usize; 5];
 

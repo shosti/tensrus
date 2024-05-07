@@ -1,9 +1,111 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, TensorShape};
+use crate::shape::Shape;
 use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
 use std::ops::{Add, Mul};
+
+pub struct GenericTensor2<T: Numeric, const S: Shape> {
+    storage: Vec<T>
+}
+
+
+impl<T: Numeric, const S: Shape> GenericTensor2<T, S> {
+    fn storage_size() -> usize {
+        S.len()
+    }
+
+    fn stride() -> [usize; S.rank()] {
+        todo!()
+        // let mut res = [0; S.rank()];
+        // for (dim, item) in res.iter_mut().enumerate() {
+        //     *item = S[(dim + 1)..S.rank()].iter().product();
+        // }
+
+        // res
+    }
+
+    // fn idx_from_storage_idx(idx: usize) -> Result<[usize; R], IndexError> {
+    //     if idx >= Self::storage_size() {
+    //         return Err(IndexError {});
+    //     }
+
+    //     let mut res = [0; R];
+    //     let mut i = idx;
+    //     let stride = Self::stride();
+
+    //     for (dim, item) in res.iter_mut().enumerate() {
+    //         let s: usize = stride[dim];
+    //         let cur = i / s;
+    //         *item = cur;
+    //         i -= cur * s;
+    //     }
+    //     debug_assert!(i == 0);
+    //     debug_assert!(Self::storage_idx(res).unwrap() == idx);
+
+    //     Ok(res)
+    // }
+
+    // fn storage_idx(idx: [usize; R]) -> Result<usize, IndexError> {
+    //     if R == 0 {
+    //         return Ok(0);
+    //     }
+
+    //     let mut i = 0;
+    //     let stride = Self::stride();
+    //     for (dim, &cur) in idx.iter().enumerate() {
+    //         if cur >= S[dim] {
+    //             return Err(IndexError {});
+    //         }
+    //         i += stride[dim] * idx[dim];
+    //     }
+
+    //     Ok(i)
+    // }
+
+    // pub fn reshape<const R2: usize, const S2: TensorShape>(self) -> GenericTensor<T, R2, S2>
+    // where
+    //     Assert<{ num_elems(R, S) == num_elems(R2, S2) }>: IsTrue,
+    // {
+    //     GenericTensor {
+    //         storage: self.storage,
+    //     }
+    // }
+
+    // pub fn subtensor(
+    //     &self,
+    //     i: usize,
+    // ) -> Result<GenericTensor<T, { R - 1 }, { subtensor_shape(R, S) }>, IndexError> {
+    //     if i >= S[0] {
+    //         return Err(IndexError {});
+    //     }
+
+    //     let out: GenericTensor<T, { R - 1 }, { subtensor_shape(R, S) }> =
+    //         GenericTensor::from_fn(|idx| {
+    //             let mut self_idx = [i; R];
+    //             self_idx[1..R].copy_from_slice(&idx[..(R - 1)]);
+    //             self.storage[Self::storage_idx(self_idx).unwrap()]
+    //         });
+    //     Ok(out)
+    // }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #[derive(Debug, Clone)]
 pub struct GenericTensor<T: Numeric, const R: usize, const S: TensorShape> {
