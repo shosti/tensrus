@@ -1,6 +1,6 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use crate::shape::{Dims, Shape};
+use crate::shape::{Shape};
 use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, TensorShape};
 use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
@@ -11,58 +11,41 @@ pub struct GenericTensor2<T: Numeric, const S: Shape> {
 }
 
 impl<T: Numeric, const S: Shape> GenericTensor2<T, S>
-where
-    Shape: Into<Dims<{ S.rank() }>>,
 {
     fn storage_size() -> usize {
         S.len()
     }
 
-    fn stride() -> [usize; S.rank()] {
-        let mut res = [0; S.rank()];
-        let dims: Dims<{ S.rank() }> = S.into();
-        for (dim, item) in res.iter_mut().enumerate() {
-            let mut n = 1;
-            for d in  (dim + 1)..S.rank() {
-                n *= dims[d];
-            }
-            *item = n;
-        }
+    // fn idx_from_storage_idx(idx: usize) -> Result<[usize; S.rank()], IndexError> {
+    //     if idx >= Self::storage_size() {
+    //         return Err(IndexError {});
+    //     }
 
-        res
-    }
+    //     let mut res = [0; S.rank()];
+    //     let mut i = idx;
+    //     let stride = S.stride();
 
-    fn idx_from_storage_idx(idx: usize) -> Result<[usize; S.rank()], IndexError> {
-        if idx >= Self::storage_size() {
-            return Err(IndexError {});
-        }
+    //     for (dim, item) in res.iter_mut().enumerate() {
+    //         let s: usize = stride[dim];
+    //         let cur = i / s;
+    //         *item = cur;
+    //         i -= cur * s;
+    //     }
+    //     debug_assert!(i == 0);
+    //     debug_assert!(Self::storage_idx(res).unwrap() == idx);
 
-        let mut res = [0; S.rank()];
-        let mut i = idx;
-        let stride = Self::stride();
-
-        for (dim, item) in res.iter_mut().enumerate() {
-            let s: usize = stride[dim];
-            let cur = i / s;
-            *item = cur;
-            i -= cur * s;
-        }
-        debug_assert!(i == 0);
-        debug_assert!(Self::storage_idx(res).unwrap() == idx);
-
-        Ok(res)
-    }
+    //     Ok(res)
+    // }
 
     fn storage_idx(idx: [usize; S.rank()]) -> Result<usize, IndexError> {
         if S.rank() == 0 {
             return Ok(0);
         }
 
+        let stride: [usize; S.rank()] = S.stride();
         let mut i = 0;
-        let stride = Self::stride();
-        let dims: Dims<{ S.rank() }> = S.into();
         for (dim, &cur) in idx.iter().enumerate() {
-            if cur >= dims[dim] {
+            if cur >= S[dim] {
                 return Err(IndexError {});
             }
             i += stride[dim] * idx[dim];

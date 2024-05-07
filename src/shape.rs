@@ -1,33 +1,6 @@
 use seq_macro::seq;
-use std::ops::{Index, Range};
 use std::marker::ConstParamTy;
-
-#[derive(ConstParamTy, PartialEq, Eq)]
-pub struct Dims<const R: usize> {
-    dims: [usize; R],
-}
-
-impl<const R: usize> Dims<R> {
-    pub const fn len(self) -> usize {
-        let mut dim = 0;
-        let mut n = 1;
-
-        while dim < R {
-            n *= self.dims[dim];
-            dim += 1;
-        }
-
-        n
-    }
-}
-
-impl<const R: usize> Index<usize> for Dims<R> {
-    type Output = usize;
-
-    fn index(&self, i: usize) -> &Self::Output {
-        &self.dims[i]
-    }
-}
+use std::ops::Index;
 
 seq!(R in 0..6 {
     #[derive(ConstParamTy, PartialEq, Eq)]
@@ -50,22 +23,60 @@ seq!(R in 0..6 {
             match self {
                 #(
                     Self::Rank~R(dims) => {
-                        Dims { dims }.len()
+                      let mut dim = 0;
+                      let mut n = 1;
+
+                      while dim < R {
+                          n *= dims[dim];
+                          dim += 1;
+                      }
+
+                      n
                     },
+                )*
+            }
+        }
+
+        pub const fn stride<const RANK: usize>(self) -> [usize; RANK] {
+            match self {
+                #(
+                    Self::Rank~R(dims) => {
+                        if R != RANK {
+                            panic!("Shape.stride() called with invalid rank parameter");
+                        }
+
+                        let mut res = [0; RANK];
+                        let mut dim = 0;
+                        while dim < RANK {
+                            let mut n = 1;
+                            let mut d = dim + 1;
+                            while d < RANK {
+                                n *= dims[d];
+                                d += 1;
+                            }
+                            res[dim] = n;
+
+                            dim += 1;
+                        }
+
+                        res
+                    }
                 )*
             }
         }
     }
 
-    #(
-        impl Into<Dims<R>> for Shape {
-            fn into(self) -> Dims<R> {
-                if let Self::Rank~R(dims) = self {
-                    Dims { dims }
-                } else {
-                    panic!("converting to invalid dimension");
-                }
+    impl Index<usize> for Shape {
+        type Output = usize;
+
+        fn index(&self, i: usize) -> &Self::Output {
+            match self {
+                #(
+                    Self::Rank~R(dims) => {
+                        dims.index(i)
+                    },
+                )*
             }
         }
-    )*
+    }
 });
