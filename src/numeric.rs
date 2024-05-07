@@ -1,4 +1,4 @@
-use cblas::{dgemm, sgemm, Layout, Transpose};
+use cblas::{dgemm, dgemv, sgemm, sgemv, Layout, Transpose};
 
 pub trait Numeric:
     num::Float
@@ -26,6 +26,21 @@ pub trait Numeric:
         c: &mut [Self],
         ldc: i32,
     );
+
+    unsafe fn gemv(
+        layout: Layout,
+        transa: Transpose,
+        m: i32,
+        n: i32,
+        alpha: Self,
+        a: &[Self],
+        lda: i32,
+        x: &[Self],
+        incx: i32,
+        beta: Self,
+        y: &mut [Self],
+        incy: i32,
+    );
 }
 
 impl Numeric for f32 {
@@ -49,6 +64,23 @@ impl Numeric for f32 {
             layout, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc,
         )
     }
+
+    unsafe fn gemv(
+        layout: Layout,
+        transa: Transpose,
+        m: i32,
+        n: i32,
+        alpha: Self,
+        a: &[Self],
+        lda: i32,
+        x: &[Self],
+        incx: i32,
+        beta: Self,
+        y: &mut [Self],
+        incy: i32,
+    ) {
+        sgemv(layout, transa, m, n, alpha, a, lda, x, incx, beta, y, incy)
+    }
 }
 impl Numeric for f64 {
     unsafe fn gemm(
@@ -70,5 +102,22 @@ impl Numeric for f64 {
         dgemm(
             layout, transa, transb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc,
         )
+    }
+
+    unsafe fn gemv(
+        layout: Layout,
+        transa: Transpose,
+        m: i32,
+        n: i32,
+        alpha: Self,
+        a: &[Self],
+        lda: i32,
+        x: &[Self],
+        incx: i32,
+        beta: Self,
+        y: &mut [Self],
+        incy: i32,
+    ) {
+        dgemv(layout, transa, m, n, alpha, a, lda, x, incx, beta, y, incy)
     }
 }

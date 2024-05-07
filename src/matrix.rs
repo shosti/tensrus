@@ -126,13 +126,26 @@ where
     type Output = Vector<T, M>;
 
     fn mul(self, other: &Vector<T, N>) -> Self::Output {
-        Self::Output::from_fn(|[i]| {
-            let mut res = T::zero();
-            for k in 0..N {
-                res += self.get([i, k]) * other.get([k]);
-            }
-            res
-        })
+        let mut out = Self::Output::zeros();
+
+        unsafe {
+            T::gemv(
+                Layout::RowMajor,
+                Transpose::None,
+                M as i32,
+                N as i32,
+                T::one(),
+                &self.0.storage,
+                N as i32,
+                &other.0.storage,
+                1,
+                T::one(),
+                &mut out.0.storage,
+                1,
+            );
+        }
+
+        out
     }
 }
 
