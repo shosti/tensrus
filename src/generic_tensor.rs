@@ -179,7 +179,6 @@ impl<T: Numeric, const S: Shape, U: ToPrimitive> From<[U; S.num_elems()]> for Ge
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::prelude::*;
 
     #[test]
     fn test_from_iterator() {

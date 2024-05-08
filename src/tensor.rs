@@ -1,6 +1,5 @@
 use num::{One, Zero};
 use std::fmt::Debug;
-use std::ops::{Add, Index, Mul};
 
 use crate::numeric::Numeric;
 use crate::shape::Shape;

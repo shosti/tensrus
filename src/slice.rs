@@ -32,7 +32,7 @@ impl<'a, T: Numeric, const S: Shape> Slice<'a, T, S> {
 }
 
 impl<'a, T: Numeric> Slice<'a, T, { Shape::Rank0([]) }> {
-    fn val(&self) -> T {
+    pub fn val(&self) -> T {
         self.storage[self.offset]
     }
 }

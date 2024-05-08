@@ -64,6 +64,7 @@ seq!(R in 0..6 {
         }
 
         pub fn stride(self) -> [usize; 6] {
+            #[allow(unused_comparisons)]
             match self {
                 #(
                     Self::Rank~R(dims) => {
