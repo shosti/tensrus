@@ -66,8 +66,7 @@ pub trait Tensor: Clone + 'static
         self.try_slice(idx).unwrap()
     }
 
-    // fn default_idx() -> Self::Idx;
-    // fn next_idx(idx: Self::Idx) -> Option<Self::Idx>;
+    fn nth_elem(&self, i: usize) -> Result<Self::T, IndexError>;
 }
 
 pub struct TensorZipper<'a, Tn: Tensor> {
@@ -94,42 +93,41 @@ impl<'a, Tn: Tensor> TensorZipper<'a, Tn> {
     }
 }
 
-// pub struct TensorIterator<'a, Tn>
-// where
-//     Tn: Tensor,
-// {
-//     t: &'a Tn,
-//     cur: Option<Tn::Idx>,
-// }
+pub struct TensorIterator<'a, Tn>
+where
+    Tn: Tensor,
+{
+    t: &'a Tn,
+    cur: usize,
+}
 
-// impl<'a, Tn> TensorIterator<'a, Tn>
-// where
-//     Tn: Tensor,
-// {
-//     pub fn new(t: &'a Tn) -> Self {
-//         Self {
-//             t,
-//             cur: Some(Tn::default_idx()),
-//         }
-//     }
-// }
+impl<'a, Tn> TensorIterator<'a, Tn>
+where
+    Tn: Tensor,
+{
+    pub fn new(t: &'a Tn) -> Self {
+        Self {
+            t,
+            cur: 0,
+        }
+    }
+}
 
-// impl<'a, Tn> Iterator for TensorIterator<'a, Tn>
-// where
-//     Tn: Tensor,
-// {
-//     type Item = Tn::T;
+impl<'a, Tn> Iterator for TensorIterator<'a, Tn>
+where
+    Tn: Tensor,
+{
+    type Item = Tn::T;
 
-//     fn next(&mut self) -> Option<Self::Item> {
-//         match &self.cur {
-//             None => None,
-//             Some(idx) => {
-//                 let cur_idx = *idx;
-//                 let item = self.t.get(cur_idx);
-//                 self.cur = Tn::next_idx(cur_idx);
-
-//                 Some(item)
-//             }
-//         }
-//     }
-// }
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.t.nth_elem(self.cur) {
+            Ok(val) => {
+                self.cur += 1;
+                Some(val)
+            },
+            Err(IndexError {}) => {
+                None
+            }
+        }
+    }
+}

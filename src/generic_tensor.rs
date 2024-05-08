@@ -4,7 +4,7 @@ use crate::numeric::Numeric;
 // use crate::scalar::Scalar;
 use crate::shape::Shape;
 use crate::slice::Slice;
-use crate::tensor::{IndexError, Tensor};
+use crate::tensor::{IndexError, Tensor, TensorIterator};
 use crate::type_assert::{Assert, IsTrue};
 use std::ops::{Add, Index, Mul};
 
@@ -117,28 +117,17 @@ impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S> {
         Self { storage }
     }
 
-    // fn default_idx() -> Self::Idx {
-    //     [0; S.rank()]
-    // }
-    // fn next_idx(idx: Self::Idx) -> Option<Self::Idx> {
-    //     let mut cur = idx;
-    //     cur[S.rank() - 1] += 1;
-    //     for dim in (0..S.rank()).rev() {
-    //         if cur[dim] == S[dim] {
-    //             if dim == 0 {
-    //                 return None;
-    //             }
-    //             cur[dim] = 0;
-    //             cur[dim - 1] += 1;
-    //         }
-    //     }
-
-    //     Some(cur)
-    // }
-
     fn repeat(n: T) -> Self {
         let storage = vec![n; Self::storage_size()];
         Self { storage }
+    }
+
+    fn nth_elem(&self, i: usize) -> Result<Self::T, IndexError> {
+        if i >= Self::storage_size() {
+            Err(IndexError {})
+        } else {
+            Ok(self.storage[i])
+        }
     }
 
     // fn from_fn(f: impl Fn([usize; S.rank()]) -> T) -> Self
@@ -166,17 +155,17 @@ impl<T: Numeric, const S: Shape, U: ToPrimitive> FromIterator<U> for GenericTens
     }
 }
 
-// impl<'a, T: Numeric, const S: Shape> IntoIterator for &'a GenericTensor<T, S>
-// where
-//     [(); S.rank()]:,
-// {
-//     type Item = T;
-//     type IntoIter = TensorIterator<'a, GenericTensor<T, S>>;
+impl<'a, T: Numeric, const S: Shape> IntoIterator for &'a GenericTensor<T, S>
+where
+    [(); S.rank()]:,
+{
+    type Item = T;
+    type IntoIter = TensorIterator<'a, GenericTensor<T, S>>;
 
-//     fn into_iter(self) -> Self::IntoIter {
-//         Self::IntoIter::new(self)
-//     }
-// }
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter::new(self)
+    }
+}
 
 impl<T: Numeric, const S: Shape> Mul<T> for GenericTensor<T, S> {
     type Output = Self;
