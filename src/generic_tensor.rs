@@ -39,23 +39,6 @@ impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
         Ok(res)
     }
 
-    fn storage_idx(idx: [usize; S.rank()]) -> Result<usize, IndexError> {
-        if S.rank() == 0 {
-            return Ok(0);
-        }
-
-        let stride = S.stride();
-        let mut i = 0;
-        for (dim, &cur) in idx.iter().enumerate() {
-            if cur >= S[dim] {
-                return Err(IndexError {});
-            }
-            i += stride[dim] * idx[dim];
-        }
-
-        Ok(i)
-    }
-
     pub fn reshape<const S2: Shape>(self) -> GenericTensor<T, S2>
     where
         Assert<{ S.num_elems() == S2.num_elems() }>: IsTrue,
@@ -182,7 +165,7 @@ impl<T: Numeric, const S: Shape> Index<[usize; S.rank()]> for GenericTensor<T, S
     type Output = T;
 
     fn index(&self, idx: [usize; S.rank()]) -> &Self::Output {
-        let i = Self::storage_idx(idx).unwrap();
+        let i = S.storage_idx(&idx).unwrap();
         self.storage.index(i)
     }
 }

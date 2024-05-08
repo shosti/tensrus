@@ -2,6 +2,8 @@ use seq_macro::seq;
 use std::marker::ConstParamTy;
 use std::ops::Index;
 
+use crate::tensor::IndexError;
+
 seq!(R in 0..6 {
     #[derive(ConstParamTy, PartialEq, Eq, Debug)]
     pub enum Shape {
@@ -35,6 +37,29 @@ seq!(R in 0..6 {
                       n
                     },
                 )*
+            }
+        }
+
+        pub fn storage_idx(self, idx: &[usize]) -> Result<usize, IndexError> {
+            match self {
+               #(
+                  Self::Rank~R(dims) => {
+                    if R == 0 {
+                        return Ok(0);
+                    }
+
+                    let stride = self.stride();
+                    let mut i = 0;
+                    for (dim, &cur) in idx.iter().enumerate() {
+                        if cur >= dims[dim] {
+                            return Err(IndexError {});
+                        }
+                        i += stride[dim] * idx[dim];
+                    }
+
+                    Ok(i)
+                  },
+               )*
             }
         }
 
