@@ -66,7 +66,10 @@ seq!(R in 0..6 {
             }
         }
 
-        pub const fn subshape(self) -> Shape {
+        pub const fn downrank(self, n: usize) -> Shape {
+            if n == 0 {
+                return self
+            }
             match self {
                 #(
                     Self::Rank~R(dims) => {
@@ -79,7 +82,7 @@ seq!(R in 0..6 {
                                     i -= 1;
                                 }
 
-                                return Shape::Rank~R2(new_dims);
+                                return Shape::Rank~R2(new_dims).downrank(n - 1);
                             }
                         });
                         panic!(concat!("cannot take subshape of shape with rank ", stringify!(R)));

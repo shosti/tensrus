@@ -3,9 +3,9 @@ use num::ToPrimitive;
 use crate::numeric::Numeric;
 // use crate::scalar::Scalar;
 use crate::shape::Shape;
-use crate::tensor::{IndexError, Tensor, };
+use crate::tensor::{IndexError, Tensor};
 use crate::type_assert::{Assert, IsTrue};
-use std::ops::{Add, Mul};
+use std::ops::{Add, Index, Mul};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct GenericTensor<T: Numeric, const S: Shape>
@@ -159,11 +159,11 @@ where
         Self { storage }
     }
 
-//     fn from_fn(f: impl Fn(Self::Idx) -> T) -> Self {
-//         (0..Self::storage_size())
-//             .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
-//             .collect()
-//     }
+    //     fn from_fn(f: impl Fn(Self::Idx) -> T) -> Self {
+    //         (0..Self::storage_size())
+    //             .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
+    //             .collect()
+    //     }
 }
 
 impl<T: Numeric, const S: Shape, U: ToPrimitive> FromIterator<U> for GenericTensor<T, S>
@@ -195,6 +195,18 @@ where
 //         Self::IntoIter::new(self)
 //     }
 // }
+
+impl<T: Numeric, const S: Shape, const D: usize> Index<[usize; D]> for GenericTensor<T, S>
+where
+    [(); S.rank()]:,
+    [(); S.downrank(D).rank()]:,
+{
+    type Output = GenericTensor<T, { S.downrank(D) }>;
+
+    fn index(&self, index: [usize; D]) -> &Self::Output {
+        todo!()
+    }
+}
 
 impl<T: Numeric, const S: Shape> Mul<T> for GenericTensor<T, S>
 where
