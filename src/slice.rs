@@ -14,18 +14,13 @@ impl<'a, T: Numeric, const S: Shape> Slice<'a, T, S> {
         storage: &'a Vec<T>,
         idx: [usize; S.downrank(D).rank()],
     ) -> Self {
-        let res = Self::from_idx_with_offset(storage, idx, 0);
-        Self {
-            storage: res.storage,
-            offset: res.offset,
-        }
-    }
-
-    fn from_idx_with_offset<const D: usize>(
-        storage: &'a Vec<T>,
-        idx: [usize; S.downrank(D).rank()],
-        offset: usize,
-    ) -> Slice<'a, T, { S.downrank(D) }> {
         todo!()
+        // // let res = Self::from_idx_with_offset(storage, idx, 0);
+        // let offset = 0;
+        // for i in 0..(S.downrank(D).rank()) {
+        //     let stride: [usize; S.rank()] = S.stride();
+        //     offset += idx[i] * stride[i];
+        // }
+        // Self { storage, offset }
     }
 }
