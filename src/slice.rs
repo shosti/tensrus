@@ -3,7 +3,6 @@ use crate::{
     numeric::Numeric,
     shape::Shape,
     tensor::IndexError,
-    type_assert::{Assert, IsTrue},
 };
 
 #[derive(Debug, PartialEq, Eq)]

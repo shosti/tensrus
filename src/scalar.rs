@@ -1,34 +1,31 @@
-// use crate::generic_tensor::GenericTensor;
-// use crate::numeric::Numeric;
-// use crate::shape::Shape;
-// use crate::tensor::Tensor;
-// use num::ToPrimitive;
+use crate::generic_tensor::GenericTensor;
+use crate::numeric::Numeric;
+use crate::shape::Shape;
+use crate::tensor::Tensor;
+use num::ToPrimitive;
 
-// pub const fn scalar_shape() -> Shape {
-//     Shape::Rank0([])
-// }
+pub const fn scalar_shape() -> Shape {
+    Shape::Rank0([])
+}
 
-// // #[derive(Tensor, PartialEq, Debug)]
-// pub struct Scalar<T: Numeric>(GenericTensor<T, { scalar_shape() }>)
-// where
-//     [(); scalar_shape().rank()]:;
+#[derive(Tensor, PartialEq, Eq, Debug)]
+pub struct Scalar<T: Numeric>(GenericTensor<T, { scalar_shape() }>);
 
-// impl<T: Numeric> Scalar<T> {
-//     pub fn val(&self) -> T {
-//         self.get([])
-//     }
-// }
+impl<T: Numeric> Scalar<T> {
+    // pub fn val(&self) -> T {
+    //     self[[]]
+    // }
+}
 
-// impl<T: Numeric, F> From<F> for Scalar<T>
-// where
-//     F: ToPrimitive + Copy,
-//     [(); scalar_shape().rank()]:,
-// {
-//     fn from(val: F) -> Self {
-//         let t: GenericTensor<T, { scalar_shape() }> = std::iter::once(val).collect();
-//         Self(t)
-//     }
-// }
+impl<T: Numeric, F> From<F> for Scalar<T>
+where
+    F: ToPrimitive + Copy,
+{
+    fn from(val: F) -> Self {
+        let t: GenericTensor<T, { scalar_shape() }> = std::iter::once(val).collect();
+        Self(t)
+    }
+}
 
 // #[cfg(test)]
 // mod tests {

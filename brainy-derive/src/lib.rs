@@ -33,15 +33,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let gen = quote! {
         impl #impl_generics crate::tensor::Tensor for #name #type_generics #where_clause {
             type T = T;
-            type Idx = [usize; #shape.rank()];
-
-            fn get(&self, idx: Self::Idx) -> Self::T {
-                self.0.get(idx)
-            }
-
-            fn set(self, idx: Self::Idx, val: Self::T) -> Self {
-                Self(self.0.set(idx, val))
-            }
+            const S: Shape = #shape;
 
             fn map(self, f: impl Fn(Self::T) -> Self::T) -> Self {
                 Self(self.0.map(f))
@@ -51,20 +43,26 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 Self(self.0.reduce(others.iter().map(|t| &t.0).collect(), f))
             }
 
-            fn default_idx() -> Self::Idx {
-                #wrapped_type::#wrapped_type_args::default_idx()
-            }
-
-            fn next_idx(idx: Self::Idx) -> Option<Self::Idx> {
-                #wrapped_type::#wrapped_type_args::next_idx(idx)
+            fn try_slice<'a, const D: usize>(
+                &'a self,
+                idx: [usize; D],
+            ) -> Result<crate::slice::Slice<'a, Self::T, { Self::S.downrank(D) }>, crate::tensor::IndexError> {
+                self.0.try_slice(idx)
             }
 
             fn repeat(n: Self::T) -> Self {
                 Self(#wrapped_type::repeat(n))
             }
 
-            fn from_fn(f: impl Fn(Self::Idx) -> T) -> Self {
+            fn from_fn(f: impl Fn([usize; Self::S.rank()]) -> Self::T) -> Self
+            where
+                [(); Self::S.rank()]:,
+            {
                 Self(#wrapped_type::from_fn(f))
+            }
+
+            fn nth_elem(&self, i: usize) -> Result<Self::T, crate::tensor::IndexError> {
+                self.0.nth_elem(i)
             }
         }
 
@@ -103,13 +101,22 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics std::ops::Mul<crate::scalar::Scalar<T>> for #name #type_generics #where_clause {
-            type Output = Self;
+        // impl #impl_generics std::ops::Mul<crate::scalar::Scalar<T>> for #name #type_generics #where_clause {
+        //     type Output = Self;
 
-            fn mul(self, other: crate::scalar::Scalar<T>) -> Self::Output {
-                Self(self.0 * other)
-            }
-        }
+        //     fn mul(self, other: crate::scalar::Scalar<T>) -> Self::Output {
+        //         Self(self.0 * other)
+        //     }
+        // }
+
+        // impl #impl_generics std::ops::Index<[usize; #shape.rank()]> for #name #type_generics #where_clause {
+        //     type Output = T;
+
+        //     fn index(&self, idx: [usize; #shape.rank()]) -> &Self::Output {
+        //         let i = #wrapped_type::storage_idx(idx).unwrap();
+        //         self.0.storage.index(i)
+        //     }
+        // }
 
         impl #impl_generics Clone for #name #type_generics #where_clause {
             fn clone(&self) -> Self {
