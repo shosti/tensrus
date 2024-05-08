@@ -6,7 +6,7 @@ use proc_macro::TokenStream;
 use proc_macro2::Span;
 use syn::{
     punctuated::Punctuated, AngleBracketedGenericArguments, DeriveInput, Expr, Generics, Ident,
-    Lifetime, LifetimeParam, LitInt, Path, PathArguments, PathSegment, TraitBound, TypeParam,
+    Lifetime, LifetimeParam, Path, PathArguments, PathSegment, TraitBound, TypeParam,
     TypeParamBound,
 };
 
@@ -19,7 +19,7 @@ pub fn tensor_macro_derive(input: TokenStream) -> TokenStream {
 fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let (wrapped_type, wrapped_type_args) = get_wrapped_type(ast);
-    let rank = get_rank(&wrapped_type_args);
+    let shape = get_shape(&wrapped_type_args);
 
     let mut f_generics = ast.generics.clone();
     push_to_primitive_f_param(&mut f_generics);
@@ -33,7 +33,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let gen = quote! {
         impl #impl_generics crate::tensor::Tensor for #name #type_generics #where_clause {
             type T = T;
-            type Idx = [usize; #rank];
+            type Idx = [usize; #shape.rank()];
 
             fn get(&self, idx: Self::Idx) -> Self::T {
                 self.0.get(idx)
@@ -203,20 +203,14 @@ fn get_wrapped_type(ast: &DeriveInput) -> (Ident, AngleBracketedGenericArguments
     (last_segment.ident.clone(), args.clone())
 }
 
-fn get_rank(args: &AngleBracketedGenericArguments) -> Expr {
-    let rank_arg = &args.args[1];
-    let rank_expr: &syn::ExprLit;
-    if let syn::GenericArgument::Const(Expr::Lit(ref e)) = rank_arg {
-        rank_expr = e;
+fn get_shape(args: &AngleBracketedGenericArguments) -> syn::Stmt {
+    let shape_arg = &args.args[1];
+    let block: &syn::ExprBlock;
+    if let syn::GenericArgument::Const(Expr::Block(b)) = shape_arg {
+        block = b;
     } else {
-        panic!("Deriving Tensor: expected wrapped type's second generic argument to be a constant specifying the tensor's rank");
-    }
-    let lit: &LitInt;
-    if let syn::Lit::Int(ref l) = rank_expr.lit {
-        lit = l;
-    } else {
-        panic!("Deriving Tensor: expected rank to be an integer");
+        panic!("derive(Tensor): unexpected argument from wrapped type")
     }
 
-    lit.clone()
+    block.block.stmts[0].clone()
 }

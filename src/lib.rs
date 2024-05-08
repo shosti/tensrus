@@ -9,7 +9,6 @@
 extern crate brainy_derive;
 
 pub mod generic_tensor;
-pub mod generic_tensor2;
 pub mod matrix;
 pub mod nn;
 pub mod numeric;

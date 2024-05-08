@@ -1,52 +1,36 @@
-use crate::numeric::Numeric;
-use crate::scalar::Scalar;
-use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, TensorShape};
-use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
+
+use crate::numeric::Numeric;
+// use crate::scalar::Scalar;
+use crate::shape::Shape;
+use crate::tensor::{IndexError, Tensor, TensorIterator};
+use crate::type_assert::{Assert, IsTrue};
 use std::ops::{Add, Mul};
 
-#[derive(Debug, Clone)]
-pub struct GenericTensor<T: Numeric, const R: usize, const S: TensorShape> {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct GenericTensor<T: Numeric, const S: Shape>
+where
+    [(); S.rank()]:,
+{
     pub(crate) storage: Vec<T>,
 }
 
-// Returns the tensor shape when downranking by 1
-pub const fn subtensor_shape(r: usize, s: TensorShape) -> TensorShape {
-    if r == 0 {
-        panic!("cannot take subtensor of tensor of rank 0");
-    }
-    let mut out = [0; 5];
-    let mut i = r - 1;
-    while i > 0 {
-        out[i - 1] = s[i];
-        i -= 1;
-    }
-
-    out
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
+impl<T: Numeric, const S: Shape> GenericTensor<T, S>
+where
+    [(); S.rank()]:,
+{
     fn storage_size() -> usize {
-        num_elems(R, S)
+        S.len()
     }
 
-    fn stride() -> [usize; R] {
-        let mut res = [0; R];
-        for (dim, item) in res.iter_mut().enumerate() {
-            *item = S[(dim + 1)..R].iter().product();
-        }
-
-        res
-    }
-
-    fn idx_from_storage_idx(idx: usize) -> Result<[usize; R], IndexError> {
+    fn idx_from_storage_idx(idx: usize) -> Result<[usize; S.rank()], IndexError> {
         if idx >= Self::storage_size() {
             return Err(IndexError {});
         }
 
-        let mut res = [0; R];
+        let mut res = [0; S.rank()];
         let mut i = idx;
-        let stride = Self::stride();
+        let stride: [usize; S.rank()] = S.stride();
 
         for (dim, item) in res.iter_mut().enumerate() {
             let s: usize = stride[dim];
@@ -60,13 +44,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         Ok(res)
     }
 
-    fn storage_idx(idx: [usize; R]) -> Result<usize, IndexError> {
-        if R == 0 {
+    fn storage_idx(idx: [usize; S.rank()]) -> Result<usize, IndexError> {
+        if S.rank() == 0 {
             return Ok(0);
         }
 
+        let stride: [usize; S.rank()] = S.stride();
         let mut i = 0;
-        let stride = Self::stride();
         for (dim, &cur) in idx.iter().enumerate() {
             if cur >= S[dim] {
                 return Err(IndexError {});
@@ -77,45 +61,48 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         Ok(i)
     }
 
-    pub fn reshape<const R2: usize, const S2: TensorShape>(self) -> GenericTensor<T, R2, S2>
+    pub fn reshape<const S2: Shape>(self) -> GenericTensor<T, S2>
     where
-        Assert<{ num_elems(R, S) == num_elems(R2, S2) }>: IsTrue,
+        Assert<{ S.len() == S2.len() }>: IsTrue,
+        [(); S2.rank()]:,
     {
         GenericTensor {
             storage: self.storage,
         }
     }
 
-    pub fn subtensor(
-        &self,
-        i: usize,
-    ) -> Result<GenericTensor<T, { R - 1 }, { subtensor_shape(R, S) }>, IndexError> {
+    pub fn subtensor(&self, i: usize) -> Result<GenericTensor<T, { S.subshape() }>, IndexError>
+    where
+        [(); S.subshape().rank()]:,
+    {
         if i >= S[0] {
             return Err(IndexError {});
         }
 
-        let out: GenericTensor<T, { R - 1 }, { subtensor_shape(R, S) }> =
-            GenericTensor::from_fn(|idx| {
-                let mut self_idx = [i; R];
-                self_idx[1..R].copy_from_slice(&idx[..(R - 1)]);
-                self.storage[Self::storage_idx(self_idx).unwrap()]
-            });
+        let out = GenericTensor::<T, { S.subshape() }>::from_fn(|idx| {
+            let mut self_idx = [i; S.rank()];
+            self_idx[1..S.rank()].copy_from_slice(&idx[..(S.subshape().rank())]);
+            self.storage[Self::storage_idx(self_idx).unwrap()]
+        });
         Ok(out)
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<T, R, S> {
+impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S>
+where
+    [(); S.rank()]:,
+{
     type T = T;
-    type Idx = [usize; R];
+    type Idx = [usize; S.rank()];
 
-    fn get(&self, idx: [usize; R]) -> T {
+    fn get(&self, idx: Self::Idx) -> T {
         match Self::storage_idx(idx) {
             Ok(i) => self.storage[i],
             Err(_e) => panic!("get: out of bounds"),
         }
     }
 
-    fn set(self, idx: [usize; R], val: T) -> Self {
+    fn set(self, idx: Self::Idx, val: T) -> Self {
         match Self::storage_idx(idx) {
             Ok(i) => {
                 let mut storage = self.storage;
@@ -149,12 +136,12 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<
     }
 
     fn default_idx() -> Self::Idx {
-        [0; R]
+        [0; S.rank()]
     }
     fn next_idx(idx: Self::Idx) -> Option<Self::Idx> {
         let mut cur = idx;
-        cur[R - 1] += 1;
-        for dim in (0..R).rev() {
+        cur[S.rank() - 1] += 1;
+        for dim in (0..S.rank()).rev() {
             if cur[dim] == S[dim] {
                 if dim == 0 {
                     return None;
@@ -179,23 +166,13 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
-    for GenericTensor<T, R, S>
+impl<T: Numeric, const S: Shape, U: ToPrimitive> FromIterator<U> for GenericTensor<T, S>
 where
-    F: ToPrimitive,
-{
-    fn from(arr: [F; num_elems(R, S)]) -> Self {
-        arr.into_iter().collect()
-    }
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape, F> FromIterator<F> for GenericTensor<T, R, S>
-where
-    F: ToPrimitive,
+    [(); S.rank()]:,
 {
     fn from_iter<I>(iter: I) -> Self
     where
-        I: IntoIterator<Item = F>,
+        I: IntoIterator<Item = U>,
     {
         let vals: Vec<T> = iter
             .into_iter()
@@ -207,32 +184,43 @@ where
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTensor<T, R, S> {
-    fn eq(&self, other: &Self) -> bool {
-        for i in 0..Self::storage_size() {
-            if self.storage[i] != other.storage[i] {
-                return false;
-            }
-        }
-        true
-    }
-}
-
-impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
-    for &'a GenericTensor<T, R, S>
+impl<'a, T: Numeric, const S: Shape> IntoIterator for &'a GenericTensor<T, S>
+where
+    [(); S.rank()]:,
 {
     type Item = T;
-    type IntoIter = TensorIterator<'a, GenericTensor<T, R, S>>;
+    type IntoIter = TensorIterator<'a, GenericTensor<T, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
         Self::IntoIter::new(self)
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Eq for GenericTensor<T, R, S> {}
+impl<T: Numeric, const S: Shape> Mul<T> for GenericTensor<T, S>
+where
+    [(); S.rank()]:,
+{
+    type Output = Self;
 
-impl<'a, T: Numeric, const R: usize, const S: TensorShape> Add<&'a Self>
-    for GenericTensor<T, R, S>
+    fn mul(self, other: T) -> Self::Output {
+        Self::from_fn(|idx| self.get(idx) * other)
+    }
+}
+
+// impl<T: Numeric, const S: Shape> Mul<Scalar<T>> for GenericTensor<T, S>
+// where
+//     [(); S.rank()]:,
+// {
+//     type Output = Self;
+
+//     fn mul(self, other: Scalar<T>) -> Self::Output {
+//         Self::from_fn(|idx| self.get(idx) * other.val())
+//     }
+// }
+
+impl<'a, T: Numeric, const S: Shape> Add<&'a Self> for GenericTensor<T, S>
+where
+    [(); S.rank()]:,
 {
     type Output = Self;
 
@@ -241,19 +229,12 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> Add<&'a Self>
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Mul<T> for GenericTensor<T, R, S> {
-    type Output = Self;
-
-    fn mul(self, other: T) -> Self::Output {
-        Self::from_fn(|idx| self.get(idx) * other)
-    }
-}
-
-impl<T: Numeric, const R: usize, const S: TensorShape> Mul<Scalar<T>> for GenericTensor<T, R, S> {
-    type Output = Self;
-
-    fn mul(self, other: Scalar<T>) -> Self::Output {
-        Self::from_fn(|idx| self.get(idx) * other.val())
+impl<T: Numeric, const S: Shape, U: ToPrimitive> From<[U; S.len()]> for GenericTensor<T, S>
+where
+    [(); S.rank()]:,
+{
+    fn from(arr: [U; S.len()]) -> Self {
+        arr.into_iter().collect()
     }
 }
 
@@ -263,37 +244,25 @@ mod tests {
     use rand::prelude::*;
 
     #[test]
-    fn test_basics() {
-        assert_eq!(
-            GenericTensor::<f64, 2, { [2, 5, 0, 0, 0] }>::stride(),
-            [5, 1]
-        );
-        assert_eq!(
-            GenericTensor::<f64, 3, { [2, 3, 3, 0, 0] }>::stride(),
-            [9, 3, 1]
-        );
-    }
-
-    #[test]
     fn test_from_iterator() {
         let xs: [i64; 3] = [1, 2, 3];
         let iter = xs.iter().cycle().copied();
 
-        let t1: GenericTensor<f64, 0, { [0; 5] }> = iter.clone().collect();
-        assert_eq!(t1, GenericTensor::<f64, 0, { [0; 5] }>::from([1.0]));
+        let t1: GenericTensor<f64, { Shape::Rank0([]) }> = iter.clone().collect();
+        assert_eq!(t1, GenericTensor::<f64, { Shape::Rank0([]) }>::from([1.0]));
 
-        let t2: GenericTensor<f64, 2, { [4, 2, 0, 0, 0] }> = iter.clone().collect();
+        let t2: GenericTensor<f64, { Shape::Rank2([4, 2]) }> = iter.clone().collect();
         assert_eq!(
             t2,
-            GenericTensor::<f64, 2, { [4, 2, 0, 0, 0] }>::from([
+            GenericTensor::<f64, { Shape::Rank2([4, 2]) }>::from([
                 1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0
             ])
         );
 
-        let t3: GenericTensor<f64, 2, { [4, 2, 0, 0, 0] }> = xs.iter().copied().collect();
+        let t3: GenericTensor<f64, { Shape::Rank2([4, 2]) }> = xs.iter().copied().collect();
         assert_eq!(
             t3,
-            GenericTensor::<f64, 2, { [4, 2, 0, 0, 0] }>::from([
+            GenericTensor::<f64, { Shape::Rank2([4, 2]) }>::from([
                 1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0
             ])
         );
@@ -307,43 +276,48 @@ mod tests {
             let s = format!("{}{}{}", i, j, k);
             s.parse().unwrap()
         };
-        let t1: GenericTensor<f64, 3, { [2; 5] }> = GenericTensor::from_fn(f);
+        let t1: GenericTensor<f64, { Shape::Rank3([2; 3]) }> = GenericTensor::from_fn(f);
         assert_eq!(
             t1,
-            GenericTensor::<f64, 3, { [2; 5] }>::from([000, 001, 010, 011, 100, 101, 110, 111]),
+            GenericTensor::<f64, { Shape::Rank3([2; 3]) }>::from([
+                000, 001, 010, 011, 100, 101, 110, 111
+            ]),
         );
 
-        let t2: GenericTensor<f64, 3, { [1, 2, 3, 0, 0] }> = GenericTensor::from_fn(f);
+        let t2: GenericTensor<f64, { Shape::Rank3([1, 2, 3]) }> = GenericTensor::from_fn(f);
         assert_eq!(
             t2,
-            GenericTensor::<f64, 3, { [1, 2, 3, 0, 0] }>::from([000, 001, 002, 010, 011, 012]),
+            GenericTensor::<f64, { Shape::Rank3([1, 2, 3]) }>::from([000, 001, 002, 010, 011, 012]),
         );
 
-        let t3: GenericTensor<f64, 3, { [3, 2, 1, 0, 0] }> = GenericTensor::from_fn(f);
+        let t3: GenericTensor<f64, { Shape::Rank3([3, 2, 1]) }> = GenericTensor::from_fn(f);
         assert_eq!(
             t3,
-            GenericTensor::<f64, 3, { [3, 2, 1, 0, 0] }>::from([000, 010, 100, 110, 200, 210]),
+            GenericTensor::<f64, { Shape::Rank3([3, 2, 1]) }>::from([000, 010, 100, 110, 200, 210]),
         );
 
-        let t4: GenericTensor<f64, 3, { [2, 3, 1, 0, 0] }> = GenericTensor::from_fn(f);
+        let t4: GenericTensor<f64, { Shape::Rank3([2, 3, 1]) }> = GenericTensor::from_fn(f);
         assert_eq!(
             t4,
-            GenericTensor::<f64, 3, { [2, 3, 1, 0, 0] }>::from([000, 010, 020, 100, 110, 120]),
+            GenericTensor::<f64, { Shape::Rank3([2, 3, 1]) }>::from([000, 010, 020, 100, 110, 120]),
         );
     }
 
     #[test]
     fn test_math() {
-        let mut x: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([1, 2, 3, 4]);
-        let y: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([5, 6, 7, 8]);
-        let a: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([6, 8, 10, 12]);
+        let mut x: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> =
+            GenericTensor::from([1, 2, 3, 4]);
+        let y: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> = GenericTensor::from([5, 6, 7, 8]);
+        let a: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> =
+            GenericTensor::from([6, 8, 10, 12]);
 
         assert_eq!(x.clone() + &y, a);
 
         x = x + &y;
         assert_eq!(x.clone(), a);
 
-        let b: GenericTensor<f64, 3, { [1, 2, 2, 0, 0] }> = GenericTensor::from([12, 16, 20, 24]);
+        let b: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> =
+            GenericTensor::from([12, 16, 20, 24]);
         assert_eq!(x.clone() * 2.0, b);
 
         x = x * 2.0;
@@ -352,25 +326,25 @@ mod tests {
 
     #[test]
     fn test_to_iter() {
-        let t: GenericTensor<f64, 2, { [2; 5] }> = (0..4).collect();
+        let t: GenericTensor<f64, { Shape::Rank2([2; 2]) }> = (0..4).collect();
         let vals: Vec<f64> = t.into_iter().collect();
         assert_eq!(vals, vec![0.0, 1.0, 2.0, 3.0]);
     }
 
     #[test]
     fn get_and_set() {
-        test_get_and_set(GenericTensor::<f64, 0, { [0; 5] }>::zeros());
-        test_get_and_set(GenericTensor::<f64, 1, { [24; 5] }>::zeros());
-        test_get_and_set(GenericTensor::<f64, 2, { [8, 72, 0, 0, 0] }>::zeros());
-        test_get_and_set(GenericTensor::<f64, 3, { [243, 62, 101, 0, 0] }>::zeros());
-        test_get_and_set(GenericTensor::<f64, 4, { [1, 99, 232, 8, 0] }>::zeros());
+        test_get_and_set(GenericTensor::<f64, { Shape::Rank0([]) }>::zeros());
+        test_get_and_set(GenericTensor::<f64, { Shape::Rank1([24]) }>::zeros());
+        test_get_and_set(GenericTensor::<f64, { Shape::Rank2([8, 72]) }>::zeros());
+        test_get_and_set(GenericTensor::<f64, { Shape::Rank3([243, 62, 101]) }>::zeros());
+        test_get_and_set(GenericTensor::<f64, { Shape::Rank4([1, 99, 232, 8]) }>::zeros());
     }
 
-    fn test_get_and_set<const R: usize, const S: TensorShape>(t: GenericTensor<f64, R, S>) {
+    fn test_get_and_set<const S: Shape>(t: GenericTensor<f64, S>) {
         let mut rng = rand::thread_rng();
         let mut x = t;
         for _ in 0..10 {
-            let mut idx = [0; R];
+            let mut idx = [0; S.rank()];
             for (dim, cur) in idx.iter_mut().enumerate() {
                 *cur = rng.gen_range(0..S[dim]);
             }
@@ -383,37 +357,37 @@ mod tests {
 
     #[test]
     fn test_map() {
-        let t: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([1, 2, 3, 4]);
+        let t: GenericTensor<f64, { Shape::Rank2([2; 2]) }> = GenericTensor::from([1, 2, 3, 4]);
         let u = t.map(&|val| val * 2.0);
 
-        let want: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([2, 4, 6, 8]);
+        let want: GenericTensor<f64, { Shape::Rank2([2; 2]) }> = GenericTensor::from([2, 4, 6, 8]);
         assert_eq!(u, want);
     }
 
     #[test]
     fn test_subtensor() {
-        let t3: GenericTensor<f64, 3, { [2, 3, 4, 0, 0] }> = (1..25).collect();
+        let t3: GenericTensor<f64, { Shape::Rank3([2, 3, 4]) }> = (1..25).collect();
 
         let t2 = t3.subtensor(1).unwrap();
-        let t2_expected: GenericTensor<f64, 2, { [3, 4, 0, 0, 0] }> = (13..25).collect();
+        let t2_expected: GenericTensor<f64, { Shape::Rank2([3, 4]) }> = (13..25).collect();
         assert_eq!(t2, t2_expected);
         assert_eq!(t3.subtensor(2), Err(IndexError {}));
 
         let t1 = t2.subtensor(1).unwrap();
-        let t1_expected: GenericTensor<f64, 1, { [4, 0, 0, 0, 0] }> =
+        let t1_expected: GenericTensor<f64, { Shape::Rank1([4]) }> =
             GenericTensor::from([17, 18, 19, 20]);
         assert_eq!(t1, t1_expected);
 
         let t0 = t1.subtensor(1).unwrap();
-        let t0_expected: GenericTensor<f64, 0, { [0; 5] }> = GenericTensor::from([18]);
+        let t0_expected: GenericTensor<f64, { Shape::Rank0([]) }> = GenericTensor::from([18]);
         assert_eq!(t0, t0_expected);
     }
 
     #[test]
     fn test_reshape() {
-        let t = GenericTensor::<f64, 2, { [3, 2, 0, 0, 0] }>::from([1, 2, 3, 4, 5, 6]);
-        let t2 = t.clone().reshape::<2, { [2, 3, 0, 0, 0] }>();
-        let t3 = t.clone().reshape::<1, { [6, 0, 0, 0, 0] }>();
+        let t = GenericTensor::<f64, { Shape::Rank2([3, 2]) }>::from([1, 2, 3, 4, 5, 6]);
+        let t2 = t.clone().reshape::<{ Shape::Rank2([2, 3]) }>();
+        let t3 = t.clone().reshape::<{ Shape::Rank1([6]) }>();
 
         assert_eq!(t.get([1, 0]), t2.get([0, 2]));
         assert_eq!(t.get([2, 1]), t3.get([5]));

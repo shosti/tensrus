@@ -6,12 +6,6 @@ use crate::numeric::Numeric;
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
-// pub enum TensorShape2 {
-//     Rank0([usize; 0),
-//     Rank1([usize; 1]),
-//     Rank2([usize; 2]),
-//           Rank3([
-// }
 
 pub type TensorShape = [usize; 5];
 
@@ -35,8 +29,8 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-pub trait Tensor:
-    Debug + Clone + for<'a> Add<&'a Self, Output = Self> + Mul<Self::T> + 'static
+pub trait Tensor: Clone + 'static
+    // Debug + Clone + for<'a> Add<&'a Self, Output = Self> + Mul<Self::T> + 'static
 {
     type T: Numeric;
     type Idx: Copy + 'static;
