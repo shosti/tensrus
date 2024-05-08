@@ -38,20 +38,16 @@ seq!(R in 0..6 {
             }
         }
 
-        pub const fn stride<const RANK: usize>(self) -> [usize; RANK] {
+        pub fn stride(self) -> [usize; 6] {
             match self {
                 #(
                     Self::Rank~R(dims) => {
-                        if R != RANK {
-                            panic!("Shape.stride() called with invalid rank parameter");
-                        }
-
-                        let mut res = [0; RANK];
+                        let mut res = [0; 6];
                         let mut dim = 0;
-                        while dim < RANK {
+                        while dim < R {
                             let mut n = 1;
                             let mut d = dim + 1;
-                            while d < RANK {
+                            while d < R {
                                 n *= dims[d];
                                 d += 1;
                             }

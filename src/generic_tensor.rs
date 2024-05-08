@@ -24,7 +24,7 @@ impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
 
         let mut res = [0; S.rank()];
         let mut i = idx;
-        let stride: [usize; S.rank()] = S.stride();
+        let stride = S.stride();
 
         for (dim, item) in res.iter_mut().enumerate() {
             let s: usize = stride[dim];
@@ -43,7 +43,7 @@ impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
             return Ok(0);
         }
 
-        let stride: [usize; S.rank()] = S.stride();
+        let stride = S.stride();
         let mut i = 0;
         for (dim, &cur) in idx.iter().enumerate() {
             if cur >= S[dim] {
