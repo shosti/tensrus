@@ -16,6 +16,7 @@ pub mod op;
 pub mod render;
 pub mod scalar;
 pub mod shape;
+pub mod slice;
 pub mod tensor;
 mod type_assert;
 pub mod var;

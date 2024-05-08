@@ -30,7 +30,7 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
 }
 
 pub trait Tensor: Clone + 'static
-    // Debug + Clone + for<'a> Add<&'a Self, Output = Self> + Mul<Self::T> + 'static
+// Debug + Clone + for<'a> Add<&'a Self, Output = Self> + Mul<Self::T> + 'static
 {
     type T: Numeric;
     // type Idx: Copy + 'static;
