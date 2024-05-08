@@ -8,17 +8,11 @@ use crate::type_assert::{Assert, IsTrue};
 use std::ops::{Add, Index, Mul};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct GenericTensor<T: Numeric, const S: Shape>
-where
-    [(); S.rank()]:,
-{
+pub struct GenericTensor<T: Numeric, const S: Shape> {
     pub(crate) storage: Vec<T>,
 }
 
-impl<T: Numeric, const S: Shape> GenericTensor<T, S>
-where
-    [(); S.rank()]:,
-{
+impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
     fn storage_size() -> usize {
         S.len()
     }
@@ -64,7 +58,6 @@ where
     pub fn reshape<const S2: Shape>(self) -> GenericTensor<T, S2>
     where
         Assert<{ S.len() == S2.len() }>: IsTrue,
-        [(); S2.rank()]:,
     {
         GenericTensor {
             storage: self.storage,
@@ -88,10 +81,7 @@ where
     // }
 }
 
-impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S>
-where
-    [(); S.rank()]:,
-{
+impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S> {
     type T = T;
     // type Idx = [usize; S.rank()];
 
@@ -166,10 +156,7 @@ where
     //     }
 }
 
-impl<T: Numeric, const S: Shape, U: ToPrimitive> FromIterator<U> for GenericTensor<T, S>
-where
-    [(); S.rank()]:,
-{
+impl<T: Numeric, const S: Shape, U: ToPrimitive> FromIterator<U> for GenericTensor<T, S> {
     fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = U>,
@@ -208,10 +195,7 @@ where
     }
 }
 
-impl<T: Numeric, const S: Shape> Mul<T> for GenericTensor<T, S>
-where
-    [(); S.rank()]:,
-{
+impl<T: Numeric, const S: Shape> Mul<T> for GenericTensor<T, S> {
     type Output = Self;
 
     fn mul(self, other: T) -> Self::Output {
@@ -231,10 +215,7 @@ where
 //     }
 // }
 
-impl<'a, T: Numeric, const S: Shape> Add<&'a Self> for GenericTensor<T, S>
-where
-    [(); S.rank()]:,
-{
+impl<'a, T: Numeric, const S: Shape> Add<&'a Self> for GenericTensor<T, S> {
     type Output = Self;
 
     fn add(self, other: &Self) -> Self::Output {
@@ -242,10 +223,7 @@ where
     }
 }
 
-impl<T: Numeric, const S: Shape, U: ToPrimitive> From<[U; S.len()]> for GenericTensor<T, S>
-where
-    [(); S.rank()]:,
-{
+impl<T: Numeric, const S: Shape, U: ToPrimitive> From<[U; S.len()]> for GenericTensor<T, S> {
     fn from(arr: [U; S.len()]) -> Self {
         arr.into_iter().collect()
     }
