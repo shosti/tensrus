@@ -3,7 +3,7 @@ use num::ToPrimitive;
 use crate::numeric::Numeric;
 // use crate::scalar::Scalar;
 use crate::shape::Shape;
-use crate::tensor::{IndexError, Tensor, TensorIterator};
+use crate::tensor::{IndexError, Tensor, };
 use crate::type_assert::{Assert, IsTrue};
 use std::ops::{Add, Mul};
 
@@ -71,21 +71,21 @@ where
         }
     }
 
-    pub fn subtensor(&self, i: usize) -> Result<GenericTensor<T, { S.subshape() }>, IndexError>
-    where
-        [(); S.subshape().rank()]:,
-    {
-        if i >= S[0] {
-            return Err(IndexError {});
-        }
+    // pub fn subtensor(&self, i: usize) -> Result<GenericTensor<T, { S.subshape() }>, IndexError>
+    // where
+    //     [(); S.subshape().rank()]:,
+    // {
+    //     if i >= S[0] {
+    //         return Err(IndexError {});
+    //     }
 
-        let out = GenericTensor::<T, { S.subshape() }>::from_fn(|idx| {
-            let mut self_idx = [i; S.rank()];
-            self_idx[1..S.rank()].copy_from_slice(&idx[..(S.subshape().rank())]);
-            self.storage[Self::storage_idx(self_idx).unwrap()]
-        });
-        Ok(out)
-    }
+    //     let out = GenericTensor::<T, { S.subshape() }>::from_fn(|idx| {
+    //         let mut self_idx = [i; S.rank()];
+    //         self_idx[1..S.rank()].copy_from_slice(&idx[..(S.subshape().rank())]);
+    //         self.storage[Self::storage_idx(self_idx).unwrap()]
+    //     });
+    //     Ok(out)
+    // }
 }
 
 impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S>
@@ -93,25 +93,25 @@ where
     [(); S.rank()]:,
 {
     type T = T;
-    type Idx = [usize; S.rank()];
+    // type Idx = [usize; S.rank()];
 
-    fn get(&self, idx: Self::Idx) -> T {
-        match Self::storage_idx(idx) {
-            Ok(i) => self.storage[i],
-            Err(_e) => panic!("get: out of bounds"),
-        }
-    }
+    // fn get(&self, idx: Self::Idx) -> T {
+    //     match Self::storage_idx(idx) {
+    //         Ok(i) => self.storage[i],
+    //         Err(_e) => panic!("get: out of bounds"),
+    //     }
+    // }
 
-    fn set(self, idx: Self::Idx, val: T) -> Self {
-        match Self::storage_idx(idx) {
-            Ok(i) => {
-                let mut storage = self.storage;
-                storage[i] = val;
-                Self { storage }
-            }
-            Err(_e) => panic!("set: out of bounds"),
-        }
-    }
+    // fn set(self, idx: Self::Idx, val: T) -> Self {
+    //     match Self::storage_idx(idx) {
+    //         Ok(i) => {
+    //             let mut storage = self.storage;
+    //             storage[i] = val;
+    //             Self { storage }
+    //         }
+    //         Err(_e) => panic!("set: out of bounds"),
+    //     }
+    // }
 
     fn map(self, f: impl Fn(T) -> T) -> Self {
         let mut storage = self.storage;
@@ -135,35 +135,35 @@ where
         Self { storage }
     }
 
-    fn default_idx() -> Self::Idx {
-        [0; S.rank()]
-    }
-    fn next_idx(idx: Self::Idx) -> Option<Self::Idx> {
-        let mut cur = idx;
-        cur[S.rank() - 1] += 1;
-        for dim in (0..S.rank()).rev() {
-            if cur[dim] == S[dim] {
-                if dim == 0 {
-                    return None;
-                }
-                cur[dim] = 0;
-                cur[dim - 1] += 1;
-            }
-        }
+    // fn default_idx() -> Self::Idx {
+    //     [0; S.rank()]
+    // }
+    // fn next_idx(idx: Self::Idx) -> Option<Self::Idx> {
+    //     let mut cur = idx;
+    //     cur[S.rank() - 1] += 1;
+    //     for dim in (0..S.rank()).rev() {
+    //         if cur[dim] == S[dim] {
+    //             if dim == 0 {
+    //                 return None;
+    //             }
+    //             cur[dim] = 0;
+    //             cur[dim - 1] += 1;
+    //         }
+    //     }
 
-        Some(cur)
-    }
+    //     Some(cur)
+    // }
 
     fn repeat(n: T) -> Self {
         let storage = vec![n; Self::storage_size()];
         Self { storage }
     }
 
-    fn from_fn(f: impl Fn(Self::Idx) -> T) -> Self {
-        (0..Self::storage_size())
-            .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
-            .collect()
-    }
+//     fn from_fn(f: impl Fn(Self::Idx) -> T) -> Self {
+//         (0..Self::storage_size())
+//             .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
+//             .collect()
+//     }
 }
 
 impl<T: Numeric, const S: Shape, U: ToPrimitive> FromIterator<U> for GenericTensor<T, S>
@@ -184,17 +184,17 @@ where
     }
 }
 
-impl<'a, T: Numeric, const S: Shape> IntoIterator for &'a GenericTensor<T, S>
-where
-    [(); S.rank()]:,
-{
-    type Item = T;
-    type IntoIter = TensorIterator<'a, GenericTensor<T, S>>;
+// impl<'a, T: Numeric, const S: Shape> IntoIterator for &'a GenericTensor<T, S>
+// where
+//     [(); S.rank()]:,
+// {
+//     type Item = T;
+//     type IntoIter = TensorIterator<'a, GenericTensor<T, S>>;
 
-    fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter::new(self)
-    }
-}
+//     fn into_iter(self) -> Self::IntoIter {
+//         Self::IntoIter::new(self)
+//     }
+// }
 
 impl<T: Numeric, const S: Shape> Mul<T> for GenericTensor<T, S>
 where
@@ -203,7 +203,8 @@ where
     type Output = Self;
 
     fn mul(self, other: T) -> Self::Output {
-        Self::from_fn(|idx| self.get(idx) * other)
+        todo!()
+        // Self::from_fn(|idx| self.get(idx) * other)
     }
 }
 
