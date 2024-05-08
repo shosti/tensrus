@@ -64,21 +64,11 @@ impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
             storage: self.storage,
         }
     }
-
-    pub fn slice<'a, const D: usize>(&'a self, idx: [usize; D]) -> Slice<'a, T, { S.downrank(D) }> {
-        Slice::new(&self.storage, idx)
-    }
-
-    pub fn try_slice<'a, const D: usize>(
-        &'a self,
-        idx: [usize; D],
-    ) -> Result<Slice<'a, T, { S.downrank(D) }>, IndexError> {
-        Slice::try_new(&self.storage, idx)
-    }
 }
 
 impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S> {
     type T = T;
+    const S: Shape = S;
     // type Idx = [usize; S.rank()];
 
     // fn get(&self, idx: Self::Idx) -> T {
@@ -99,6 +89,12 @@ impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S> {
     //     }
     // }
 
+    fn try_slice<'a, const D: usize>(
+        &'a self,
+        idx: [usize; D],
+    ) -> Result<Slice<'a, T, { Self::S.downrank(D) }>, IndexError> {
+        Slice::try_new(&self.storage, idx)
+    }
     fn map(self, f: impl Fn(T) -> T) -> Self {
         let mut storage = self.storage;
         storage.iter_mut().for_each(|v| *v = f(*v));

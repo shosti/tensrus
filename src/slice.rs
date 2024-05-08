@@ -55,6 +55,7 @@ impl<'a, T: Numeric, const S: Shape> Into<GenericTensor<T, S>> for Slice<'a, T, 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tensor::Tensor;
 
     #[test]
     fn test_slice_and_back() {

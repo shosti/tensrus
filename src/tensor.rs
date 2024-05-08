@@ -3,6 +3,8 @@ use std::fmt::Debug;
 use std::ops::{Add, Mul};
 
 use crate::numeric::Numeric;
+use crate::shape::Shape;
+use crate::slice::Slice;
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
@@ -33,6 +35,7 @@ pub trait Tensor: Clone + 'static
 // Debug + Clone + for<'a> Add<&'a Self, Output = Self> + Mul<Self::T> + 'static
 {
     type T: Numeric;
+    const S: Shape;
     // type Idx: Copy + 'static;
 
     fn repeat(n: Self::T) -> Self;
@@ -52,6 +55,14 @@ pub trait Tensor: Clone + 'static
     }
     // fn set(self, idx: Self::Idx, val: Self::T) -> Self;
     fn reduce<'a>(self, others: Vec<&'a Self>, f: impl Fn(Vec<Self::T>) -> Self::T) -> Self;
+    fn try_slice<'a, const D: usize>(
+        &'a self,
+        idx: [usize; D],
+    ) -> Result<Slice<'a, Self::T, { Self::S.downrank(D) }>, IndexError>;
+
+    fn slice<'a, const D: usize>(&'a self, idx: [usize; D]) -> Slice<'a, Self::T, { Self::S.downrank(D) }> {
+        self.try_slice(idx).unwrap()
+    }
 
     // fn default_idx() -> Self::Idx;
     // fn next_idx(idx: Self::Idx) -> Option<Self::Idx>;
