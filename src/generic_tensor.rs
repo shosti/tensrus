@@ -3,6 +3,7 @@ use num::ToPrimitive;
 use crate::numeric::Numeric;
 // use crate::scalar::Scalar;
 use crate::shape::Shape;
+use crate::slice::Slice;
 use crate::tensor::{IndexError, Tensor};
 use crate::type_assert::{Assert, IsTrue};
 use std::ops::{Add, Index, Mul};
@@ -64,21 +65,9 @@ impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
         }
     }
 
-    // pub fn subtensor(&self, i: usize) -> Result<GenericTensor<T, { S.subshape() }>, IndexError>
-    // where
-    //     [(); S.subshape().rank()]:,
-    // {
-    //     if i >= S[0] {
-    //         return Err(IndexError {});
-    //     }
-
-    //     let out = GenericTensor::<T, { S.subshape() }>::from_fn(|idx| {
-    //         let mut self_idx = [i; S.rank()];
-    //         self_idx[1..S.rank()].copy_from_slice(&idx[..(S.subshape().rank())]);
-    //         self.storage[Self::storage_idx(self_idx).unwrap()]
-    //     });
-    //     Ok(out)
-    // }
+    pub fn slice<'a, const D: usize>(&'a self, idx: [usize; D]) -> Slice<'a, T, { S.downrank(D) }> {
+        Slice::new(&self.storage, idx)
+    }
 }
 
 impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S> {
@@ -182,18 +171,6 @@ impl<T: Numeric, const S: Shape, U: ToPrimitive> FromIterator<U> for GenericTens
 //         Self::IntoIter::new(self)
 //     }
 // }
-
-impl<T: Numeric, const S: Shape, const D: usize> Index<[usize; D]> for GenericTensor<T, S>
-where
-    [(); S.rank()]:,
-    [(); S.downrank(D).rank()]:,
-{
-    type Output = GenericTensor<T, { S.downrank(D) }>;
-
-    fn index(&self, index: [usize; D]) -> &Self::Output {
-        todo!()
-    }
-}
 
 impl<T: Numeric, const S: Shape> Mul<T> for GenericTensor<T, S> {
     type Output = Self;
