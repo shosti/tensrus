@@ -93,7 +93,7 @@ impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S> {
         &'a self,
         idx: [usize; D],
     ) -> Result<Slice<'a, T, { Self::S.downrank(D) }>, IndexError> {
-        Slice::try_new(&self.storage, idx)
+        Slice::new::<D, S>(&self.storage, idx)
     }
     fn map(self, f: impl Fn(T) -> T) -> Self {
         let mut storage = self.storage;

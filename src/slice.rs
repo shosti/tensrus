@@ -13,30 +13,22 @@ pub struct Slice<'a, T: Numeric, const S: Shape> {
 }
 
 impl<'a, T: Numeric, const S: Shape> Slice<'a, T, S> {
-    pub fn new<const D: usize>(storage: &'a Vec<T>, idx: [usize; D]) -> Self {
-        for dim in 0..D {
-            if idx[dim] >= S[dim] {
-                panic!("dim {} is out of bounds (max {})", dim, S[dim]);
-            }
-        }
-        let mut offset = 0;
-        for i in 0..D {
-            offset += idx[i] * S.stride()[i];
-        }
-        Self { storage, offset }
-    }
-
-    pub fn try_new<const D: usize>(
+    pub fn new<const D: usize, const S2: Shape>(
         storage: &'a Vec<T>,
         idx: [usize; D],
     ) -> Result<Self, IndexError> {
         for dim in 0..D {
-            if idx[dim] >= S[dim] {
+            if idx[dim] >= S2[dim] {
                 return Err(IndexError {});
             }
         }
 
-        Ok(Self::new(storage, idx))
+        let mut offset = 0;
+        for i in 0..D {
+            offset += idx[i] * S2.stride()[i];
+        }
+
+        Ok(Self { storage, offset })
     }
 }
 
@@ -65,6 +57,7 @@ mod tests {
         assert_eq!(t, t2);
     }
 
+    #[test]
     fn test_slice_to_val() {
         let t: GenericTensor<f64, { Shape::Rank1([5]) }> = GenericTensor::from([0, 1, 2, 3, 4]);
         for i in 0..5 {
@@ -73,6 +66,7 @@ mod tests {
         }
     }
 
+    #[test]
     fn test_slice_rank2() {
         #[rustfmt::skip]
         let t: GenericTensor<f64, { Shape::Rank2([3, 2]) }> = GenericTensor::from([
@@ -91,6 +85,7 @@ mod tests {
         assert_eq!(subtensor, want);
     }
 
+    #[test]
     fn test_try_slice() {
         #[rustfmt::skip]
         let t: GenericTensor<f64, { Shape::Rank2([3, 2]) }> = GenericTensor::from([
