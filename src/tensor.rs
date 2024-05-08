@@ -44,9 +44,9 @@ pub trait Tensor: Clone + 'static
     fn ones() -> Self {
         Self::repeat(Self::T::one())
     }
-    // fn from_fn(f: impl Fn([usize; Self::S.rank()]) -> Self::T) -> Self
-    // where
-    //     [(); Self::S.rank()]:;
+    fn from_fn(f: impl Fn([usize; Self::S.rank()]) -> Self::T) -> Self
+    where
+        [(); Self::S.rank()]:;
 
 
     fn map(self, f: impl Fn(Self::T) -> Self::T) -> Self;

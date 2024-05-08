@@ -18,14 +18,16 @@ impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
         S.num_elems()
     }
 
-    fn idx_from_storage_idx(idx: usize) -> Result<[usize; S.rank()], IndexError> {
+    // Extra type param is to hack around the annoying S vs Self::S difference
+    // :(
+    fn idx_from_storage_idx<const S2: Shape>(idx: usize) -> Result<[usize; S2.rank()], IndexError> {
         if idx >= Self::storage_size() {
             return Err(IndexError {});
         }
 
-        let mut res = [0; S.rank()];
+        let mut res = [0; S2.rank()];
         let mut i = idx;
-        let stride = S.stride();
+        let stride = S2.stride();
 
         for (dim, item) in res.iter_mut().enumerate() {
             let s: usize = stride[dim];
@@ -33,8 +35,6 @@ impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
             *item = cur;
             i -= cur * s;
         }
-        debug_assert!(i == 0);
-        debug_assert!(Self::storage_idx(res).unwrap() == idx);
 
         Ok(res)
     }
@@ -69,25 +69,6 @@ impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
 impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S> {
     type T = T;
     const S: Shape = S;
-    // type Idx = [usize; S.rank()];
-
-    // fn get(&self, idx: Self::Idx) -> T {
-    //     match Self::storage_idx(idx) {
-    //         Ok(i) => self.storage[i],
-    //         Err(_e) => panic!("get: out of bounds"),
-    //     }
-    // }
-
-    // fn set(self, idx: Self::Idx, val: T) -> Self {
-    //     match Self::storage_idx(idx) {
-    //         Ok(i) => {
-    //             let mut storage = self.storage;
-    //             storage[i] = val;
-    //             Self { storage }
-    //         }
-    //         Err(_e) => panic!("set: out of bounds"),
-    //     }
-    // }
 
     fn try_slice<'a, const D: usize>(
         &'a self,
@@ -130,14 +111,17 @@ impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S> {
         }
     }
 
-    // fn from_fn(f: impl Fn([usize; S.rank()]) -> T) -> Self
-    // where
-    //     [(); S.rank()]:,
-    // {
-    //     (0..Self::storage_size())
-    //         .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
-    //         .collect()
-    // }
+    fn from_fn(f: impl Fn([usize; Self::S.rank()]) -> T) -> Self
+    where
+        [(); Self::S.rank()]:,
+    {
+        (0..Self::storage_size())
+            .map(|i| {
+                let idx: [usize; Self::S.rank()] = Self::idx_from_storage_idx(i).unwrap();
+                f(idx)
+            })
+            .collect()
+    }
 }
 
 impl<T: Numeric, const S: Shape, U: ToPrimitive> FromIterator<U> for GenericTensor<T, S> {
@@ -170,9 +154,10 @@ where
 impl<T: Numeric, const S: Shape> Mul<T> for GenericTensor<T, S> {
     type Output = Self;
 
-    fn mul(self, other: T) -> Self::Output {
+    fn mul(self, other: T) -> Self::Output
+    {
         todo!()
-        // Self::from_fn(|idx| self.get(idx) * other)
+        // Self::from_fn(|idx| self[idx] * other)
     }
 }
 
@@ -240,40 +225,40 @@ impl<T: Numeric, const S: Shape, U: ToPrimitive> From<[U; S.num_elems()]> for Ge
 //         );
 //     }
 
-//     #[test]
-//     #[allow(clippy::zero_prefixed_literal)]
-//     fn test_from_fn() {
-//         let f = |idx| {
-//             let [i, j, k] = idx;
-//             let s = format!("{}{}{}", i, j, k);
-//             s.parse().unwrap()
-//         };
-//         let t1: GenericTensor<f64, { Shape::Rank3([2; 3]) }> = GenericTensor::from_fn(f);
-//         assert_eq!(
-//             t1,
-//             GenericTensor::<f64, { Shape::Rank3([2; 3]) }>::from([
-//                 000, 001, 010, 011, 100, 101, 110, 111
-//             ]),
-//         );
+#[test]
+#[allow(clippy::zero_prefixed_literal)]
+fn test_from_fn() {
+    let f = |idx| {
+        let [i, j, k] = idx;
+        let s = format!("{}{}{}", i, j, k);
+        s.parse().unwrap()
+    };
+    let t1: GenericTensor<f64, { Shape::Rank3([2; 3]) }> = GenericTensor::from_fn(f);
+    assert_eq!(
+        t1,
+        GenericTensor::<f64, { Shape::Rank3([2; 3]) }>::from([
+            000, 001, 010, 011, 100, 101, 110, 111
+        ]),
+    );
 
-//         let t2: GenericTensor<f64, { Shape::Rank3([1, 2, 3]) }> = GenericTensor::from_fn(f);
-//         assert_eq!(
-//             t2,
-//             GenericTensor::<f64, { Shape::Rank3([1, 2, 3]) }>::from([000, 001, 002, 010, 011, 012]),
-//         );
+    let t2: GenericTensor<f64, { Shape::Rank3([1, 2, 3]) }> = GenericTensor::from_fn(f);
+    assert_eq!(
+        t2,
+        GenericTensor::<f64, { Shape::Rank3([1, 2, 3]) }>::from([000, 001, 002, 010, 011, 012]),
+    );
 
-//         let t3: GenericTensor<f64, { Shape::Rank3([3, 2, 1]) }> = GenericTensor::from_fn(f);
-//         assert_eq!(
-//             t3,
-//             GenericTensor::<f64, { Shape::Rank3([3, 2, 1]) }>::from([000, 010, 100, 110, 200, 210]),
-//         );
+    let t3: GenericTensor<f64, { Shape::Rank3([3, 2, 1]) }> = GenericTensor::from_fn(f);
+    assert_eq!(
+        t3,
+        GenericTensor::<f64, { Shape::Rank3([3, 2, 1]) }>::from([000, 010, 100, 110, 200, 210]),
+    );
 
-//         let t4: GenericTensor<f64, { Shape::Rank3([2, 3, 1]) }> = GenericTensor::from_fn(f);
-//         assert_eq!(
-//             t4,
-//             GenericTensor::<f64, { Shape::Rank3([2, 3, 1]) }>::from([000, 010, 020, 100, 110, 120]),
-//         );
-//     }
+    let t4: GenericTensor<f64, { Shape::Rank3([2, 3, 1]) }> = GenericTensor::from_fn(f);
+    assert_eq!(
+        t4,
+        GenericTensor::<f64, { Shape::Rank3([2, 3, 1]) }>::from([000, 010, 020, 100, 110, 120]),
+    );
+}
 
 //     #[test]
 //     fn test_math() {
