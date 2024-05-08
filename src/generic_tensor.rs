@@ -141,11 +141,14 @@ impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S> {
         Self { storage }
     }
 
-    //     fn from_fn(f: impl Fn(Self::Idx) -> T) -> Self {
-    //         (0..Self::storage_size())
-    //             .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
-    //             .collect()
-    //     }
+    // fn from_fn(f: impl Fn([usize; S.rank()]) -> T) -> Self
+    // where
+    //     [(); S.rank()]:,
+    // {
+    //     (0..Self::storage_size())
+    //         .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
+    //         .collect()
+    // }
 }
 
 impl<T: Numeric, const S: Shape, U: ToPrimitive> FromIterator<U> for GenericTensor<T, S> {
@@ -200,6 +203,15 @@ impl<'a, T: Numeric, const S: Shape> Add<&'a Self> for GenericTensor<T, S> {
 
     fn add(self, other: &Self) -> Self::Output {
         self.zip(other).map(|vs| vs[0] + vs[1])
+    }
+}
+
+impl<T: Numeric, const S: Shape> Index<[usize; S.rank()]> for GenericTensor<T, S> {
+    type Output = T;
+
+    fn index(&self, idx: [usize; S.rank()]) -> &Self::Output {
+        let i = Self::storage_idx(idx).unwrap();
+        self.storage.index(i)
     }
 }
 

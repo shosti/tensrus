@@ -1,6 +1,6 @@
 use num::{One, Zero};
 use std::fmt::Debug;
-use std::ops::{Add, Mul};
+use std::ops::{Add, Index, Mul};
 
 use crate::numeric::Numeric;
 use crate::shape::Shape;
@@ -36,7 +36,6 @@ pub trait Tensor: Clone + 'static
 {
     type T: Numeric;
     const S: Shape;
-    // type Idx: Copy + 'static;
 
     fn repeat(n: Self::T) -> Self;
     fn zeros() -> Self {
@@ -45,22 +44,25 @@ pub trait Tensor: Clone + 'static
     fn ones() -> Self {
         Self::repeat(Self::T::one())
     }
-    // fn from_fn(f: impl Fn(Self::Idx) -> Self::T) -> Self;
+    // fn from_fn(f: impl Fn([usize; Self::S.rank()]) -> Self::T) -> Self
+    // where
+    //     [(); Self::S.rank()]:;
 
-    // fn get(&self, idx: Self::Idx) -> Self::T;
 
     fn map(self, f: impl Fn(Self::T) -> Self::T) -> Self;
     fn zip<'a>(self, other: &'a Self) -> TensorZipper<'a, Self> {
         TensorZipper::new(self, other)
     }
-    // fn set(self, idx: Self::Idx, val: Self::T) -> Self;
     fn reduce<'a>(self, others: Vec<&'a Self>, f: impl Fn(Vec<Self::T>) -> Self::T) -> Self;
     fn try_slice<'a, const D: usize>(
         &'a self,
         idx: [usize; D],
     ) -> Result<Slice<'a, Self::T, { Self::S.downrank(D) }>, IndexError>;
 
-    fn slice<'a, const D: usize>(&'a self, idx: [usize; D]) -> Slice<'a, Self::T, { Self::S.downrank(D) }> {
+    fn slice<'a, const D: usize>(
+        &'a self,
+        idx: [usize; D],
+    ) -> Slice<'a, Self::T, { Self::S.downrank(D) }> {
         self.try_slice(idx).unwrap()
     }
 
