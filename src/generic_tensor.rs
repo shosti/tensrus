@@ -154,21 +154,19 @@ where
 impl<T: Numeric, const S: Shape> Mul<T> for GenericTensor<T, S> {
     type Output = Self;
 
-    fn mul(self, other: T) -> Self::Output
-    {
-        todo!()
-        // Self::from_fn(|idx| self[idx] * other)
+    fn mul(self, other: T) -> Self::Output {
+        let mut storage = self.storage;
+        storage.iter_mut().for_each(|x| *x *= other);
+        Self { storage }
     }
 }
 
-// impl<T: Numeric, const S: Shape> Mul<Scalar<T>> for GenericTensor<T, S>
-// where
-//     [(); S.rank()]:,
+// impl<T: Numeric, const S: Shape> Mul<&Scalar<T>> for GenericTensor<T, S>
 // {
 //     type Output = Self;
 
-//     fn mul(self, other: Scalar<T>) -> Self::Output {
-//         Self::from_fn(|idx| self.get(idx) * other.val())
+//     fn mul(self, other: &Scalar<T>) -> Self::Output {
+//         self * other.val()
 //     }
 // }
 
@@ -195,158 +193,115 @@ impl<T: Numeric, const S: Shape, U: ToPrimitive> From<[U; S.num_elems()]> for Ge
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use rand::prelude::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::prelude::*;
 
-//     #[test]
-//     fn test_from_iterator() {
-//         let xs: [i64; 3] = [1, 2, 3];
-//         let iter = xs.iter().cycle().copied();
+    #[test]
+    fn test_from_iterator() {
+        let xs: [i64; 3] = [1, 2, 3];
+        let iter = xs.iter().cycle().copied();
 
-//         let t1: GenericTensor<f64, { Shape::Rank0([]) }> = iter.clone().collect();
-//         assert_eq!(t1, GenericTensor::<f64, { Shape::Rank0([]) }>::from([1.0]));
+        let t1: GenericTensor<f64, { Shape::Rank0([]) }> = iter.clone().collect();
+        assert_eq!(t1, GenericTensor::<f64, { Shape::Rank0([]) }>::from([1.0]));
 
-//         let t2: GenericTensor<f64, { Shape::Rank2([4, 2]) }> = iter.clone().collect();
-//         assert_eq!(
-//             t2,
-//             GenericTensor::<f64, { Shape::Rank2([4, 2]) }>::from([
-//                 1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0
-//             ])
-//         );
+        let t2: GenericTensor<f64, { Shape::Rank2([4, 2]) }> = iter.clone().collect();
+        assert_eq!(
+            t2,
+            GenericTensor::<f64, { Shape::Rank2([4, 2]) }>::from([
+                1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0
+            ])
+        );
 
-//         let t3: GenericTensor<f64, { Shape::Rank2([4, 2]) }> = xs.iter().copied().collect();
-//         assert_eq!(
-//             t3,
-//             GenericTensor::<f64, { Shape::Rank2([4, 2]) }>::from([
-//                 1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0
-//             ])
-//         );
-//     }
+        let t3: GenericTensor<f64, { Shape::Rank2([4, 2]) }> = xs.iter().copied().collect();
+        assert_eq!(
+            t3,
+            GenericTensor::<f64, { Shape::Rank2([4, 2]) }>::from([
+                1.0, 2.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0
+            ])
+        );
+    }
 
-#[test]
-#[allow(clippy::zero_prefixed_literal)]
-fn test_from_fn() {
-    let f = |idx| {
-        let [i, j, k] = idx;
-        let s = format!("{}{}{}", i, j, k);
-        s.parse().unwrap()
-    };
-    let t1: GenericTensor<f64, { Shape::Rank3([2; 3]) }> = GenericTensor::from_fn(f);
-    assert_eq!(
-        t1,
-        GenericTensor::<f64, { Shape::Rank3([2; 3]) }>::from([
-            000, 001, 010, 011, 100, 101, 110, 111
-        ]),
-    );
+    #[test]
+    #[allow(clippy::zero_prefixed_literal)]
+    fn test_from_fn() {
+        let f = |idx| {
+            let [i, j, k] = idx;
+            let s = format!("{}{}{}", i, j, k);
+            s.parse().unwrap()
+        };
+        let t1: GenericTensor<f64, { Shape::Rank3([2; 3]) }> = GenericTensor::from_fn(f);
+        assert_eq!(
+            t1,
+            GenericTensor::<f64, { Shape::Rank3([2; 3]) }>::from([
+                000, 001, 010, 011, 100, 101, 110, 111
+            ]),
+        );
 
-    let t2: GenericTensor<f64, { Shape::Rank3([1, 2, 3]) }> = GenericTensor::from_fn(f);
-    assert_eq!(
-        t2,
-        GenericTensor::<f64, { Shape::Rank3([1, 2, 3]) }>::from([000, 001, 002, 010, 011, 012]),
-    );
+        let t2: GenericTensor<f64, { Shape::Rank3([1, 2, 3]) }> = GenericTensor::from_fn(f);
+        assert_eq!(
+            t2,
+            GenericTensor::<f64, { Shape::Rank3([1, 2, 3]) }>::from([000, 001, 002, 010, 011, 012]),
+        );
 
-    let t3: GenericTensor<f64, { Shape::Rank3([3, 2, 1]) }> = GenericTensor::from_fn(f);
-    assert_eq!(
-        t3,
-        GenericTensor::<f64, { Shape::Rank3([3, 2, 1]) }>::from([000, 010, 100, 110, 200, 210]),
-    );
+        let t3: GenericTensor<f64, { Shape::Rank3([3, 2, 1]) }> = GenericTensor::from_fn(f);
+        assert_eq!(
+            t3,
+            GenericTensor::<f64, { Shape::Rank3([3, 2, 1]) }>::from([000, 010, 100, 110, 200, 210]),
+        );
 
-    let t4: GenericTensor<f64, { Shape::Rank3([2, 3, 1]) }> = GenericTensor::from_fn(f);
-    assert_eq!(
-        t4,
-        GenericTensor::<f64, { Shape::Rank3([2, 3, 1]) }>::from([000, 010, 020, 100, 110, 120]),
-    );
+        let t4: GenericTensor<f64, { Shape::Rank3([2, 3, 1]) }> = GenericTensor::from_fn(f);
+        assert_eq!(
+            t4,
+            GenericTensor::<f64, { Shape::Rank3([2, 3, 1]) }>::from([000, 010, 020, 100, 110, 120]),
+        );
+    }
+
+    #[test]
+    fn test_math() {
+        let mut x: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> =
+            GenericTensor::from([1, 2, 3, 4]);
+        let y: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> = GenericTensor::from([5, 6, 7, 8]);
+        let a: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> =
+            GenericTensor::from([6, 8, 10, 12]);
+
+        assert_eq!(x.clone() + &y, a);
+
+        x = x + &y;
+        assert_eq!(x.clone(), a);
+
+        let b: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> =
+            GenericTensor::from([12, 16, 20, 24]);
+        assert_eq!(x.clone() * 2.0, b);
+
+        x = x * 2.0;
+        assert_eq!(x, b);
+    }
+
+    #[test]
+    fn test_to_iter() {
+        let t: GenericTensor<f64, { Shape::Rank2([2; 2]) }> = (0..4).collect();
+        let vals: Vec<f64> = t.into_iter().collect();
+        assert_eq!(vals, vec![0.0, 1.0, 2.0, 3.0]);
+    }
+
+    #[test]
+    fn test_map() {
+        let t: GenericTensor<f64, { Shape::Rank2([2; 2]) }> = GenericTensor::from([1, 2, 3, 4]);
+        let u = t.map(&|val| val * 2.0);
+
+        let want: GenericTensor<f64, { Shape::Rank2([2; 2]) }> = GenericTensor::from([2, 4, 6, 8]);
+        assert_eq!(u, want);
+    }
+
+    #[test]
+    fn test_reshape() {
+        let t = GenericTensor::<f64, { Shape::Rank2([3, 2]) }>::from([1, 2, 3, 4, 5, 6]);
+        let t2 = t.clone().reshape::<{ Shape::Rank2([2, 3]) }>();
+        let t3 = t.clone().reshape::<{ Shape::Rank1([6]) }>();
+
+        assert_eq!(t[[1, 0]], t2[[0, 2]]);
+        assert_eq!(t[[2, 1]], t3[[5]]);
+    }
 }
-
-//     #[test]
-//     fn test_math() {
-//         let mut x: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> =
-//             GenericTensor::from([1, 2, 3, 4]);
-//         let y: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> = GenericTensor::from([5, 6, 7, 8]);
-//         let a: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> =
-//             GenericTensor::from([6, 8, 10, 12]);
-
-//         assert_eq!(x.clone() + &y, a);
-
-//         x = x + &y;
-//         assert_eq!(x.clone(), a);
-
-//         let b: GenericTensor<f64, { Shape::Rank3([1, 2, 2]) }> =
-//             GenericTensor::from([12, 16, 20, 24]);
-//         assert_eq!(x.clone() * 2.0, b);
-
-//         x = x * 2.0;
-//         assert_eq!(x, b);
-//     }
-
-//     #[test]
-//     fn test_to_iter() {
-//         let t: GenericTensor<f64, { Shape::Rank2([2; 2]) }> = (0..4).collect();
-//         let vals: Vec<f64> = t.into_iter().collect();
-//         assert_eq!(vals, vec![0.0, 1.0, 2.0, 3.0]);
-//     }
-
-//     #[test]
-//     fn get_and_set() {
-//         test_get_and_set(GenericTensor::<f64, { Shape::Rank0([]) }>::zeros());
-//         test_get_and_set(GenericTensor::<f64, { Shape::Rank1([24]) }>::zeros());
-//         test_get_and_set(GenericTensor::<f64, { Shape::Rank2([8, 72]) }>::zeros());
-//         test_get_and_set(GenericTensor::<f64, { Shape::Rank3([243, 62, 101]) }>::zeros());
-//         test_get_and_set(GenericTensor::<f64, { Shape::Rank4([1, 99, 232, 8]) }>::zeros());
-//     }
-
-//     fn test_get_and_set<const S: Shape>(t: GenericTensor<f64, S>) {
-//         let mut rng = rand::thread_rng();
-//         let mut x = t;
-//         for _ in 0..10 {
-//             let mut idx = [0; S.rank()];
-//             for (dim, cur) in idx.iter_mut().enumerate() {
-//                 *cur = rng.gen_range(0..S[dim]);
-//             }
-//             let val: f64 = rng.gen();
-//             x = x.set(idx, val);
-
-//             assert_eq!(x.get(idx), val);
-//         }
-//     }
-
-//     #[test]
-//     fn test_map() {
-//         let t: GenericTensor<f64, { Shape::Rank2([2; 2]) }> = GenericTensor::from([1, 2, 3, 4]);
-//         let u = t.map(&|val| val * 2.0);
-
-//         let want: GenericTensor<f64, { Shape::Rank2([2; 2]) }> = GenericTensor::from([2, 4, 6, 8]);
-//         assert_eq!(u, want);
-//     }
-
-//     #[test]
-//     fn test_subtensor() {
-//         let t3: GenericTensor<f64, { Shape::Rank3([2, 3, 4]) }> = (1..25).collect();
-
-//         let t2 = t3.subtensor(1).unwrap();
-//         let t2_expected: GenericTensor<f64, { Shape::Rank2([3, 4]) }> = (13..25).collect();
-//         assert_eq!(t2, t2_expected);
-//         assert_eq!(t3.subtensor(2), Err(IndexError {}));
-
-//         let t1 = t2.subtensor(1).unwrap();
-//         let t1_expected: GenericTensor<f64, { Shape::Rank1([4]) }> =
-//             GenericTensor::from([17, 18, 19, 20]);
-//         assert_eq!(t1, t1_expected);
-
-//         let t0 = t1.subtensor(1).unwrap();
-//         let t0_expected: GenericTensor<f64, { Shape::Rank0([]) }> = GenericTensor::from([18]);
-//         assert_eq!(t0, t0_expected);
-//     }
-
-//     #[test]
-//     fn test_reshape() {
-//         let t = GenericTensor::<f64, { Shape::Rank2([3, 2]) }>::from([1, 2, 3, 4, 5, 6]);
-//         let t2 = t.clone().reshape::<{ Shape::Rank2([2, 3]) }>();
-//         let t3 = t.clone().reshape::<{ Shape::Rank1([6]) }>();
-
-//         assert_eq!(t.get([1, 0]), t2.get([0, 2]));
-//         assert_eq!(t.get([2, 1]), t3.get([5]));
-//     }
-// }
