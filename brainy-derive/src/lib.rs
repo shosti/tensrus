@@ -109,14 +109,14 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         //     }
         // }
 
-        // impl #impl_generics std::ops::Index<[usize; #shape.rank()]> for #name #type_generics #where_clause {
-        //     type Output = T;
+        impl #impl_generics std::ops::Index<[usize; #shape.rank()]> for #name #type_generics #where_clause {
+            type Output = T;
 
-        //     fn index(&self, idx: [usize; #shape.rank()]) -> &Self::Output {
-        //         let i = #wrapped_type::storage_idx(idx).unwrap();
-        //         self.0.storage.index(i)
-        //     }
-        // }
+            fn index(&self, idx: [usize; #shape.rank()]) -> &Self::Output {
+                let i = #shape.storage_idx(&idx).unwrap();
+                self.0.storage.index(i)
+            }
+        }
 
         impl #impl_generics Clone for #name #type_generics #where_clause {
             fn clone(&self) -> Self {
