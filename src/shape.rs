@@ -81,7 +81,7 @@ seq!(R in 0..6 {
                                 return Shape::Rank~R2(new_dims).downrank(n - 1);
                             }
                         });
-                        panic!(concat!("cannot take subshape of shape with rank ", stringify!(R)));
+                        panic!(concat!("cannot downrank shape with rank ", stringify!(R)));
                     },
                 )*
             }
@@ -116,20 +116,20 @@ mod tests {
 
     #[test]
     fn test_stride() {
-        assert_eq!(Shape::Rank0([]).stride(), []);
-        assert_eq!(Shape::Rank2([2, 5]).stride(), [5, 1]);
-        assert_eq!(Shape::Rank3([2, 3, 3]).stride(), [9, 3, 1]);
+        assert_eq!(Shape::Rank0([]).stride(), [0; 6]);
+        assert_eq!(Shape::Rank2([2, 5]).stride(), [5, 1, 0, 0, 0, 0]);
+        assert_eq!(Shape::Rank3([2, 3, 3]).stride(), [9, 3, 1, 0, 0, 0]);
     }
 
     #[test]
-    fn test_subshape() {
-        assert_eq!(Shape::Rank1([12]).subshape(), Shape::Rank0([]));
-        assert_eq!(Shape::Rank3([2, 3, 4]).subshape(), Shape::Rank2([3, 4]));
+    fn test_downrank() {
+        assert_eq!(Shape::Rank1([12]).downrank(1), Shape::Rank0([]));
+        assert_eq!(Shape::Rank3([2, 3, 4]).downrank(1), Shape::Rank2([3, 4]));
     }
 
     #[test]
     #[should_panic]
-    fn test_rank0_subshape() {
-        Shape::Rank0([]).subshape();
+    fn test_rank0_downrank() {
+        Shape::Rank0([]).downrank(1);
     }
 }
