@@ -19,7 +19,7 @@ seq!(R in 0..6 {
             }
         }
 
-        pub const fn len(self) -> usize {
+        pub const fn num_elems(self) -> usize {
             #[allow(unused_comparisons)]
             match self {
                 #(
@@ -109,9 +109,9 @@ mod tests {
 
     #[test]
     fn test_len() {
-        assert_eq!(Shape::Rank0([]).len(), 1);
-        assert_eq!(Shape::Rank2([2, 5]).len(), 10);
-        assert_eq!(Shape::Rank3([2, 3, 3]).len(), 18);
+        assert_eq!(Shape::Rank0([]).num_elems(), 1);
+        assert_eq!(Shape::Rank2([2, 5]).num_elems(), 10);
+        assert_eq!(Shape::Rank3([2, 3, 3]).num_elems(), 18);
     }
 
     #[test]

@@ -15,7 +15,7 @@ pub struct GenericTensor<T: Numeric, const S: Shape> {
 
 impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
     fn storage_size() -> usize {
-        S.len()
+        S.num_elems()
     }
 
     fn idx_from_storage_idx(idx: usize) -> Result<[usize; S.rank()], IndexError> {
@@ -58,7 +58,7 @@ impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
 
     pub fn reshape<const S2: Shape>(self) -> GenericTensor<T, S2>
     where
-        Assert<{ S.len() == S2.len() }>: IsTrue,
+        Assert<{ S.num_elems() == S2.num_elems() }>: IsTrue,
     {
         GenericTensor {
             storage: self.storage,
@@ -215,8 +215,8 @@ impl<T: Numeric, const S: Shape> Index<[usize; S.rank()]> for GenericTensor<T, S
     }
 }
 
-impl<T: Numeric, const S: Shape, U: ToPrimitive> From<[U; S.len()]> for GenericTensor<T, S> {
-    fn from(arr: [U; S.len()]) -> Self {
+impl<T: Numeric, const S: Shape, U: ToPrimitive> From<[U; S.num_elems()]> for GenericTensor<T, S> {
+    fn from(arr: [U; S.num_elems()]) -> Self {
         arr.into_iter().collect()
     }
 }
