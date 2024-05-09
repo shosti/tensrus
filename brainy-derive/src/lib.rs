@@ -31,9 +31,8 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let (f_impl_generics, _, _) = f_generics.split_for_impl();
     let (impl_generics_with_lifetime, _, _) = generics_with_lifetime.split_for_impl();
     let gen = quote! {
-        impl #impl_generics crate::tensor::Tensor for #name #type_generics #where_clause {
+        impl #impl_generics crate::tensor::Tensor<#shape> for #name #type_generics #where_clause {
             type T = T;
-            const S: Shape = #shape;
 
             fn map(self, f: impl Fn(Self::T) -> Self::T) -> Self {
                 Self(self.0.map(f))
@@ -46,7 +45,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             fn try_slice<'a, const D: usize>(
                 &'a self,
                 idx: [usize; D],
-            ) -> Result<crate::slice::Slice<'a, Self::T, { Self::S.downrank(D) }>, crate::tensor::IndexError> {
+            ) -> Result<crate::slice::Slice<'a, Self::T, { #shape.downrank(D) }>, crate::tensor::IndexError> {
                 self.0.try_slice(idx)
             }
 
@@ -54,9 +53,9 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 Self(#wrapped_type::repeat(n))
             }
 
-            fn from_fn(f: impl Fn([usize; Self::S.rank()]) -> Self::T) -> Self
+            fn from_fn(f: impl Fn([usize; #shape.rank()]) -> Self::T) -> Self
             where
-                [(); Self::S.rank()]:,
+                [(); #shape.rank()]:,
             {
                 Self(#wrapped_type::from_fn(f))
             }

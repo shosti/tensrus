@@ -30,11 +30,9 @@ pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
     s[i]
 }
 
-pub trait Tensor: Clone + 'static
-// Debug + Clone + for<'a> Add<&'a Self, Output = Self> + Mul<Self::T> + 'static
+pub trait Tensor<const S: Shape>: Clone + 'static
 {
     type T: Numeric;
-    const S: Shape;
 
     fn repeat(n: Self::T) -> Self;
     fn zeros() -> Self {
@@ -43,9 +41,9 @@ pub trait Tensor: Clone + 'static
     fn ones() -> Self {
         Self::repeat(Self::T::one())
     }
-    fn from_fn(f: impl Fn([usize; Self::S.rank()]) -> Self::T) -> Self
+    fn from_fn(f: impl Fn([usize; S.rank()]) -> Self::T) -> Self
     where
-        [(); Self::S.rank()]:;
+        [(); S.rank()]:;
 
 
     fn map(self, f: impl Fn(Self::T) -> Self::T) -> Self;
@@ -56,24 +54,24 @@ pub trait Tensor: Clone + 'static
     fn try_slice<'a, const D: usize>(
         &'a self,
         idx: [usize; D],
-    ) -> Result<Slice<'a, Self::T, { Self::S.downrank(D) }>, IndexError>;
+    ) -> Result<Slice<'a, Self::T, { S.downrank(D) }>, IndexError>;
 
     fn slice<'a, const D: usize>(
         &'a self,
         idx: [usize; D],
-    ) -> Slice<'a, Self::T, { Self::S.downrank(D) }> {
+    ) -> Slice<'a, Self::T, { S.downrank(D) }> {
         self.try_slice(idx).unwrap()
     }
 
     fn nth_elem(&self, i: usize) -> Result<Self::T, IndexError>;
 }
 
-pub struct TensorZipper<'a, Tn: Tensor> {
+pub struct TensorZipper<'a, const S: Shape, Tn: Tensor<S>> {
     t: Tn,
     others: Vec<&'a Tn>,
 }
 
-impl<'a, Tn: Tensor> TensorZipper<'a, Tn> {
+impl<'a, S, Tn: Tensor<S>> TensorZipper<'a, S, Tn> {
     pub fn new(t: Tn, other: &'a Tn) -> Self {
         Self {
             t,
@@ -92,9 +90,9 @@ impl<'a, Tn: Tensor> TensorZipper<'a, Tn> {
     }
 }
 
-pub struct TensorIterator<'a, Tn>
+pub struct TensorIterator<'a, S, Tn<S>>
 where
-    Tn: Tensor,
+    Tn: Tensor<S>,
 {
     t: &'a Tn,
     cur: usize,

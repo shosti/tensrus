@@ -18,16 +18,14 @@ impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
         S.num_elems()
     }
 
-    // Extra type param is to hack around the annoying S vs Self::S difference
-    // :(
-    fn idx_from_storage_idx<const S2: Shape>(idx: usize) -> Result<[usize; S2.rank()], IndexError> {
+    fn idx_from_storage_idx(idx: usize) -> Result<[usize; S.rank()], IndexError> {
         if idx >= Self::storage_size() {
             return Err(IndexError {});
         }
 
-        let mut res = [0; S2.rank()];
+        let mut res = [0; S.rank()];
         let mut i = idx;
-        let stride = S2.stride();
+        let stride = S.stride();
 
         for (dim, item) in res.iter_mut().enumerate() {
             let s: usize = stride[dim];
@@ -49,14 +47,13 @@ impl<T: Numeric, const S: Shape> GenericTensor<T, S> {
     }
 }
 
-impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S> {
+impl<T: Numeric, const S: Shape> Tensor<S> for GenericTensor<T, S> {
     type T = T;
-    const S: Shape = S;
 
     fn try_slice<'a, const D: usize>(
         &'a self,
         idx: [usize; D],
-    ) -> Result<Slice<'a, T, { Self::S.downrank(D) }>, IndexError> {
+    ) -> Result<Slice<'a, T, { S.downrank(D) }>, IndexError> {
         Slice::new::<D, S>(&self.storage, idx)
     }
     fn map(self, f: impl Fn(T) -> T) -> Self {
@@ -94,13 +91,13 @@ impl<T: Numeric, const S: Shape> Tensor for GenericTensor<T, S> {
         }
     }
 
-    fn from_fn(f: impl Fn([usize; Self::S.rank()]) -> T) -> Self
+    fn from_fn(f: impl Fn([usize; S.rank()]) -> T) -> Self
     where
-        [(); Self::S.rank()]:,
+        [(); S.rank()]:,
     {
         (0..Self::storage_size())
             .map(|i| {
-                let idx: [usize; Self::S.rank()] = Self::idx_from_storage_idx(i).unwrap();
+                let idx: [usize; S.rank()] = Self::idx_from_storage_idx(i).unwrap();
                 f(idx)
             })
             .collect()
