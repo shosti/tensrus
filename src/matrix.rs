@@ -163,6 +163,17 @@ where
     }
 }
 
+impl<'a, T: Numeric, const M: usize, const N: usize> From<Slice<'a, T, 2, { matrix_shape(M, N) }>>
+    for Matrix<T, M, N>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+{
+    fn from(s: Slice<'a, T, 2, { matrix_shape(M, N) }>) -> Self {
+        let t = s.into();
+        Self(t)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

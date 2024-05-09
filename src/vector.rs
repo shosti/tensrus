@@ -59,6 +59,16 @@ where
     }
 }
 
+impl<'a, T: Numeric, const N: usize> From<Slice<'a, T, 1, { vector_shape(N) }>> for Vector<T, N>
+where
+    [(); num_elems(1, vector_shape(N))]:,
+{
+    fn from(s: Slice<'a, T, 1, { vector_shape(N) }>) -> Self {
+        let t = s.into();
+        Self(t)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
