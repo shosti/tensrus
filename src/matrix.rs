@@ -1,6 +1,7 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{num_elems, IndexError, Tensor, Shape};
+use crate::slice::Slice;
+use crate::tensor::{downrank, num_elems, IndexError, Shape, SlicedTensor, Tensor};
 use crate::vector::{vector_shape, Vector};
 use cblas::{Layout, Transpose};
 use num::ToPrimitive;
@@ -146,6 +147,19 @@ where
         }
 
         out
+    }
+}
+
+impl<T: Numeric, const M: usize, const N: usize> SlicedTensor<T, 2, { matrix_shape(M, N) }>
+    for Matrix<T, M, N>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+{
+    fn try_slice<'a, const D: usize>(
+        &'a self,
+        idx: [usize; D],
+    ) -> Result<Slice<'a, T, { 2 - D }, { downrank(2, matrix_shape(M, N), D) }>, IndexError> {
+        self.0.try_slice(idx)
     }
 }
 
