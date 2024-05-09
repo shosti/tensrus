@@ -1,6 +1,7 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
-use crate::tensor::{num_elems, Tensor, Shape};
+use crate::slice::Slice;
+use crate::tensor::{downrank, num_elems, IndexError, Shape, SlicedTensor, Tensor};
 use num::ToPrimitive;
 
 pub const fn vector_shape(n: usize) -> Shape {
@@ -43,6 +44,18 @@ where
 {
     fn from(val: Vector<T, N>) -> Self {
         val.0
+    }
+}
+
+impl<T: Numeric, const N: usize> SlicedTensor<T, 1, { vector_shape(N) }> for Vector<T, N>
+where
+    [(); num_elems(1, vector_shape(N))]:,
+{
+    fn try_slice<'a, const D: usize>(
+        &'a self,
+        idx: [usize; D],
+    ) -> Result<Slice<'a, T, { 1 - D }, { downrank(1, vector_shape(N), D) }>, IndexError> {
+        self.0.try_slice(idx)
     }
 }
 
