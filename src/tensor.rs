@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use std::ops::{Add, Mul};
 
 use crate::numeric::Numeric;
+use crate::slice::Slice;
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
@@ -78,6 +79,20 @@ pub trait Tensor:
 
     fn default_idx() -> Self::Idx;
     fn next_idx(idx: Self::Idx) -> Option<Self::Idx>;
+}
+
+pub trait SlicedTensor<T: Numeric, const R: usize, const S: Shape> {
+    fn try_slice<'a, const D: usize>(
+        &'a self,
+        idx: [usize; D],
+    ) -> Result<Slice<'a, T, { R - D }, { downrank(R, S, D) }>, IndexError>;
+
+    fn slice<'a, const D: usize>(
+        &'a self,
+        idx: [usize; D],
+    ) -> Slice<'a, T, { R - D }, { downrank(R, S, D) }> {
+        self.try_slice(idx).unwrap()
+    }
 }
 
 pub struct TensorZipper<'a, Tn: Tensor> {

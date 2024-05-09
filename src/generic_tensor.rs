@@ -1,6 +1,9 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use crate::tensor::{num_elems, stride, IndexError, Shape, Tensor, TensorIterator};
+use crate::slice::Slice;
+use crate::tensor::{
+    downrank, num_elems, stride, IndexError, Shape, SlicedTensor, Tensor, TensorIterator,
+};
 use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
 use std::ops::{Add, Mul};
@@ -167,6 +170,15 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
         (0..Self::storage_size())
             .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
             .collect()
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: Shape> SlicedTensor<T, R, S> for GenericTensor<T, R, S> {
+    fn try_slice<'a, const D: usize>(
+        &'a self,
+        idx: [usize; D],
+    ) -> Result<Slice<'a, T, { R - D }, { downrank(R, S, D) }>, IndexError> {
+        Slice::new::<D, R, S>(&self.storage, idx)
     }
 }
 
