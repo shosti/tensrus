@@ -29,6 +29,20 @@ pub const fn shape_dim(s: Shape, i: usize) -> usize {
     s[i]
 }
 
+pub const fn downrank(r: usize, s: Shape, n: usize) -> Shape {
+    if n > r {
+        panic!("downranking to negative rank");
+    }
+    let mut new_shape = [0; 5];
+    let mut i = 0;
+    while i < r - n {
+        new_shape[i] = s[i + n];
+        i += 1;
+    }
+
+    new_shape
+}
+
 pub fn stride<const R: usize, const S: Shape>() -> [usize; R] {
     let mut res = [0; R];
     for (dim, item) in res.iter_mut().enumerate() {
@@ -127,5 +141,19 @@ where
                 Some(item)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_downrank() {
+        let s1 = [7, 6, 5, 0, 0];
+        assert_eq!(downrank(3, s1, 0), s1);
+        assert_eq!(downrank(3, s1, 1), [6, 5, 0, 0, 0]);
+        assert_eq!(downrank(3, s1, 2), [5, 0, 0, 0, 0]);
+        assert_eq!(downrank(3, s1, 3), [0, 0, 0, 0, 0]);
     }
 }
