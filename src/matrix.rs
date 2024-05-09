@@ -155,10 +155,10 @@ impl<T: Numeric, const M: usize, const N: usize> SlicedTensor<T, 2, { matrix_sha
 where
     [(); num_elems(2, matrix_shape(M, N))]:,
 {
-    fn try_slice<'a, const D: usize>(
-        &'a self,
+    fn try_slice<const D: usize>(
+        &self,
         idx: [usize; D],
-    ) -> Result<Slice<'a, T, { 2 - D }, { downrank(2, matrix_shape(M, N), D) }>, IndexError> {
+    ) -> Result<Slice<T, { 2 - D }, { downrank(2, matrix_shape(M, N), D) }>, IndexError> {
         self.0.try_slice(idx)
     }
 }

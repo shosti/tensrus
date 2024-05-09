@@ -51,10 +51,10 @@ impl<T: Numeric, const N: usize> SlicedTensor<T, 1, { vector_shape(N) }> for Vec
 where
     [(); num_elems(1, vector_shape(N))]:,
 {
-    fn try_slice<'a, const D: usize>(
-        &'a self,
+    fn try_slice<const D: usize>(
+        &self,
         idx: [usize; D],
-    ) -> Result<Slice<'a, T, { 1 - D }, { downrank(1, vector_shape(N), D) }>, IndexError> {
+    ) -> Result<Slice<T, { 1 - D }, { downrank(1, vector_shape(N), D) }>, IndexError> {
         self.0.try_slice(idx)
     }
 }

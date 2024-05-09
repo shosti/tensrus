@@ -71,26 +71,23 @@ pub trait Tensor:
     fn get(&self, idx: Self::Idx) -> Self::T;
 
     fn map(self, f: impl Fn(Self::T) -> Self::T) -> Self;
-    fn zip<'a>(self, other: &'a Self) -> TensorZipper<'a, Self> {
+    fn zip(self, other: &Self) -> TensorZipper<Self> {
         TensorZipper::new(self, other)
     }
     fn set(self, idx: Self::Idx, val: Self::T) -> Self;
-    fn reduce<'a>(self, others: Vec<&'a Self>, f: impl Fn(Vec<Self::T>) -> Self::T) -> Self;
+    fn reduce(self, others: Vec<&Self>, f: impl Fn(Vec<Self::T>) -> Self::T) -> Self;
 
     fn default_idx() -> Self::Idx;
     fn next_idx(idx: Self::Idx) -> Option<Self::Idx>;
 }
 
 pub trait SlicedTensor<T: Numeric, const R: usize, const S: Shape> {
-    fn try_slice<'a, const D: usize>(
-        &'a self,
+    fn try_slice<const D: usize>(
+        &self,
         idx: [usize; D],
-    ) -> Result<Slice<'a, T, { R - D }, { downrank(R, S, D) }>, IndexError>;
+    ) -> Result<Slice<T, { R - D }, { downrank(R, S, D) }>, IndexError>;
 
-    fn slice<'a, const D: usize>(
-        &'a self,
-        idx: [usize; D],
-    ) -> Slice<'a, T, { R - D }, { downrank(R, S, D) }> {
+    fn slice<const D: usize>(&self, idx: [usize; D]) -> Slice<T, { R - D }, { downrank(R, S, D) }> {
         self.try_slice(idx).unwrap()
     }
 }

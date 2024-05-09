@@ -16,8 +16,8 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> Slice<'a, T, R, S> {
         storage: &'a Vec<T>,
         idx: [usize; D],
     ) -> Result<Self, IndexError> {
-        for dim in 0..D {
-            if idx[dim] >= S2[dim] {
+        for (i, &dim) in idx.iter().enumerate().take(D) {
+            if dim >= S2[i] {
                 return Err(IndexError {});
             }
         }
@@ -38,11 +38,12 @@ impl<'a, T: Numeric> Slice<'a, T, 0, { scalar_shape() }> {
     }
 }
 
-impl<'a, T: Numeric, const R: usize, const S: Shape> Into<GenericTensor<T, R, S>>
-    for Slice<'a, T, R, S>
+impl<'a, T: Numeric, const R: usize, const S: Shape> From<Slice<'a, T, R, S>>
+    for GenericTensor<T, R, S>
 {
-    fn into(self) -> GenericTensor<T, R, S> {
-        self.storage[self.offset..].iter().map(|x| *x).collect()
+    fn from(s: Slice<'a, T, R, S>) -> Self {
+        let storage = s.storage[s.offset..].to_vec();
+        Self { storage }
     }
 }
 

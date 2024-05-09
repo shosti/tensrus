@@ -127,7 +127,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
         Self { storage }
     }
 
-    fn reduce<'a>(self, others: Vec<&'a Self>, f: impl Fn(Vec<T>) -> T) -> Self {
+    fn reduce(self, others: Vec<&Self>, f: impl Fn(Vec<T>) -> T) -> Self {
         let mut storage = self.storage;
         storage.iter_mut().enumerate().for_each(|(i, v)| {
             let mut vals = vec![*v];
@@ -174,10 +174,10 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> SlicedTensor<T, R, S> for GenericTensor<T, R, S> {
-    fn try_slice<'a, const D: usize>(
-        &'a self,
+    fn try_slice<const D: usize>(
+        &self,
         idx: [usize; D],
-    ) -> Result<Slice<'a, T, { R - D }, { downrank(R, S, D) }>, IndexError> {
+    ) -> Result<Slice<T, { R - D }, { downrank(R, S, D) }>, IndexError> {
         Slice::new::<D, R, S>(&self.storage, idx)
     }
 }
