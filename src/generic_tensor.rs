@@ -1,17 +1,17 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, TensorShape};
+use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, Shape};
 use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
 use std::ops::{Add, Mul};
 
 #[derive(Debug, Clone)]
-pub struct GenericTensor<T: Numeric, const R: usize, const S: TensorShape> {
+pub struct GenericTensor<T: Numeric, const R: usize, const S: Shape> {
     pub(crate) storage: Vec<T>,
 }
 
 // Returns the tensor shape when downranking by 1
-pub const fn subtensor_shape(r: usize, s: TensorShape) -> TensorShape {
+pub const fn subtensor_shape(r: usize, s: Shape) -> Shape {
     if r == 0 {
         panic!("cannot take subtensor of tensor of rank 0");
     }
@@ -25,7 +25,7 @@ pub const fn subtensor_shape(r: usize, s: TensorShape) -> TensorShape {
     out
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
+impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
     fn storage_size() -> usize {
         num_elems(R, S)
     }
@@ -77,7 +77,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
         Ok(i)
     }
 
-    pub fn reshape<const R2: usize, const S2: TensorShape>(self) -> GenericTensor<T, R2, S2>
+    pub fn reshape<const R2: usize, const S2: Shape>(self) -> GenericTensor<T, R2, S2>
     where
         Assert<{ num_elems(R, S) == num_elems(R2, S2) }>: IsTrue,
     {
@@ -104,7 +104,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> GenericTensor<T, R, S> {
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<T, R, S> {
+impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, S> {
     type T = T;
     type Idx = [usize; R];
 
@@ -179,7 +179,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Tensor for GenericTensor<
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, F> From<[F; num_elems(R, S)]>
+impl<T: Numeric, const R: usize, const S: Shape, F> From<[F; num_elems(R, S)]>
     for GenericTensor<T, R, S>
 where
     F: ToPrimitive,
@@ -189,7 +189,7 @@ where
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape, F> FromIterator<F> for GenericTensor<T, R, S>
+impl<T: Numeric, const R: usize, const S: Shape, F> FromIterator<F> for GenericTensor<T, R, S>
 where
     F: ToPrimitive,
 {
@@ -207,7 +207,7 @@ where
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTensor<T, R, S> {
+impl<T: Numeric, const R: usize, const S: Shape> PartialEq for GenericTensor<T, R, S> {
     fn eq(&self, other: &Self) -> bool {
         for i in 0..Self::storage_size() {
             if self.storage[i] != other.storage[i] {
@@ -218,7 +218,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> PartialEq for GenericTens
     }
 }
 
-impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
+impl<'a, T: Numeric, const R: usize, const S: Shape> IntoIterator
     for &'a GenericTensor<T, R, S>
 {
     type Item = T;
@@ -229,9 +229,9 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> IntoIterator
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Eq for GenericTensor<T, R, S> {}
+impl<T: Numeric, const R: usize, const S: Shape> Eq for GenericTensor<T, R, S> {}
 
-impl<'a, T: Numeric, const R: usize, const S: TensorShape> Add<&'a Self>
+impl<'a, T: Numeric, const R: usize, const S: Shape> Add<&'a Self>
     for GenericTensor<T, R, S>
 {
     type Output = Self;
@@ -241,7 +241,7 @@ impl<'a, T: Numeric, const R: usize, const S: TensorShape> Add<&'a Self>
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Mul<T> for GenericTensor<T, R, S> {
+impl<T: Numeric, const R: usize, const S: Shape> Mul<T> for GenericTensor<T, R, S> {
     type Output = Self;
 
     fn mul(self, other: T) -> Self::Output {
@@ -249,7 +249,7 @@ impl<T: Numeric, const R: usize, const S: TensorShape> Mul<T> for GenericTensor<
     }
 }
 
-impl<T: Numeric, const R: usize, const S: TensorShape> Mul<Scalar<T>> for GenericTensor<T, R, S> {
+impl<T: Numeric, const R: usize, const S: Shape> Mul<Scalar<T>> for GenericTensor<T, R, S> {
     type Output = Self;
 
     fn mul(self, other: Scalar<T>) -> Self::Output {
@@ -366,7 +366,7 @@ mod tests {
         test_get_and_set(GenericTensor::<f64, 4, { [1, 99, 232, 8, 0] }>::zeros());
     }
 
-    fn test_get_and_set<const R: usize, const S: TensorShape>(t: GenericTensor<f64, R, S>) {
+    fn test_get_and_set<const R: usize, const S: Shape>(t: GenericTensor<f64, R, S>) {
         let mut rng = rand::thread_rng();
         let mut x = t;
         for _ in 0..10 {

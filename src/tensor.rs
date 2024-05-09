@@ -7,13 +7,13 @@ use crate::numeric::Numeric;
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
 
-pub type TensorShape = [usize; 5];
+pub type Shape = [usize; 5];
 
-pub const fn vector_shape(n: usize) -> TensorShape {
+pub const fn vector_shape(n: usize) -> Shape {
     [n; 5]
 }
 
-pub const fn num_elems(r: usize, s: TensorShape) -> usize {
+pub const fn num_elems(r: usize, s: Shape) -> usize {
     let mut dim = 0;
     let mut n = 1;
 
@@ -25,7 +25,7 @@ pub const fn num_elems(r: usize, s: TensorShape) -> usize {
     n
 }
 
-pub const fn shape_dim(s: TensorShape, i: usize) -> usize {
+pub const fn shape_dim(s: Shape, i: usize) -> usize {
     s[i]
 }
 
