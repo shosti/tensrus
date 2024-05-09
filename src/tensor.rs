@@ -29,6 +29,15 @@ pub const fn shape_dim(s: Shape, i: usize) -> usize {
     s[i]
 }
 
+pub fn stride<const R: usize, const S: Shape>() -> [usize; R] {
+    let mut res = [0; R];
+    for (dim, item) in res.iter_mut().enumerate() {
+        *item = S[(dim + 1)..R].iter().product();
+    }
+
+    res
+}
+
 pub trait Tensor:
     Debug + Clone + for<'a> Add<&'a Self, Output = Self> + Mul<Self::T> + 'static
 {

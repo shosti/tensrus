@@ -1,6 +1,6 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use crate::tensor::{num_elems, IndexError, Tensor, TensorIterator, Shape};
+use crate::tensor::{num_elems, stride, IndexError, Shape, Tensor, TensorIterator};
 use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
 use std::ops::{Add, Mul};
@@ -30,15 +30,6 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
         num_elems(R, S)
     }
 
-    fn stride() -> [usize; R] {
-        let mut res = [0; R];
-        for (dim, item) in res.iter_mut().enumerate() {
-            *item = S[(dim + 1)..R].iter().product();
-        }
-
-        res
-    }
-
     fn idx_from_storage_idx(idx: usize) -> Result<[usize; R], IndexError> {
         if idx >= Self::storage_size() {
             return Err(IndexError {});
@@ -46,10 +37,10 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
 
         let mut res = [0; R];
         let mut i = idx;
-        let stride = Self::stride();
+        let str = stride::<R, S>();
 
         for (dim, item) in res.iter_mut().enumerate() {
-            let s: usize = stride[dim];
+            let s: usize = str[dim];
             let cur = i / s;
             *item = cur;
             i -= cur * s;
@@ -66,12 +57,12 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
         }
 
         let mut i = 0;
-        let stride = Self::stride();
+        let str = stride::<R, S>();
         for (dim, &cur) in idx.iter().enumerate() {
             if cur >= S[dim] {
                 return Err(IndexError {});
             }
-            i += stride[dim] * idx[dim];
+            i += str[dim] * idx[dim];
         }
 
         Ok(i)
@@ -218,9 +209,7 @@ impl<T: Numeric, const R: usize, const S: Shape> PartialEq for GenericTensor<T, 
     }
 }
 
-impl<'a, T: Numeric, const R: usize, const S: Shape> IntoIterator
-    for &'a GenericTensor<T, R, S>
-{
+impl<'a, T: Numeric, const R: usize, const S: Shape> IntoIterator for &'a GenericTensor<T, R, S> {
     type Item = T;
     type IntoIter = TensorIterator<'a, GenericTensor<T, R, S>>;
 
@@ -231,9 +220,7 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> IntoIterator
 
 impl<T: Numeric, const R: usize, const S: Shape> Eq for GenericTensor<T, R, S> {}
 
-impl<'a, T: Numeric, const R: usize, const S: Shape> Add<&'a Self>
-    for GenericTensor<T, R, S>
-{
+impl<'a, T: Numeric, const R: usize, const S: Shape> Add<&'a Self> for GenericTensor<T, R, S> {
     type Output = Self;
 
     fn add(self, other: &Self) -> Self::Output {
@@ -261,18 +248,6 @@ impl<T: Numeric, const R: usize, const S: Shape> Mul<Scalar<T>> for GenericTenso
 mod tests {
     use super::*;
     use rand::prelude::*;
-
-    #[test]
-    fn test_basics() {
-        assert_eq!(
-            GenericTensor::<f64, 2, { [2, 5, 0, 0, 0] }>::stride(),
-            [5, 1]
-        );
-        assert_eq!(
-            GenericTensor::<f64, 3, { [2, 3, 3, 0, 0] }>::stride(),
-            [9, 3, 1]
-        );
-    }
 
     #[test]
     fn test_from_iterator() {
