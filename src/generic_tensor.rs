@@ -125,6 +125,10 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
         [0; R]
     }
     fn next_idx(&self, idx: Self::Idx) -> Option<Self::Idx> {
+        if R == 0 {
+            return None;
+        }
+
         let mut cur = idx;
         cur[R - 1] += 1;
         for dim in (0..R).rev() {
@@ -193,12 +197,7 @@ where
 
 impl<T: Numeric, const R: usize, const S: Shape> PartialEq for GenericTensor<T, R, S> {
     fn eq(&self, other: &Self) -> bool {
-        for i in 0..Self::storage_size() {
-            if self.storage[i] != other.storage[i] {
-                return false;
-            }
-        }
-        true
+        self.iter().all(|(idx, val)| val == other[idx])
     }
 }
 
@@ -241,6 +240,17 @@ impl<T: Numeric, const R: usize, const S: Shape> Mul<Scalar<T>> for GenericTenso
 mod tests {
     use super::*;
     use rand::prelude::*;
+
+    #[test]
+    fn test_equal() {
+        let a: GenericTensor<f64, 0, { [0; 5] }> = GenericTensor::from([1]);
+        let b: GenericTensor<f64, 0, { [0; 5] }> = GenericTensor::from([2]);
+        assert_ne!(a, b);
+
+        let x: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([1, 2, 3, 4]);
+        let y: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([1, 2, 3, 5]);
+        assert_ne!(x, y);
+    }
 
     #[test]
     fn test_from_iterator() {
