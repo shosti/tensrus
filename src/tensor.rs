@@ -71,7 +71,9 @@ pub trait Tensor:
     fn ones() -> Self {
         Self::repeat(Self::T::one())
     }
-    fn from_fn(f: impl Fn(Self::Idx) -> Self::T) -> Self;
+    fn from_fn(f: impl Fn(Self::Idx) -> Self::T) -> Self {
+        Self::zeros().map(|_, idx| f(idx))
+    }
 
     fn map(self, f: impl Fn(Self::T, Self::Idx) -> Self::T) -> Self;
     fn zip(self, other: &Self) -> TensorZipper<Self> {

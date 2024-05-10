@@ -58,10 +58,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             fn repeat(n: Self::T) -> Self {
                 Self(#wrapped_type::repeat(n))
             }
-
-            fn from_fn(f: impl Fn(Self::Idx) -> T) -> Self {
-                Self(#wrapped_type::from_fn(f))
-            }
         }
 
         impl #f_impl_generics FromIterator<F> for #name #type_generics #where_clause

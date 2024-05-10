@@ -160,12 +160,6 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
         let storage = vec![n; Self::storage_size()];
         Self { storage }
     }
-
-    fn from_fn(f: impl Fn(Self::Idx) -> T) -> Self {
-        (0..Self::storage_size())
-            .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
-            .collect()
-    }
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> Index<[usize; R]> for GenericTensor<T, R, S> {
