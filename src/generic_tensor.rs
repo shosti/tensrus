@@ -122,21 +122,6 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
         Self { storage }
     }
 
-    fn reduce(self, others: Vec<&Self>, f: impl Fn(Vec<T>) -> T) -> Self {
-        let mut storage = self.storage;
-        storage.iter_mut().enumerate().for_each(|(i, v)| {
-            let mut vals = vec![*v];
-            for other in others.iter() {
-                vals.push(other.storage[i]);
-            }
-            let out = f(vals);
-
-            *v = out
-        });
-
-        Self { storage }
-    }
-
     fn default_idx() -> Self::Idx {
         [0; R]
     }
@@ -233,7 +218,7 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> Add<&'a Self> for GenericTe
     type Output = Self;
 
     fn add(self, other: &Self) -> Self::Output {
-        self.zip(other).map(|vs| vs[0] + vs[1])
+        self.map(|v, idx| v + other[idx])
     }
 }
 
@@ -241,7 +226,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Mul<T> for GenericTensor<T, R, 
     type Output = Self;
 
     fn mul(self, other: T) -> Self::Output {
-        Self::from_fn(|idx| self[idx] * other)
+        self.map(|v, _| v * other)
     }
 }
 
@@ -249,7 +234,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Mul<Scalar<T>> for GenericTenso
     type Output = Self;
 
     fn mul(self, other: Scalar<T>) -> Self::Output {
-        Self::from_fn(|idx| self[idx] * other.val())
+        self * other.val()
     }
 }
 

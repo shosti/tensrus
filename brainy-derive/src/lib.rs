@@ -43,10 +43,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 Self(self.0.map(f))
             }
 
-            fn reduce<'a>(self, others: Vec<&'a Self>, f: impl Fn(Vec<Self::T>) -> Self::T) -> Self {
-                Self(self.0.reduce(others.iter().map(|t| &t.0).collect(), f))
-            }
-
             fn default_idx() -> Self::Idx {
                 #wrapped_type::#wrapped_type_args::default_idx()
             }

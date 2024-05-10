@@ -57,7 +57,7 @@ pub trait Tensor:
     Debug
     + Clone
     + for<'a> Add<&'a Self, Output = Self>
-    + Mul<Self::T>
+    + Mul<Self::T, Output = Self>
     + Index<Self::Idx, Output = Self::T>
     + 'static
 {
@@ -76,11 +76,7 @@ pub trait Tensor:
     }
 
     fn map(self, f: impl Fn(Self::T, Self::Idx) -> Self::T) -> Self;
-    fn zip(self, other: &Self) -> TensorZipper<Self> {
-        TensorZipper::new(self, other)
-    }
     fn set(self, idx: Self::Idx, val: Self::T) -> Self;
-    fn reduce(self, others: Vec<&Self>, f: impl Fn(Vec<Self::T>) -> Self::T) -> Self;
 
     fn default_idx() -> Self::Idx;
     fn next_idx(&self, idx: Self::Idx) -> Option<Self::Idx>;
@@ -94,30 +90,6 @@ pub trait SlicedTensor<T: Numeric, const R: usize, const S: Shape> {
 
     fn slice<const D: usize>(&self, idx: [usize; D]) -> Slice<T, { R - D }, { downrank(R, S, D) }> {
         self.try_slice(idx).unwrap()
-    }
-}
-
-pub struct TensorZipper<'a, Tn: Tensor> {
-    t: Tn,
-    others: Vec<&'a Tn>,
-}
-
-impl<'a, Tn: Tensor> TensorZipper<'a, Tn> {
-    pub fn new(t: Tn, other: &'a Tn) -> Self {
-        Self {
-            t,
-            others: vec![other],
-        }
-    }
-
-    pub fn zip(self, other: &'a Tn) -> Self {
-        let mut others = self.others;
-        others.push(other);
-        Self { t: self.t, others }
-    }
-
-    pub fn map(self, f: impl Fn(Vec<Tn::T>) -> Tn::T) -> Tn {
-        self.t.reduce(self.others, f)
     }
 }
 

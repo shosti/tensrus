@@ -70,12 +70,7 @@ impl<Tn: Tensor> Var<Tn> {
 
     pub fn update_from_grad(&mut self, epsilon: Tn::T) {
         if let Some(grad) = self.grad.take() {
-            let new_data = grad.zip(&self.data).map(|vals| {
-                let grad = vals[0];
-                let data = vals[1];
-                data + grad * -epsilon
-            });
-            self.data = new_data;
+            self.data = (grad * -epsilon) + &self.data;
         }
     }
 
