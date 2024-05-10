@@ -1,8 +1,10 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::slice::Slice;
+use crate::tensor;
 use crate::tensor::{
-    downrank, num_elems, stride, IndexError, Shape, SlicedTensor, Tensor, TensorIterator,
+    downrank, num_elems, transpose_shape, IndexError, Shape, SlicedTensor, Tensor, TensorIterator,
+    Transpose,
 };
 use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
@@ -11,6 +13,7 @@ use std::ops::{Add, Index, Mul};
 #[derive(Debug, Clone)]
 pub struct GenericTensor<T: Numeric, const R: usize, const S: Shape> {
     pub(crate) storage: Vec<T>,
+    pub transpose: Transpose,
 }
 
 // Returns the tensor shape when downranking by 1
@@ -29,8 +32,17 @@ pub const fn subtensor_shape(r: usize, s: Shape) -> Shape {
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
+    pub fn new(storage: Vec<T>, transpose: Transpose) -> Self {
+        Self { storage, transpose }
+    }
+
     fn storage_size() -> usize {
         num_elems(R, S)
+    }
+
+    fn stride() -> [usize; R] {
+        let s = tensor::stride(R, S);
+        std::array::from_fn(|i| s[i])
     }
 
     fn idx_from_storage_idx(idx: usize) -> Result<[usize; R], IndexError> {
@@ -40,7 +52,7 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
 
         let mut res = [0; R];
         let mut i = idx;
-        let str = stride::<R, S>();
+        let str = Self::stride();
 
         for (dim, item) in res.iter_mut().enumerate() {
             let s: usize = str[dim];
@@ -56,17 +68,33 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
         if R == 0 {
             return Ok(0);
         }
-
-        let mut i = 0;
-        let str = stride::<R, S>();
         for (dim, &cur) in idx.iter().enumerate() {
             if cur >= S[dim] {
                 return Err(IndexError {});
             }
-            i += str[dim] * idx[dim];
         }
 
-        Ok(i)
+        let res = match self.transpose {
+            Transpose::None => Ok(Self::calc_storage_idx(idx, S)),
+            Transpose::Transposed => {
+                let orig_shape = transpose_shape(R, S);
+                let mut orig_idx = idx;
+                orig_idx.reverse();
+
+                Ok(Self::calc_storage_idx(orig_idx, orig_shape))
+            }
+        };
+        res
+    }
+
+    fn calc_storage_idx(idx: [usize; R], shape: Shape) -> usize {
+        let stride = tensor::stride(R, shape);
+        let mut i = 0;
+        for (dim, &cur) in idx.iter().enumerate() {
+            i += stride[dim] * cur;
+        }
+
+        i
     }
 
     pub fn reshape<const R2: usize, const S2: Shape>(self) -> GenericTensor<T, R2, S2>
@@ -75,7 +103,15 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
     {
         GenericTensor {
             storage: self.storage,
+            transpose: self.transpose,
         }
+    }
+
+    pub fn transpose(self) -> GenericTensor<T, R, { transpose_shape(R, S) }>
+    where
+        Assert<{ R >= 2 }>: IsTrue,
+    {
+        GenericTensor::new(self.storage, self.transpose)
     }
 
     pub fn subtensor(
@@ -105,7 +141,10 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
             Ok(i) => {
                 let mut storage = self.storage;
                 storage[i] = val;
-                Self { storage }
+                Self {
+                    storage,
+                    transpose: self.transpose,
+                }
             }
             Err(_e) => panic!("set: out of bounds"),
         }
@@ -118,7 +157,10 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
             *v = f(idx, *v);
         }
 
-        Self { storage }
+        Self {
+            storage,
+            transpose: self.transpose,
+        }
     }
 
     fn default_idx() -> Self::Idx {
@@ -146,7 +188,10 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
 
     fn repeat(n: T) -> Self {
         let storage = vec![n; Self::storage_size()];
-        Self { storage }
+        Self {
+            storage,
+            transpose: Transpose::default(),
+        }
     }
 }
 
@@ -163,7 +208,7 @@ impl<T: Numeric, const R: usize, const S: Shape> SlicedTensor<T, R, S> for Gener
         &self,
         idx: [usize; D],
     ) -> Result<Slice<T, { R - D }, { downrank(R, S, D) }>, IndexError> {
-        Slice::new::<D, R, S>(&self.storage, idx)
+        Slice::new::<D, R, S>(&self.storage, self.transpose, idx)
     }
 }
 
@@ -191,7 +236,10 @@ where
             .chain(std::iter::repeat(T::zero()))
             .take(Self::storage_size())
             .collect();
-        Self { storage: vals }
+        Self {
+            storage: vals,
+            transpose: Transpose::default(),
+        }
     }
 }
 

@@ -11,8 +11,35 @@ pub struct IndexError {}
 
 pub type Shape = [usize; 5];
 
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum Transpose {
+    #[default]
+    None,
+    Transposed,
+}
+
+impl Transpose {
+    pub fn transpose(self) -> Transpose {
+        match self {
+            Transpose::None => Transpose::Transposed,
+            Transpose::Transposed => Transpose::None,
+        }
+    }
+}
+
 pub const fn vector_shape(n: usize) -> Shape {
     [n; 5]
+}
+
+pub const fn transpose_shape(r: usize, s: Shape) -> Shape {
+    let mut out = [0; 5];
+    let mut i = 0;
+    while i < r {
+        out[i] = s[r - i - 1];
+        i += 1;
+    }
+
+    out
 }
 
 pub const fn num_elems(r: usize, s: Shape) -> usize {
@@ -45,10 +72,20 @@ pub const fn downrank(r: usize, s: Shape, n: usize) -> Shape {
     new_shape
 }
 
-pub fn stride<const R: usize, const S: Shape>() -> [usize; R] {
-    let mut res = [0; R];
-    for (dim, item) in res.iter_mut().enumerate() {
-        *item = S[(dim + 1)..R].iter().product();
+pub const fn stride(r: usize, s: Shape) -> [usize; 5] {
+    let mut res = [0; 5];
+    let mut dim = 0;
+
+    while dim < r {
+        let mut i = dim + 1;
+        let mut cur = 1;
+        while i < r {
+            cur *= s[i];
+            i += 1;
+        }
+        res[dim] = cur;
+
+        dim += 1;
     }
 
     res

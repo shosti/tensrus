@@ -44,12 +44,14 @@ where
         Ok(Vector::from_fn(|[i]| self[[i, j]]))
     }
 
-    // This could be "fast" but we'll deal with that later
-    pub fn transpose(&self) -> Matrix<T, N, M>
+    pub fn transpose(self) -> Matrix<T, N, M>
     where
         [(); num_elems(2, matrix_shape(N, M))]:,
     {
-        Matrix::from_fn(|[i, j]| self[[j, i]])
+        Matrix(GenericTensor::new(
+            self.0.storage,
+            self.0.transpose.transpose(),
+        ))
     }
 }
 
