@@ -75,6 +75,9 @@ pub trait Tensor:
     fn from_fn(f: impl Fn(Self::Idx) -> Self::T) -> Self {
         Self::zeros().map(|idx, _| f(idx))
     }
+    fn iter<'a>(&'a self) -> TensorIterator<'a, Self> {
+        TensorIterator::new(self)
+    }
 
     fn map(self, f: impl Fn(Self::Idx, Self::T) -> Self::T) -> Self;
     fn set(self, idx: Self::Idx, val: Self::T) -> Self;
