@@ -48,13 +48,11 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
             *item = cur;
             i -= cur * s;
         }
-        debug_assert!(i == 0);
-        debug_assert!(Self::storage_idx(res).unwrap() == idx);
 
         Ok(res)
     }
 
-    fn storage_idx(idx: [usize; R]) -> Result<usize, IndexError> {
+    fn storage_idx(&self, idx: [usize; R]) -> Result<usize, IndexError> {
         if R == 0 {
             return Ok(0);
         }
@@ -92,7 +90,7 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
             GenericTensor::from_fn(|idx| {
                 let mut self_idx = [i; R];
                 self_idx[1..R].copy_from_slice(&idx[..(R - 1)]);
-                self.storage[Self::storage_idx(self_idx).unwrap()]
+                self.storage[self.storage_idx(self_idx).unwrap()]
             });
         Ok(out)
     }
@@ -103,7 +101,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
     type Idx = [usize; R];
 
     fn set(self, idx: [usize; R], val: T) -> Self {
-        match Self::storage_idx(idx) {
+        match self.storage_idx(idx) {
             Ok(i) => {
                 let mut storage = self.storage;
                 storage[i] = val;
@@ -138,7 +136,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
     fn default_idx() -> Self::Idx {
         [0; R]
     }
-    fn next_idx(idx: Self::Idx) -> Option<Self::Idx> {
+    fn next_idx(&self, idx: Self::Idx) -> Option<Self::Idx> {
         let mut cur = idx;
         cur[R - 1] += 1;
         for dim in (0..R).rev() {
@@ -170,7 +168,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Index<[usize; R]> for GenericTe
     type Output = T;
 
     fn index(&self, idx: [usize; R]) -> &Self::Output {
-        self.storage.index(Self::storage_idx(idx).unwrap())
+        self.storage.index(self.storage_idx(idx).unwrap())
     }
 }
 

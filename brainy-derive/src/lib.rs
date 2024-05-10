@@ -51,8 +51,8 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 #wrapped_type::#wrapped_type_args::default_idx()
             }
 
-            fn next_idx(idx: Self::Idx) -> Option<Self::Idx> {
-                #wrapped_type::#wrapped_type_args::next_idx(idx)
+            fn next_idx(&self, idx: Self::Idx) -> Option<Self::Idx> {
+                self.0.next_idx(idx)
             }
 
             fn repeat(n: Self::T) -> Self {

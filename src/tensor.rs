@@ -81,7 +81,7 @@ pub trait Tensor:
     fn reduce(self, others: Vec<&Self>, f: impl Fn(Vec<Self::T>) -> Self::T) -> Self;
 
     fn default_idx() -> Self::Idx;
-    fn next_idx(idx: Self::Idx) -> Option<Self::Idx>;
+    fn next_idx(&self, idx: Self::Idx) -> Option<Self::Idx>;
 }
 
 pub trait SlicedTensor<T: Numeric, const R: usize, const S: Shape> {
@@ -151,7 +151,7 @@ where
             Some(idx) => {
                 let cur_idx = *idx;
                 let item = self.t[cur_idx];
-                self.cur = Tn::next_idx(cur_idx);
+                self.cur = self.t.next_idx(cur_idx);
 
                 Some(item)
             }
