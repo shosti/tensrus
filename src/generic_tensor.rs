@@ -113,10 +113,9 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
 
     fn map(self, f: impl Fn(Self::Idx, Self::T) -> Self::T) -> Self {
         let mut storage = self.storage;
-        for i in 0..Self::storage_size() {
+        for (i, v) in storage.iter_mut().enumerate() {
             let idx = Self::idx_from_storage_idx(i).unwrap();
-            let v = storage[i];
-            storage[i] = f(idx, v);
+            *v = f(idx, *v);
         }
 
         Self { storage }

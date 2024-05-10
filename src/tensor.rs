@@ -102,6 +102,11 @@ where
     cur: Option<Tn::Idx>,
 }
 
+type ValueMap<'a, Tn> = Map<
+    TensorIterator<'a, Tn>,
+    &'a dyn Fn((<Tn as Tensor>::Idx, <Tn as Tensor>::T)) -> <Tn as Tensor>::T,
+>;
+
 impl<'a, Tn> TensorIterator<'a, Tn>
 where
     Tn: Tensor,
@@ -113,7 +118,7 @@ where
         }
     }
 
-    pub fn values(self) -> Map<TensorIterator<'a, Tn>, &'a dyn Fn((Tn::Idx, Tn::T)) -> Tn::T> {
+    pub fn values(self) -> ValueMap<'a, Tn> {
         self.map(&|(_, v)| v)
     }
 }
