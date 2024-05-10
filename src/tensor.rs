@@ -1,6 +1,6 @@
 use num::{One, Zero};
 use std::fmt::Debug;
-use std::ops::{Add, Mul};
+use std::ops::{Add, Index, Mul};
 
 use crate::numeric::Numeric;
 use crate::slice::Slice;
@@ -54,7 +54,12 @@ pub fn stride<const R: usize, const S: Shape>() -> [usize; R] {
 }
 
 pub trait Tensor:
-    Debug + Clone + for<'a> Add<&'a Self, Output = Self> + Mul<Self::T> + 'static
+    Debug
+    + Clone
+    + for<'a> Add<&'a Self, Output = Self>
+    + Mul<Self::T>
+    + Index<Self::Idx, Output = Self::T>
+    + 'static
 {
     type T: Numeric;
     type Idx: Copy + 'static;
@@ -67,8 +72,6 @@ pub trait Tensor:
         Self::repeat(Self::T::one())
     }
     fn from_fn(f: impl Fn(Self::Idx) -> Self::T) -> Self;
-
-    fn get(&self, idx: Self::Idx) -> Self::T;
 
     fn map(self, f: impl Fn(Self::T) -> Self::T) -> Self;
     fn zip(self, other: &Self) -> TensorZipper<Self> {
@@ -147,7 +150,7 @@ where
             None => None,
             Some(idx) => {
                 let cur_idx = *idx;
-                let item = self.t.get(cur_idx);
+                let item = self.t[cur_idx];
                 self.cur = Tn::next_idx(cur_idx);
 
                 Some(item)

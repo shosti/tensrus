@@ -6,7 +6,7 @@ use crate::tensor::{
 };
 use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
-use std::ops::{Add, Mul};
+use std::ops::{Add, Index, Mul};
 
 #[derive(Debug, Clone)]
 pub struct GenericTensor<T: Numeric, const R: usize, const S: Shape> {
@@ -102,13 +102,6 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
     type T = T;
     type Idx = [usize; R];
 
-    fn get(&self, idx: [usize; R]) -> T {
-        match Self::storage_idx(idx) {
-            Ok(i) => self.storage[i],
-            Err(_e) => panic!("get: out of bounds"),
-        }
-    }
-
     fn set(self, idx: [usize; R], val: T) -> Self {
         match Self::storage_idx(idx) {
             Ok(i) => {
@@ -170,6 +163,14 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
         (0..Self::storage_size())
             .map(|i| f(Self::idx_from_storage_idx(i).unwrap()))
             .collect()
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: Shape> Index<[usize; R]> for GenericTensor<T, R, S> {
+    type Output = T;
+
+    fn index(&self, idx: [usize; R]) -> &Self::Output {
+        self.storage.index(Self::storage_idx(idx).unwrap())
     }
 }
 
@@ -244,7 +245,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Mul<T> for GenericTensor<T, R, 
     type Output = Self;
 
     fn mul(self, other: T) -> Self::Output {
-        Self::from_fn(|idx| self.get(idx) * other)
+        Self::from_fn(|idx| self[idx] * other)
     }
 }
 
@@ -252,7 +253,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Mul<Scalar<T>> for GenericTenso
     type Output = Self;
 
     fn mul(self, other: Scalar<T>) -> Self::Output {
-        Self::from_fn(|idx| self.get(idx) * other.val())
+        Self::from_fn(|idx| self[idx] * other.val())
     }
 }
 
@@ -364,7 +365,7 @@ mod tests {
             let val: f64 = rng.gen();
             x = x.set(idx, val);
 
-            assert_eq!(x.get(idx), val);
+            assert_eq!(x[idx], val);
         }
     }
 
@@ -402,7 +403,7 @@ mod tests {
         let t2 = t.clone().reshape::<2, { [2, 3, 0, 0, 0] }>();
         let t3 = t.clone().reshape::<1, { [6, 0, 0, 0, 0] }>();
 
-        assert_eq!(t.get([1, 0]), t2.get([0, 2]));
-        assert_eq!(t.get([2, 1]), t3.get([5]));
+        assert_eq!(t[[1, 0]], t2[[0, 2]]);
+        assert_eq!(t[[2, 1]], t3[[5]]);
     }
 }

@@ -1,7 +1,7 @@
 use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
 use crate::slice::Slice;
-use crate::tensor::{downrank, num_elems, IndexError, Shape, SlicedTensor, Tensor};
+use crate::tensor::{downrank, num_elems, IndexError, Shape, SlicedTensor};
 use num::ToPrimitive;
 
 pub const fn vector_shape(n: usize) -> Shape {
@@ -21,7 +21,7 @@ where
         let mut res = T::zero();
         for i in 0..N {
             let idx = [i];
-            res += self.get(idx) * other.get(idx);
+            res += self[idx] * other[idx];
         }
 
         res
@@ -72,12 +72,13 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tensor::Tensor;
 
     #[test]
     fn test_basics() {
         let a: Vector<f64, 5> = Vector::from([1, 2, 3, 4, 5]);
 
-        assert_eq!(a.get([3]), 4.0);
+        assert_eq!(a[[3]], 4.0);
     }
 
     #[test]

@@ -35,10 +35,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             type T = T;
             type Idx = [usize; #rank];
 
-            fn get(&self, idx: Self::Idx) -> Self::T {
-                self.0.get(idx)
-            }
-
             fn set(self, idx: Self::Idx, val: Self::T) -> Self {
                 Self(self.0.set(idx, val))
             }
@@ -100,6 +96,14 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
 
             fn mul(self, other: T) -> Self::Output {
                 Self(self.0 * other)
+            }
+        }
+
+        impl #impl_generics std::ops::Index<[usize; #rank]> for #name #type_generics #where_clause {
+            type Output = T;
+
+            fn index(&self, idx: [usize; #rank]) -> &Self::Output {
+                self.0.index(idx)
             }
         }
 
