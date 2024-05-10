@@ -75,7 +75,7 @@ pub trait Tensor:
     fn from_fn(f: impl Fn(Self::Idx) -> Self::T) -> Self {
         Self::zeros().map(|idx, _| f(idx))
     }
-    fn iter<'a>(&'a self) -> TensorIterator<'a, Self> {
+    fn iter(&self) -> TensorIterator<Self> {
         TensorIterator::new(self)
     }
 
@@ -105,11 +105,6 @@ where
     cur: Option<Tn::Idx>,
 }
 
-type ValueMap<'a, Tn> = Map<
-    TensorIterator<'a, Tn>,
-    &'a dyn Fn((<Tn as Tensor>::Idx, <Tn as Tensor>::T)) -> <Tn as Tensor>::T,
->;
-
 impl<'a, Tn> TensorIterator<'a, Tn>
 where
     Tn: Tensor,
@@ -121,8 +116,8 @@ where
         }
     }
 
-    pub fn values(self) -> ValueMap<'a, Tn> {
-        self.map(&|(_, v)| v)
+    pub fn values(self) -> Map<TensorIterator<'a, Tn>, impl FnMut((Tn::Idx, Tn::T)) -> Tn::T> {
+        self.map(|(_, v)| v)
     }
 }
 
