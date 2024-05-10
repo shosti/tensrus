@@ -39,7 +39,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 Self(self.0.set(idx, val))
             }
 
-            fn map(self, f: impl Fn(Self::T, Self::Idx) -> Self::T) -> Self {
+            fn map(self, f: impl Fn(Self::Idx, Self::T) -> Self::T) -> Self {
                 Self(self.0.map(f))
             }
 
@@ -67,7 +67,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         }
 
         impl #impl_generics_with_lifetime IntoIterator for &'a #name #type_generics #where_clause {
-            type Item = (T, [usize; #rank]);
+            type Item = ([usize; #rank], T);
             type IntoIter = crate::tensor::TensorIterator<'a, #name #type_generics>;
 
             fn into_iter(self) -> Self::IntoIter {

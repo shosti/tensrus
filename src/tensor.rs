@@ -73,10 +73,10 @@ pub trait Tensor:
         Self::repeat(Self::T::one())
     }
     fn from_fn(f: impl Fn(Self::Idx) -> Self::T) -> Self {
-        Self::zeros().map(|_, idx| f(idx))
+        Self::zeros().map(|idx, _| f(idx))
     }
 
-    fn map(self, f: impl Fn(Self::T, Self::Idx) -> Self::T) -> Self;
+    fn map(self, f: impl Fn(Self::Idx, Self::T) -> Self::T) -> Self;
     fn set(self, idx: Self::Idx, val: Self::T) -> Self;
 
     fn default_idx() -> Self::Idx;
@@ -113,8 +113,8 @@ where
         }
     }
 
-    pub fn values(self) -> Map<TensorIterator<'a, Tn>, &'a dyn Fn((Tn::T, Tn::Idx)) -> Tn::T> {
-        self.map(&|(v, _)| v)
+    pub fn values(self) -> Map<TensorIterator<'a, Tn>, &'a dyn Fn((Tn::Idx, Tn::T)) -> Tn::T> {
+        self.map(&|(_, v)| v)
     }
 }
 
@@ -122,14 +122,14 @@ impl<'a, Tn> Iterator for TensorIterator<'a, Tn>
 where
     Tn: Tensor,
 {
-    type Item = (Tn::T, Tn::Idx);
+    type Item = (Tn::Idx, Tn::T);
 
     fn next(&mut self) -> Option<Self::Item> {
         match &self.cur {
             None => None,
             Some(idx) => {
                 let cur_idx = *idx;
-                let item = (self.t[cur_idx], cur_idx);
+                let item = (cur_idx, self.t[cur_idx]);
                 self.cur = self.t.next_idx(cur_idx);
 
                 Some(item)

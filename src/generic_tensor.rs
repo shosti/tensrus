@@ -111,12 +111,12 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
         }
     }
 
-    fn map(self, f: impl Fn(Self::T, Self::Idx) -> Self::T) -> Self {
+    fn map(self, f: impl Fn(Self::Idx, Self::T) -> Self::T) -> Self {
         let mut storage = self.storage;
         for i in 0..Self::storage_size() {
             let idx = Self::idx_from_storage_idx(i).unwrap();
             let v = storage[i];
-            storage[i] = f(v, idx);
+            storage[i] = f(idx, v);
         }
 
         Self { storage }
@@ -204,7 +204,7 @@ impl<T: Numeric, const R: usize, const S: Shape> PartialEq for GenericTensor<T, 
 }
 
 impl<'a, T: Numeric, const R: usize, const S: Shape> IntoIterator for &'a GenericTensor<T, R, S> {
-    type Item = (T, [usize; R]);
+    type Item = ([usize; R], T);
     type IntoIter = TensorIterator<'a, GenericTensor<T, R, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -218,7 +218,7 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> Add<&'a Self> for GenericTe
     type Output = Self;
 
     fn add(self, other: &Self) -> Self::Output {
-        self.map(|v, idx| v + other[idx])
+        self.map(|idx, v| v + other[idx])
     }
 }
 
@@ -226,7 +226,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Mul<T> for GenericTensor<T, R, 
     type Output = Self;
 
     fn mul(self, other: T) -> Self::Output {
-        self.map(|v, _| v * other)
+        self.map(|_, v| v * other)
     }
 }
 
@@ -353,7 +353,7 @@ mod tests {
     #[test]
     fn test_map() {
         let t: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([1, 2, 3, 4]);
-        let u = t.map(|val, _| val * 2.0);
+        let u = t.map(|_, val| val * 2.0);
 
         let want: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([2, 4, 6, 8]);
         assert_eq!(u, want);
