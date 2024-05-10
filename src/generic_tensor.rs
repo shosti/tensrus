@@ -204,7 +204,7 @@ impl<T: Numeric, const R: usize, const S: Shape> PartialEq for GenericTensor<T, 
 }
 
 impl<'a, T: Numeric, const R: usize, const S: Shape> IntoIterator for &'a GenericTensor<T, R, S> {
-    type Item = T;
+    type Item = (T, [usize; R]);
     type IntoIter = TensorIterator<'a, GenericTensor<T, R, S>>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -322,7 +322,7 @@ mod tests {
     #[test]
     fn test_to_iter() {
         let t: GenericTensor<f64, 2, { [2; 5] }> = (0..4).collect();
-        let vals: Vec<f64> = t.into_iter().collect();
+        let vals: Vec<f64> = t.into_iter().values().collect();
         assert_eq!(vals, vec![0.0, 1.0, 2.0, 3.0]);
     }
 

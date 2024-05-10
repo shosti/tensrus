@@ -67,7 +67,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         }
 
         impl #impl_generics_with_lifetime IntoIterator for &'a #name #type_generics #where_clause {
-            type Item = T;
+            type Item = (T, [usize; #rank]);
             type IntoIter = crate::tensor::TensorIterator<'a, #name #type_generics>;
 
             fn into_iter(self) -> Self::IntoIter {

@@ -1,5 +1,6 @@
 use num::{One, Zero};
 use std::fmt::Debug;
+use std::iter::Map;
 use std::ops::{Add, Index, Mul};
 
 use crate::numeric::Numeric;
@@ -111,20 +112,24 @@ where
             cur: Some(Tn::default_idx()),
         }
     }
+
+    pub fn values(self) -> Map<TensorIterator<'a, Tn>, &'a dyn Fn((Tn::T, Tn::Idx)) -> Tn::T> {
+        self.map(&|(v, _)| v)
+    }
 }
 
 impl<'a, Tn> Iterator for TensorIterator<'a, Tn>
 where
     Tn: Tensor,
 {
-    type Item = Tn::T;
+    type Item = (Tn::T, Tn::Idx);
 
     fn next(&mut self) -> Option<Self::Item> {
         match &self.cur {
             None => None,
             Some(idx) => {
                 let cur_idx = *idx;
-                let item = self.t[cur_idx];
+                let item = (self.t[cur_idx], cur_idx);
                 self.cur = self.t.next_idx(cur_idx);
 
                 Some(item)
