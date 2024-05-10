@@ -73,7 +73,7 @@ pub trait Tensor:
     }
     fn from_fn(f: impl Fn(Self::Idx) -> Self::T) -> Self;
 
-    fn map(self, f: impl Fn(Self::T) -> Self::T) -> Self;
+    fn map(self, f: impl Fn(Self::T, Self::Idx) -> Self::T) -> Self;
     fn zip(self, other: &Self) -> TensorZipper<Self> {
         TensorZipper::new(self, other)
     }

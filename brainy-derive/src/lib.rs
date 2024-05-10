@@ -39,7 +39,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 Self(self.0.set(idx, val))
             }
 
-            fn map(self, f: impl Fn(Self::T) -> Self::T) -> Self {
+            fn map(self, f: impl Fn(Self::T, Self::Idx) -> Self::T) -> Self {
                 Self(self.0.map(f))
             }
 

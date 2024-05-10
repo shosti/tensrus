@@ -111,9 +111,13 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
         }
     }
 
-    fn map(self, f: impl Fn(T) -> T) -> Self {
+    fn map(self, f: impl Fn(Self::T, Self::Idx) -> Self::T) -> Self {
         let mut storage = self.storage;
-        storage.iter_mut().for_each(|v| *v = f(*v));
+        for i in 0..Self::storage_size() {
+            let idx = Self::idx_from_storage_idx(i).unwrap();
+            let v = storage[i];
+            storage[i] = f(v, idx);
+        }
 
         Self { storage }
     }
@@ -370,7 +374,7 @@ mod tests {
     #[test]
     fn test_map() {
         let t: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([1, 2, 3, 4]);
-        let u = t.map(&|val| val * 2.0);
+        let u = t.map(|val, _| val * 2.0);
 
         let want: GenericTensor<f64, 2, { [2; 5] }> = GenericTensor::from([2, 4, 6, 8]);
         assert_eq!(u, want);

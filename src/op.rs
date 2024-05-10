@@ -76,7 +76,7 @@ where
     Tn: Tensor,
 {
     pub fn create_flow(from: Var<Tn>) -> Var<Tn> {
-        let out = from.data.clone().map(|v| {
+        let out = from.data.clone().map(|v, _| {
             if v.is_sign_negative() {
                 Tn::T::zero()
             } else {
