@@ -3,7 +3,7 @@ use crate::numeric::Numeric;
 use crate::slice::Slice;
 use crate::tensor::{downrank, num_elems, IndexError, Shape, SlicedTensor, Tensor};
 use crate::vector::{vector_shape, Vector};
-use cblas::{Layout, Transpose};
+use cblas::Layout;
 use num::ToPrimitive;
 use std::ops::Mul;
 
@@ -132,24 +132,31 @@ where
     type Output = Vector<T, M>;
 
     fn mul(self, other: &Vector<T, N>) -> Self::Output {
-        let mut out = Self::Output::zeros();
-
-        unsafe {
-            T::gemv(
-                Layout::RowMajor,
-                Transpose::None,
-                M as i32,
-                N as i32,
-                T::one(),
-                &self.0.storage,
-                N as i32,
-                &other.0.storage,
-                1,
-                T::one(),
-                &mut out.0.storage,
-                1,
-            );
-        }
+        let out = Self::Output::zeros().map(|idx, _| {
+            let mut res = T::zero();
+            let row = idx[0];
+            for i in 0..N {
+                res += self[&[row, i]] * other[&[i]];
+            }
+            res
+        });
+        // TODO: Figure out why gemv isn't working...
+        // unsafe {
+        //     T::gemv(
+        //         Layout::RowMajor,
+        //         self.0.transpose.into(),
+        //         M as i32,
+        //         N as i32,
+        //         T::one(),
+        //         &self.0.storage,
+        //         N as i32,
+        //         &other.0.storage,
+        //         1,
+        //         T::one(),
+        //         &mut out.0.storage,
+        //         1,
+        //     );
+        // }
 
         out
     }
@@ -315,10 +322,23 @@ mod tests {
 
     #[test]
     fn test_matrix_vector_multiply() {
-        let a: Matrix<f64, _, _> = Matrix::from([[1, -1, 2], [0, -3, 1]]);
+        #[rustfmt::skip]
+        let a: Matrix<f64, _, _> = Matrix::from([
+            [1, -1, 2],
+            [0, -3, 1],
+        ]);
+        #[rustfmt::skip]
+        let a_t: Matrix<f64, _, _> = Matrix::from([
+            [1, 0],
+            [-1, -3],
+            [2, 1],
+        ]).transpose();
         let x: Vector<f64, _> = Vector::from([2, 1, 0]);
 
-        assert_eq!(&a * &x, Vector::from([1, -3]));
+        let want = Vector::from([1, -3]);
+
+        assert_eq!(&a * &x, want);
+        assert_eq!(&a_t * &x, want);
     }
 
     #[test]
