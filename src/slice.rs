@@ -24,6 +24,10 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> Slice<'a, T, R, S> {
             }
         }
 
+        if transpose == Transpose::Transposed {
+            panic!("slice of transposed tensor isn't implemented yet");
+        }
+
         let mut offset = 0;
         let str = stride(R2, S2);
         for i in 0..D {
@@ -99,6 +103,27 @@ mod tests {
         let want: Vector<f64, _> = Vector::from([3, 4]);
 
         assert_eq!(vector, want);
+    }
+
+    // TODO: Think about how this should be implemented
+    #[test]
+    #[should_panic]
+    fn test_matrix_transpose() {
+        #[rustfmt::skip]
+        let t: Matrix<f64, _, _> = Matrix::from([
+            [1, 2],
+            [3, 4],
+            [5, 6],
+        ]).transpose();
+        assert_eq!(t.slice([0, 2]).val(), 5.0);
+
+        let t2: Matrix<f64, 2, 3> = t.slice([]).into();
+        #[rustfmt::skip]
+        let want: Matrix<f64, _, _> = Matrix::from([
+            [1, 3, 5],
+            [2, 4, 6],
+        ]);
+        assert_eq!(t2, want);
     }
 
     #[test]
