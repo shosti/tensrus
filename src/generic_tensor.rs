@@ -74,7 +74,7 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
             }
         }
 
-        let res = match self.transpose {
+        match self.transpose {
             Transpose::None => Ok(Self::calc_storage_idx(idx, S)),
             Transpose::Transposed => {
                 let orig_shape = transpose_shape(R, S);
@@ -83,8 +83,7 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
 
                 Ok(Self::calc_storage_idx(&orig_idx, orig_shape))
             }
-        };
-        res
+        }
     }
 
     fn calc_storage_idx(idx: &[usize; R], shape: Shape) -> usize {
