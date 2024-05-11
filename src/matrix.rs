@@ -98,19 +98,22 @@ where
     fn mul(self, other: &Matrix<T, N, P>) -> Self::Output {
         let mut out = Self::Output::zeros();
 
+        let lda = if self.0.is_transposed() { M } else { N } as i32;
+        let ldb = if other.0.is_transposed() { N } else { P } as i32;
+
         unsafe {
             T::gemm(
                 Layout::RowMajor,
-                Transpose::None,
-                Transpose::None,
+                self.0.transpose.into(),
+                other.0.transpose.into(),
                 M as i32,
                 P as i32,
                 N as i32,
                 T::one(),
                 &self.0.storage,
-                N as i32,
+                lda,
                 &other.0.storage,
-                P as i32,
+                ldb,
                 T::one(),
                 &mut out.0.storage,
                 P as i32,
@@ -272,12 +275,42 @@ mod tests {
 
     #[test]
     fn test_matrix_multiply() {
-        let x: Matrix<f64, _, _> = Matrix::from([[1, 2], [3, 4], [5, 6]]);
-        let y: Matrix<f64, _, _> = Matrix::from([[7, 8, 9, 10], [9, 10, 11, 12]]);
-        let res: Matrix<f64, _, _> =
-            Matrix::from([[25, 28, 31, 34], [57, 64, 71, 78], [89, 100, 111, 122]]);
+        #[rustfmt::skip]
+        let x: Matrix<f64, _, _> = Matrix::from([
+            [1, 2],
+            [3, 4],
+            [5, 6]
+        ]);
+        #[rustfmt::skip]
+        let x_t: Matrix<f64, _, _> = Matrix::from([
+            [1, 3, 5],
+            [2, 4, 6],
+        ]).transpose();
 
-        assert_eq!(&x * &y, res);
+        #[rustfmt::skip]
+        let y: Matrix<f64, _, _> = Matrix::from([
+            [7, 8, 9, 10],
+            [9, 10, 11, 12]
+        ]);
+        #[rustfmt::skip]
+        let y_t: Matrix<f64, _, _> = Matrix::from([
+            [7, 9],
+            [8, 10],
+            [9, 11],
+            [10, 12],
+        ]).transpose();
+
+        #[rustfmt::skip]
+        let want: Matrix<f64, _, _> = Matrix::from([
+            [25, 28, 31, 34],
+            [57, 64, 71, 78],
+            [89, 100, 111, 122]
+        ]);
+
+        assert_eq!(&x * &y, want);
+        assert_eq!(&x_t * &y, want);
+        assert_eq!(&x * &y_t, want);
+        assert_eq!(&x_t * &y_t, want);
     }
 
     #[test]

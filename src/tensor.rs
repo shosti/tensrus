@@ -27,6 +27,15 @@ impl Transpose {
     }
 }
 
+impl From<Transpose> for cblas::Transpose {
+    fn from(t: Transpose) -> cblas::Transpose {
+        match t {
+            Transpose::None => cblas::Transpose::None,
+            Transpose::Transposed => cblas::Transpose::Ordinary,
+        }
+    }
+}
+
 pub const fn vector_shape(n: usize) -> Shape {
     [n; 5]
 }
