@@ -35,11 +35,11 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             type T = T;
             type Idx = [usize; #rank];
 
-            fn set(self, idx: Self::Idx, val: Self::T) -> Self {
+            fn set(self, idx: &Self::Idx, val: Self::T) -> Self {
                 Self(self.0.set(idx, val))
             }
 
-            fn map(self, f: impl Fn(Self::Idx, Self::T) -> Self::T) -> Self {
+            fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
                 Self(self.0.map(f))
             }
 
@@ -47,7 +47,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 #wrapped_type::#wrapped_type_args::default_idx()
             }
 
-            fn next_idx(&self, idx: Self::Idx) -> Option<Self::Idx> {
+            fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
                 self.0.next_idx(idx)
             }
 
@@ -91,10 +91,10 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics std::ops::Index<[usize; #rank]> for #name #type_generics #where_clause {
+        impl #impl_generics std::ops::Index<&[usize; #rank]> for #name #type_generics #where_clause {
             type Output = T;
 
-            fn index(&self, idx: [usize; #rank]) -> &Self::Output {
+            fn index(&self, idx: &[usize; #rank]) -> &Self::Output {
                 self.0.index(idx)
             }
         }

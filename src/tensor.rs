@@ -96,7 +96,7 @@ pub trait Tensor:
     + Clone
     + for<'a> Add<&'a Self, Output = Self>
     + Mul<Self::T, Output = Self>
-    + Index<Self::Idx, Output = Self::T>
+    + for<'a> Index<&'a Self::Idx, Output = Self::T>
     + 'static
 {
     type T: Numeric;
@@ -109,18 +109,18 @@ pub trait Tensor:
     fn ones() -> Self {
         Self::repeat(Self::T::one())
     }
-    fn from_fn(f: impl Fn(Self::Idx) -> Self::T) -> Self {
+    fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self {
         Self::zeros().map(|idx, _| f(idx))
     }
     fn iter(&self) -> TensorIterator<Self> {
         TensorIterator::new(self)
     }
 
-    fn map(self, f: impl Fn(Self::Idx, Self::T) -> Self::T) -> Self;
-    fn set(self, idx: Self::Idx, val: Self::T) -> Self;
+    fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self;
+    fn set(self, idx: &Self::Idx, val: Self::T) -> Self;
 
     fn default_idx() -> Self::Idx;
-    fn next_idx(&self, idx: Self::Idx) -> Option<Self::Idx>;
+    fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx>;
 }
 
 pub trait SlicedTensor<T: Numeric, const R: usize, const S: Shape> {
@@ -169,8 +169,8 @@ where
             None => None,
             Some(idx) => {
                 let cur_idx = *idx;
-                let item = (cur_idx, self.t[cur_idx]);
-                self.cur = self.t.next_idx(cur_idx);
+                let item = (cur_idx, self.t[&cur_idx]);
+                self.cur = self.t.next_idx(&cur_idx);
 
                 Some(item)
             }

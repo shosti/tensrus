@@ -21,7 +21,7 @@ where
         let mut res = T::zero();
         for i in 0..N {
             let idx = [i];
-            res += self[idx] * other[idx];
+            res += self[&idx] * other[&idx];
         }
 
         res
@@ -78,7 +78,7 @@ mod tests {
     fn test_basics() {
         let a: Vector<f64, 5> = Vector::from([1, 2, 3, 4, 5]);
 
-        assert_eq!(a[[3]], 4.0);
+        assert_eq!(a[&[3]], 4.0);
     }
 
     #[test]

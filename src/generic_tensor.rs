@@ -64,7 +64,7 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
         Ok(res)
     }
 
-    fn storage_idx(&self, idx: [usize; R]) -> Result<usize, IndexError> {
+    fn storage_idx(&self, idx: &[usize; R]) -> Result<usize, IndexError> {
         if R == 0 {
             return Ok(0);
         }
@@ -78,16 +78,16 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
             Transpose::None => Ok(Self::calc_storage_idx(idx, S)),
             Transpose::Transposed => {
                 let orig_shape = transpose_shape(R, S);
-                let mut orig_idx = idx;
+                let mut orig_idx = *idx;
                 orig_idx.reverse();
 
-                Ok(Self::calc_storage_idx(orig_idx, orig_shape))
+                Ok(Self::calc_storage_idx(&orig_idx, orig_shape))
             }
         };
         res
     }
 
-    fn calc_storage_idx(idx: [usize; R], shape: Shape) -> usize {
+    fn calc_storage_idx(idx: &[usize; R], shape: Shape) -> usize {
         let stride = tensor::stride(R, shape);
         let mut i = 0;
         for (dim, &cur) in idx.iter().enumerate() {
@@ -126,7 +126,7 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
             GenericTensor::from_fn(|idx| {
                 let mut self_idx = [i; R];
                 self_idx[1..R].copy_from_slice(&idx[..(R - 1)]);
-                self.storage[self.storage_idx(self_idx).unwrap()]
+                self.storage[self.storage_idx(&self_idx).unwrap()]
             });
         Ok(out)
     }
@@ -136,7 +136,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
     type T = T;
     type Idx = [usize; R];
 
-    fn set(self, idx: [usize; R], val: T) -> Self {
+    fn set(self, idx: &[usize; R], val: T) -> Self {
         match self.storage_idx(idx) {
             Ok(i) => {
                 let mut storage = self.storage;
@@ -150,11 +150,11 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
         }
     }
 
-    fn map(self, f: impl Fn(Self::Idx, Self::T) -> Self::T) -> Self {
+    fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
         let mut storage = self.storage;
         for (i, v) in storage.iter_mut().enumerate() {
             let idx = Self::idx_from_storage_idx(i).unwrap();
-            *v = f(idx, *v);
+            *v = f(&idx, *v);
         }
 
         Self {
@@ -166,12 +166,12 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
     fn default_idx() -> Self::Idx {
         [0; R]
     }
-    fn next_idx(&self, idx: Self::Idx) -> Option<Self::Idx> {
+    fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
         if R == 0 {
             return None;
         }
 
-        let mut cur = idx;
+        let mut cur = *idx;
         cur[R - 1] += 1;
         for dim in (0..R).rev() {
             if cur[dim] == S[dim] {
@@ -195,10 +195,10 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
     }
 }
 
-impl<T: Numeric, const R: usize, const S: Shape> Index<[usize; R]> for GenericTensor<T, R, S> {
+impl<T: Numeric, const R: usize, const S: Shape> Index<&[usize; R]> for GenericTensor<T, R, S> {
     type Output = T;
 
-    fn index(&self, idx: [usize; R]) -> &Self::Output {
+    fn index(&self, idx: &[usize; R]) -> &Self::Output {
         self.storage.index(self.storage_idx(idx).unwrap())
     }
 }
@@ -245,7 +245,7 @@ where
 
 impl<T: Numeric, const R: usize, const S: Shape> PartialEq for GenericTensor<T, R, S> {
     fn eq(&self, other: &Self) -> bool {
-        self.iter().all(|(idx, val)| val == other[idx])
+        self.iter().all(|(idx, val)| val == other[&idx])
     }
 }
 
@@ -328,8 +328,8 @@ mod tests {
     #[test]
     #[allow(clippy::zero_prefixed_literal)]
     fn test_from_fn() {
-        let f = |idx| {
-            let [i, j, k] = idx;
+        let f = |idx: &[usize; 3]| {
+            let [i, j, k] = *idx;
             let s = format!("{}{}{}", i, j, k);
             s.parse().unwrap()
         };
@@ -401,9 +401,9 @@ mod tests {
                 *cur = rng.gen_range(0..S[dim]);
             }
             let val: f64 = rng.gen();
-            x = x.set(idx, val);
+            x = x.set(&idx, val);
 
-            assert_eq!(x[idx], val);
+            assert_eq!(x[&idx], val);
         }
     }
 
@@ -441,7 +441,7 @@ mod tests {
         let t2 = t.clone().reshape::<2, { [2, 3, 0, 0, 0] }>();
         let t3 = t.clone().reshape::<1, { [6, 0, 0, 0, 0] }>();
 
-        assert_eq!(t[[1, 0]], t2[[0, 2]]);
-        assert_eq!(t[[2, 1]], t3[[5]]);
+        assert_eq!(t[&[1, 0]], t2[&[0, 2]]);
+        assert_eq!(t[&[2, 1]], t3[&[5]]);
     }
 }

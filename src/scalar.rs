@@ -12,7 +12,7 @@ pub struct Scalar<T: Numeric>(GenericTensor<T, 0, { scalar_shape() }>);
 
 impl<T: Numeric> Scalar<T> {
     pub fn val(&self) -> T {
-        self[[]]
+        self[&[]]
     }
 }
 
@@ -35,7 +35,7 @@ mod tests {
     fn basics() {
         let a: Scalar<f64> = Scalar::from(42);
 
-        assert_eq!(a[[]], 42.0);
+        assert_eq!(a[&[]], 42.0);
         assert_eq!(a.val(), 42.0);
     }
 
