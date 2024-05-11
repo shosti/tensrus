@@ -45,7 +45,7 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
         std::array::from_fn(|i| s[i])
     }
 
-    fn idx_from_storage_idx(idx: usize) -> Result<[usize; R], IndexError> {
+    fn idx_from_storage_idx(idx: usize, transpose: Transpose) -> Result<[usize; R], IndexError> {
         if idx >= Self::storage_size() {
             return Err(IndexError {});
         }
@@ -61,7 +61,13 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
             i -= cur * s;
         }
 
-        Ok(res)
+        match transpose {
+            Transpose::None => Ok(res),
+            Transpose::Transposed => {
+                res.reverse();
+                Ok(res)
+            }
+        }
     }
 
     fn storage_idx(&self, idx: &[usize; R]) -> Result<usize, IndexError> {
@@ -110,7 +116,7 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
     where
         Assert<{ R >= 2 }>: IsTrue,
     {
-        GenericTensor::new(self.storage, self.transpose)
+        GenericTensor::new(self.storage, self.transpose.transpose())
     }
 
     pub fn subtensor(
@@ -152,7 +158,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
     fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
         let mut storage = self.storage;
         for (i, v) in storage.iter_mut().enumerate() {
-            let idx = Self::idx_from_storage_idx(i).unwrap();
+            let idx = Self::idx_from_storage_idx(i, self.transpose).unwrap();
             *v = f(&idx, *v);
         }
 
@@ -432,6 +438,23 @@ mod tests {
         let t0 = t1.subtensor(1).unwrap();
         let t0_expected: GenericTensor<f64, 0, { [0; 5] }> = GenericTensor::from([18]);
         assert_eq!(t0, t0_expected);
+    }
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_transpose() {
+        let t: GenericTensor<f64, 2, { [3, 2, 0, 0, 0] }> = GenericTensor::from([
+            1, 2,
+            3, 4,
+            5, 6,
+        ]);
+        let t2 = t.transpose().map(|_, v| v + 1.0);
+        let want: GenericTensor<f64, 2, { [2, 3, 0, 0, 0] }> = GenericTensor::from([
+            2, 4, 6,
+            3, 5, 7,
+        ]);
+
+        assert_eq!(t2, want);
     }
 
     #[test]
