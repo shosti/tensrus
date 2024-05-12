@@ -1,5 +1,4 @@
-use blas::{dgemv, sgemv};
-use cblas::{dgemm, sgemm, Layout, Transpose};
+use blas::{dgemm, dgemv, sgemm, sgemv};
 
 pub trait Numeric:
     num::Float
@@ -39,9 +38,8 @@ macro_rules! blas_ops {
 
 blas_ops! {
     gemm(
-        layout: Layout,
-        transa: Transpose,
-        transb: Transpose,
+        transa: u8,
+        transb: u8,
         m: i32,
         n: i32,
         k: i32,
