@@ -18,13 +18,7 @@ where
     [(); num_elems(1, vector_shape(N))]:,
 {
     pub fn dot(&self, other: &Self) -> T {
-        let mut res = T::zero();
-        for i in 0..N {
-            let idx = [i];
-            res += self[&idx] * other[&idx];
-        }
-
-        res
+        unsafe { T::dot(N as i32, &self.0.storage, 1, &other.0.storage, 1) }
     }
 }
 

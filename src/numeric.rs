@@ -1,4 +1,4 @@
-use blas::{dgemm, dgemv, sgemm, sgemv};
+use blas::{ddot, dgemm, dgemv, sdot, sgemm, sgemv};
 
 pub trait Numeric:
     num::Float
@@ -17,19 +17,19 @@ impl Numeric for f32 {}
 impl Numeric for f64 {}
 
 macro_rules! blas_ops {
-    ( $( $name:ident ( $( $var:ident : $t:ty , )* ) , )* ) => {
+    ( $( $name:ident ( $( $var:ident : $t:ty , )* ) -> $ret:ty , )* ) => {
         pub trait BLASOps: Sized {
-            $( unsafe fn $name ( $( $var : $t , )* ) ; )*
+            $( unsafe fn $name ( $( $var : $t , )* ) -> $ret ; )*
         }
 
         impl BLASOps for f32 {
-            $( unsafe fn $name ( $( $var : $t , )* ) {
+            $( unsafe fn $name ( $( $var : $t , )* )  -> $ret {
                 concat_idents!(s, $name) ( $( $var ),* )
             } )*
         }
 
         impl BLASOps for f64 {
-            $( unsafe fn $name ( $( $var : $t , )* ) {
+            $( unsafe fn $name ( $( $var : $t , )* ) -> $ret {
                 concat_idents!(d, $name) ( $( $var ),* )
             } )*
         }
@@ -51,7 +51,7 @@ blas_ops! {
         beta: Self,
         c: &mut [Self],
         ldc: i32,
-    ),
+    ) -> (),
     gemv(
         trans: u8,
         m: i32,
@@ -64,5 +64,12 @@ blas_ops! {
         beta: Self,
         y: &mut [Self],
         incy: i32,
-    ),
+    ) -> (),
+    dot(
+        n: i32,
+        x: &[Self],
+        incx: i32,
+        y: &[Self],
+        incy: i32,
+    ) -> Self,
 }
