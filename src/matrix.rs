@@ -132,31 +132,27 @@ where
     type Output = Vector<T, M>;
 
     fn mul(self, other: &Vector<T, N>) -> Self::Output {
-        let out = Self::Output::zeros().map(|idx, _| {
-            let mut res = T::zero();
-            let row = idx[0];
-            for i in 0..N {
-                res += self[&[row, i]] * other[&[i]];
-            }
-            res
-        });
-        // TODO: Figure out why gemv isn't working...
-        // unsafe {
-        //     T::gemv(
-        //         Layout::RowMajor,
-        //         self.0.transpose.into(),
-        //         M as i32,
-        //         N as i32,
-        //         T::one(),
-        //         &self.0.storage,
-        //         N as i32,
-        //         &other.0.storage,
-        //         1,
-        //         T::one(),
-        //         &mut out.0.storage,
-        //         1,
-        //     );
-        // }
+        let mut out = Self::Output::zeros();
+        let trans = if self.0.is_transposed() { b'N' } else { b'T' };
+        let m = if self.0.is_transposed() { M } else { N } as i32;
+        let n = if self.0.is_transposed() { N } else { M } as i32;
+        let lda = m;
+
+        unsafe {
+            T::gemv(
+                trans,
+                m,
+                n,
+                T::one(),
+                &self.0.storage,
+                lda,
+                &other.0.storage,
+                1,
+                T::one(),
+                &mut out.0.storage,
+                1,
+            );
+        }
 
         out
     }
