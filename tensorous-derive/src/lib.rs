@@ -5,9 +5,8 @@ extern crate quote;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use syn::{
-    punctuated::Punctuated, AngleBracketedGenericArguments, DeriveInput, Expr, Generics, Ident,
-    Lifetime, LifetimeParam, LitInt, Path, PathArguments, PathSegment, TraitBound, TypeParam,
-    TypeParamBound,
+    punctuated::Punctuated, AngleBracketedGenericArguments, DeriveInput, Generics, Ident, Lifetime,
+    LifetimeParam, Path, PathArguments, PathSegment, TraitBound, TypeParam, TypeParamBound,
 };
 
 #[proc_macro_derive(Tensor)]
@@ -199,15 +198,15 @@ fn get_wrapped_type(ast: &DeriveInput) -> (Ident, AngleBracketedGenericArguments
     (last_segment.ident.clone(), args.clone())
 }
 
-fn get_rank(args: &AngleBracketedGenericArguments) -> LitInt {
+fn get_rank(args: &AngleBracketedGenericArguments) -> syn::LitInt {
     let rank_arg = &args.args[1];
     let rank_expr: &syn::ExprLit;
-    if let syn::GenericArgument::Const(Expr::Lit(ref e)) = rank_arg {
+    if let syn::GenericArgument::Const(syn::Expr::Lit(ref e)) = rank_arg {
         rank_expr = e;
     } else {
         panic!("Deriving Tensor: expected wrapped type's second generic argument to be a constant specifying the tensor's rank");
     }
-    let lit: &LitInt;
+    let lit: &syn::LitInt;
     if let syn::Lit::Int(ref l) = rank_expr.lit {
         lit = l;
     } else {
