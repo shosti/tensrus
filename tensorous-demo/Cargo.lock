@@ -9,24 +9,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1fdabc7756949593fe60f30ec81974b613357de856987752631dea1e3394c80"
 
 [[package]]
-name = "brainy"
+name = "tensorous"
 version = "0.1.0"
 dependencies = [
- "brainy-derive",
+ "tensorous-derive",
  "dot",
  "num",
  "rand",
 ]
 
 [[package]]
-name = "brainy-demo"
+name = "tensorous-demo"
 version = "0.1.0"
 dependencies = [
- "brainy",
+ "tensorous",
 ]
 
 [[package]]
-name = "brainy-derive"
+name = "tensorous-derive"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",

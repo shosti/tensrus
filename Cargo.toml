@@ -1,17 +1,17 @@
 [package]
-name = "brainy"
+name = "tensorous"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
-name = "brainy"
+name = "tensorous"
 path = "src/lib.rs"
 
 [dependencies]
 dot = { git = "https://github.com/przygienda/dot-rust.git" }
 num = "0.4"
 rand = "0.8"
-brainy-derive = { path = "brainy-derive" }
+tensorous-derive = { path = "tensorous-derive" }
 blas = "0.22"
 # blas-src = { version = "0.10", features = ["accelerate"] }

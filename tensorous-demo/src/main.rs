@@ -1,6 +1,6 @@
-use brainy::flow::Flow;
-use brainy::nn::{Module, MLP};
-use brainy::scalar::Scalar;
+use tensorous::flow::Flow;
+use tensorous::nn::{Module, MLP};
+use tensorous::scalar::Scalar;
 
 fn main() {
     let xs: Vec<Vec<Flow<Scalar<f64>>>> = [

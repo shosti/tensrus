@@ -29,26 +29,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "brainy"
-version = "0.1.0"
-dependencies = [
- "blas",
- "brainy-derive",
- "dot",
- "num",
- "rand",
-]
-
-[[package]]
-name = "brainy-derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -214,6 +194,26 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "tensorous"
+version = "0.1.0"
+dependencies = [
+ "blas",
+ "dot",
+ "num",
+ "rand",
+ "tensorous-derive",
+]
+
+[[package]]
+name = "tensorous-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

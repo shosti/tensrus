@@ -6,7 +6,7 @@
 #![feature(concat_idents)]
 #![allow(incomplete_features)]
 #[macro_use]
-extern crate brainy_derive;
+extern crate tensorous_derive;
 
 pub mod generic_tensor;
 pub mod matrix;

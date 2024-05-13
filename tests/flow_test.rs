@@ -1,8 +1,8 @@
-extern crate brainy;
+extern crate tensorous;
 
-//use brainy::render::Graph;
-//use brainy::scalar::Scalar;
-// use brainy::var::Var;
+//use tensorous::render::Graph;
+//use tensorous::scalar::Scalar;
+// use tensorous::var::Var;
 // use std::fs::File;
 // use std::process::Command;
 
