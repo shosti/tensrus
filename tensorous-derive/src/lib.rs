@@ -111,6 +111,18 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 Self(self.0.clone())
             }
         }
+
+        impl #impl_generics From<#wrapped_type #wrapped_type_args> for #name #type_generics #where_clause {
+            fn from(t: #wrapped_type #wrapped_type_args) -> Self {
+                Self(t)
+            }
+        }
+
+        impl #impl_generics From<#name #type_generics> for #wrapped_type #wrapped_type_args #where_clause {
+            fn from(s: #name #type_generics) -> Self {
+                s.0
+            }
+        }
     };
     gen.into()
 }

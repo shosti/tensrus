@@ -32,15 +32,6 @@ where
     }
 }
 
-impl<T: Numeric, const N: usize> From<Vector<T, N>> for GenericTensor<T, 1, { vector_shape(N) }>
-where
-    [(); num_elems(1, vector_shape(N))]:,
-{
-    fn from(val: Vector<T, N>) -> Self {
-        val.0
-    }
-}
-
 impl<T: Numeric, const N: usize> SlicedTensor<T, 1, { vector_shape(N) }> for Vector<T, N>
 where
     [(); num_elems(1, vector_shape(N))]:,
