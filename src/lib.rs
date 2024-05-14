@@ -20,6 +20,8 @@ pub mod tensor;
 mod type_assert;
 pub mod var;
 pub mod vector;
+pub mod op2;
+pub mod flow;
 
 // use nn::{Module, MLP};
 // use render::Graph;

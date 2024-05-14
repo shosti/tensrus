@@ -128,6 +128,17 @@ pub trait Tensor:
 
     fn default_idx() -> Self::Idx;
     fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx>;
+
+    // Operations
+    fn relu(self) -> Self {
+        self.map(|_, val| {
+            if val < Self::T::zero() {
+                Self::T::zero()
+            } else {
+                val
+            }
+        })
+    }
 }
 
 pub trait SlicedTensor<T: Numeric, const R: usize, const S: Shape> {
