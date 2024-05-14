@@ -1,4 +1,4 @@
-use crate::op2::{Input, Op};
+use crate::op2::{Op, ReLU};
 use crate::tensor::Tensor;
 use std::any::Any;
 use std::cell::RefCell;
@@ -27,8 +27,14 @@ pub struct Output<Tn: Tensor> {
     id: Id,
     data: Rc<RefCell<Tn>>,
     op: Rc<dyn Op<Output = Tn>>,
-    inputs: Input,
-    children: HashMap<Id, Rc<dyn Any>>,
+    children: Children,
+    vars: Rc<RefCell<HashMap<Id, Box<dyn Any>>>>, // HashMap Any value is Var
+}
+
+#[derive(Debug, Clone)]
+enum Children {
+    Unary(Id),
+    Binary(Id, Id),
 }
 
 impl<Tn: Tensor> Var<Tn> {
@@ -36,6 +42,13 @@ impl<Tn: Tensor> Var<Tn> {
         match self {
             Self::Parameter(Param { id, .. }) => *id,
             Self::Output(Output { id, .. }) => *id,
+        }
+    }
+
+    pub fn data(&self) -> Rc<RefCell<Tn>> {
+        match self {
+            Self::Parameter(Param { data, .. }) => data.clone(),
+            Self::Output(Output { data, .. }) => data.clone(),
         }
     }
 
@@ -47,6 +60,37 @@ impl<Tn: Tensor> Var<Tn> {
         });
 
         id
+    }
+
+    fn new_from_unary(&self, op: Rc<dyn Op<Output = Tn>>) -> Self {
+        let id = Self::next_id();
+        let vars = match self {
+            Self::Parameter(_) => {
+                let mut h: HashMap<Id, Box<dyn Any>> = HashMap::new();
+                h.insert(self.id(), Box::new(self.clone()));
+                Rc::new(RefCell::new(h))
+            }
+            Self::Output(Output { vars, .. }) => {
+                let mut h = vars.borrow_mut();
+                h.insert(self.id(), Box::new(self.clone()));
+                vars.clone()
+            }
+        };
+
+        let data = op.forward(self.data().into());
+        Self::Output(Output {
+            id,
+            children: Children::Unary(self.id()),
+            op,
+            vars,
+            data: Rc::new(RefCell::new(data)),
+        })
+    }
+
+    pub fn relu(&self) -> Self {
+        let op = Rc::new(ReLU::new());
+
+        self.new_from_unary(op)
     }
 }
 

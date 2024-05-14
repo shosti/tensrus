@@ -8,11 +8,13 @@
 #[macro_use]
 extern crate tensorous_derive;
 
+pub mod flow;
 pub mod generic_tensor;
 pub mod matrix;
 pub mod nn;
 pub mod numeric;
 pub mod op;
+pub mod op2;
 pub mod render;
 pub mod scalar;
 pub mod slice;
@@ -20,8 +22,6 @@ pub mod tensor;
 mod type_assert;
 pub mod var;
 pub mod vector;
-pub mod op2;
-pub mod flow;
 
 // use nn::{Module, MLP};
 // use render::Graph;
