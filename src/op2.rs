@@ -1,12 +1,11 @@
+use crate::flow::Id;
+use crate::tensor::Tensor;
 use std::fmt::Debug;
 
-use crate::tensor::Tensor;
-use crate::flow::Flow;
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Input {
-    Unary(Flow),
-    Binary(Flow, Flow),
+    Unary(Id),
+    Binary(Id, Id),
 }
 
 pub trait Op: Debug {
@@ -28,9 +27,10 @@ macro_rules! create_unary_op {
 
             fn forward(&self, input: &Input) -> Self::Output {
                 if let Input::Unary(var_ref) = input {
-                    let var_rc = var_ref.clone().into_var::<Tn>();
-                    let var = var_rc.borrow();
-                    var.map($forward).into()
+                    todo!()
+                    // let var_rc = var_ref.clone().into_var::<Tn>();
+                    // let var = var_rc.borrow();
+                    // var.map($forward).into()
                 } else {
                     panic!("non-unary input to unary op")
                 }

@@ -2,72 +2,36 @@ use crate::op2::{Input, Op};
 use crate::tensor::Tensor;
 use std::any::Any;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
-type Id = u64;
+pub type Id = u64;
 
 thread_local!(static NEXT_ID: RefCell<Id> = const { RefCell::new(1) });
 
 #[derive(Debug, Clone)]
-pub struct Flow {
-    var_id: Id,
-    var: Rc<dyn Any>, // Is actually Rc<RefCell<Var<Tn>>>
-}
-
-#[derive(Debug)]
 pub enum Var<Tn: Tensor> {
     Parameter(Param<Tn>),
     Output(Output<Tn>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Param<Tn: Tensor> {
     id: Id,
-    data: Tn,
-    grad: Option<Tn>,
+    data: Rc<RefCell<Tn>>,
+    grad: Option<Rc<RefCell<Tn>>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Output<Tn: Tensor> {
     id: Id,
-    data: Tn,
-    op: Box<dyn Op<Output = Tn>>,
+    data: Rc<RefCell<Tn>>,
+    op: Rc<dyn Op<Output = Tn>>,
     inputs: Input,
-}
-
-impl Flow {
-    pub fn into_var<Tn: Tensor>(self) -> Rc<RefCell<Var<Tn>>> {
-        let out: Rc<RefCell<Var<Tn>>> = self.var.downcast().unwrap();
-        out
-    }
+    children: HashMap<Id, Rc<dyn Any>>,
 }
 
 impl<Tn: Tensor> Var<Tn> {
-    pub fn param(data: Tn) -> Self {
-        Self::Parameter(Param {
-            id: Self::next_id(),
-            data,
-            grad: None,
-        })
-    }
-
-    pub fn map(&self, f: impl FnOnce(&Tn) -> Tn) -> Tn {
-        match self {
-            Self::Parameter(Param { data, .. }) => f(data),
-            Self::Output(Output { data, .. }) => f(data),
-        }
-    }
-
-    pub fn output(op: Box<dyn Op<Output = Tn>>, inputs: Input) -> Self {
-        let data = op.forward(&inputs);
-        Self::Output(Output {
-            id: Self::next_id(),
-            data,
-            op,
-            inputs,
-        })
-    }
-
     pub fn id(&self) -> Id {
         match self {
             Self::Parameter(Param { id, .. }) => *id,
@@ -86,11 +50,12 @@ impl<Tn: Tensor> Var<Tn> {
     }
 }
 
-impl<Tn: Tensor> From<Var<Tn>> for Flow {
-    fn from(v: Var<Tn>) -> Self {
-        Self {
-            var_id: v.id(),
-            var: Rc::new(RefCell::new(v))
-        }
+impl<Tn: Tensor> From<Tn> for Var<Tn> {
+    fn from(data: Tn) -> Self {
+        Self::Parameter(Param {
+            id: Self::next_id(),
+            data: Rc::new(RefCell::new(data)),
+            grad: None,
+        })
     }
 }
