@@ -1,6 +1,5 @@
 use crate::tensor::Tensor;
 use std::any::Any;
-use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::fmt::Debug;
 use std::marker::PhantomData;
