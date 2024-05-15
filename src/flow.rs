@@ -131,6 +131,10 @@ impl<Tn: Tensor> Var<Tn> {
                 let v = vars.borrow();
 
                 Self::build_topo(cur, &mut topo, &mut visited, &v);
+
+                for id in topo.iter().rev() {
+                    // let var = vars.borrow()[id];
+                }
             }
         }
     }

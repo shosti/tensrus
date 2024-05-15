@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::rc::Rc;
+use num::Zero;
 
 #[derive(Debug, Clone)]
 pub enum Input {
@@ -32,7 +33,7 @@ pub trait Op: Debug {
     type Output: Tensor;
 
     fn forward(&self, input: Input) -> Self::Output;
-    fn backward(&self);
+    fn backward(&self, input_grads: Input, to_data: &Self::Output, to_data: &Self::Output) -> Input;
 }
 
 #[derive(Debug)]
@@ -56,8 +57,27 @@ impl<Tn: Tensor> Op for ReLU<Tn> {
         data.clone().relu()
     }
 
-    fn backward(&self) {
-        todo!()
+    fn backward(&self, input_grads: Input, to_grad: &Self::Output, to_data: &Self::Output) -> Input {
+        if let Input::Unary(input_grad) = input_grads {
+            let in_typed: Rc<Self::Output> = input_grad.downcast().unwrap();
+            let in_grad = Rc::into_inner(in_typed).unwrap();
+            let grad = in_grad.map(|idx, val| {
+                val
+            });
+
+            let res = grad.map(|idx, g|{
+                let diff = if to_data[idx] > Tn::T::zero() {
+                    to_grad[idx]
+                } else {
+                    Tn::T::zero()
+                };
+
+                g + diff
+            });
+            Input::Unary(Rc::new(res))
+        } else {
+            panic!("non-unary input grads sent to relu")
+        }
     }
 }
 // macro_rules! create_unary_op {
