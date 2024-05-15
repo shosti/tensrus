@@ -53,7 +53,9 @@ impl<Tn: Tensor> ReLU<Tn> {
 impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
     fn forward(&self, input: OpInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
         if let OpInput::Unary(input) = input {
-            todo!()
+            let data = Tn::from_basic(input.as_ref());
+            let out = data.clone().relu();
+            Box::new(out)
         } else {
             panic!("non-unary input to ReLU")
         }

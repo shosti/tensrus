@@ -206,7 +206,7 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTensor<T, R, S> {
-    fn into_any(self: Box<Self>) -> Box<dyn Any> {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 }

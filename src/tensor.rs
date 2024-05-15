@@ -100,7 +100,7 @@ pub const fn stride(r: usize, s: Shape) -> [usize; 5] {
 }
 
 pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {
-    fn into_any(self: Box<Self>) -> Box<dyn Any>;
+    fn as_any(&self) -> &dyn Any;
 }
 
 pub trait Tensor:
@@ -128,9 +128,9 @@ pub trait Tensor:
         TensorIterator::new(self)
     }
 
-    fn from_basic(from: Box<dyn BasicTensor<Self::T>>) -> Box<Self> {
-        let anybox = from.into_any();
-        anybox.downcast().unwrap()
+    fn from_basic(from: &dyn BasicTensor<Self::T>) -> &Self {
+        let any_ref = from.as_any();
+        any_ref.downcast_ref().unwrap()
     }
 
     fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self;
