@@ -67,6 +67,10 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             fn num_elems(&self) -> usize {
                 self.0.num_elems()
             }
+
+            fn clone(self: Box<Self>) -> Box<dyn crate::tensor::BasicTensor<T>> {
+                Box::new(self.as_ref().clone())
+            }
         }
 
         impl #f_impl_generics FromIterator<F> for #name #type_generics #where_clause

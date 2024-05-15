@@ -92,7 +92,7 @@ impl<T: Numeric> Var<T> {
         match self {
             Self::Parameter(p) => {
                 let mut param = p.borrow_mut();
-                param.grad = Some(zero_grad);
+                param.grad = Some(zero_grad.clone());
                 return;
             }
             Self::Output(o) => {

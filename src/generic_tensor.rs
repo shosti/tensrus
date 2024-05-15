@@ -216,6 +216,10 @@ impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTenso
     fn num_elems(&self) -> usize {
         Self::storage_size()
     }
+
+    fn clone(self: Box<Self>) -> Box<dyn BasicTensor<T>> {
+        Box::new(self.as_ref().clone())
+    }
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> Index<&[usize; R]> for GenericTensor<T, R, S> {
