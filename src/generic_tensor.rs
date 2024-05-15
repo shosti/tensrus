@@ -1,7 +1,7 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::slice::Slice;
-use crate::tensor;
+use crate::tensor::{self, BasicTensor};
 use crate::tensor::{
     downrank, num_elems, transpose_shape, IndexError, Shape, SlicedTensor, Tensor, TensorIterator,
     Transpose,
@@ -204,11 +204,26 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
     }
 }
 
+impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTensor<T, R, S> {}
+
 impl<T: Numeric, const R: usize, const S: Shape> Index<&[usize; R]> for GenericTensor<T, R, S> {
     type Output = T;
 
     fn index(&self, idx: &[usize; R]) -> &Self::Output {
         self.storage.index(self.storage_idx(idx).unwrap())
+    }
+}
+
+impl<T: Numeric, const R: usize, const S: Shape> Index<&[usize]> for GenericTensor<T, R, S> {
+    type Output = T;
+
+    fn index(&self, idx: &[usize]) -> &Self::Output {
+        if idx.len() != R {
+            panic!("invalid index for tensor of rank {}", R);
+        }
+        let mut i = [0; R];
+        i.copy_from_slice(idx);
+        self.index(&i)
     }
 }
 

@@ -98,8 +98,10 @@ pub const fn stride(r: usize, s: Shape) -> [usize; 5] {
     res
 }
 
+pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {}
+
 pub trait Tensor:
-    Debug
+    BasicTensor<Self::T>
     + Clone
     + for<'a> Add<&'a Self, Output = Self>
     + Mul<Self::T, Output = Self>

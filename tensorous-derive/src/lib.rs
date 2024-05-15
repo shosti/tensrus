@@ -55,6 +55,9 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
+        impl #impl_generics crate::tensor::BasicTensor<T> for #name #type_generics #where_clause {
+        }
+
         impl #f_impl_generics FromIterator<F> for #name #type_generics #where_clause
         {
             fn from_iter<I>(iter: I) -> Self
@@ -94,6 +97,14 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             type Output = T;
 
             fn index(&self, idx: &[usize; #rank]) -> &Self::Output {
+                self.0.index(idx)
+            }
+        }
+
+        impl #impl_generics std::ops::Index<&[usize]> for #name #type_generics #where_clause {
+            type Output = T;
+
+            fn index(&self, idx: &[usize]) -> &Self::Output {
                 self.0.index(idx)
             }
         }
