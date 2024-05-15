@@ -1,10 +1,9 @@
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::slice::Slice;
-use crate::tensor::{self, BasicTensor};
 use crate::tensor::{
-    downrank, num_elems, transpose_shape, IndexError, Shape, SlicedTensor, Tensor, TensorIterator,
-    Transpose,
+    downrank, num_elems, transpose_shape, BasicTensor, IndexError, Shape, SlicedTensor, Tensor,
+    TensorIterator, Transpose,
 };
 use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
@@ -42,7 +41,7 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
     }
 
     fn stride() -> [usize; R] {
-        let s = tensor::stride(R, S);
+        let s = crate::tensor::stride(R, S);
         std::array::from_fn(|i| s[i])
     }
 
@@ -94,7 +93,7 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
     }
 
     fn calc_storage_idx(idx: &[usize; R], shape: Shape) -> usize {
-        let stride = tensor::stride(R, shape);
+        let stride = crate::tensor::stride(R, shape);
         let mut i = 0;
         for (dim, &cur) in idx.iter().enumerate() {
             i += stride[dim] * cur;
@@ -145,6 +144,10 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
 impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, S> {
     type T = T;
     type Idx = [usize; R];
+
+    fn num_elems() -> usize {
+        Self::storage_size()
+    }
 
     fn set(self, idx: &[usize; R], val: T) -> Self {
         match self.storage_idx(idx) {
@@ -208,6 +211,10 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
 impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTensor<T, R, S> {
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn num_elems(&self) -> usize {
+        Self::storage_size()
     }
 }
 

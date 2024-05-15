@@ -53,11 +53,19 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             fn repeat(n: Self::T) -> Self {
                 Self(#wrapped_type::repeat(n))
             }
+
+            fn num_elems() -> usize {
+                #wrapped_type::#wrapped_type_args::num_elems()
+            }
         }
 
         impl #impl_generics crate::tensor::BasicTensor<T> for #name #type_generics #where_clause {
             fn as_any(&self) -> &dyn std::any::Any {
                 self
+            }
+
+            fn num_elems(&self) -> usize {
+                self.0.num_elems()
             }
         }
 

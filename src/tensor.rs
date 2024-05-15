@@ -101,6 +101,7 @@ pub const fn stride(r: usize, s: Shape) -> [usize; 5] {
 
 pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {
     fn as_any(&self) -> &dyn Any;
+    fn num_elems(&self) -> usize;
 }
 
 pub trait Tensor:
@@ -112,7 +113,7 @@ pub trait Tensor:
     + 'static
 {
     type T: Numeric;
-    type Idx: Copy + 'static;
+    type Idx: AsRef<[usize]> + Copy + 'static;
 
     fn repeat(n: Self::T) -> Self;
     fn zeros() -> Self {
@@ -124,13 +125,23 @@ pub trait Tensor:
     fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self {
         Self::zeros().map(|idx, _| f(idx))
     }
+    fn num_elems() -> usize;
+
     fn iter(&self) -> TensorIterator<Self> {
         TensorIterator::new(self)
     }
 
-    fn from_basic(from: &dyn BasicTensor<Self::T>) -> &Self {
+    fn ref_from_basic(from: &dyn BasicTensor<Self::T>) -> &Self {
         let any_ref = from.as_any();
         any_ref.downcast_ref().unwrap()
+    }
+
+    fn from_basic(from: &dyn BasicTensor<Self::T>) -> Self {
+        if from.num_elems() != <Self as Tensor>::num_elems() {
+            panic!("cannot create a Tensor from a BasicTensor unless the number of elements is identical");
+        }
+
+        Self::from_fn(|idx| from[idx.as_ref()])
     }
 
     fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self;
