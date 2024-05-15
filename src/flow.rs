@@ -159,13 +159,14 @@ impl<T: Numeric> Var<T> {
     // }
 }
 
-impl<Tn: Tensor> VarOps<Tn> for Var<Tn::T> {}
-
-pub trait VarOps<Tn: Tensor>: Sized {
+impl<Tn: Tensor> VarOps<Tn> for Var<Tn::T> {
     fn relu(&self) -> Self {
         let op = ReLU::<Tn>::new();
 
-        todo!()
-        // self.new_from_unary(op)
+        self.new_from_unary(op)
     }
+}
+
+pub trait VarOps<Tn: Tensor>: Sized {
+    fn relu(&self) -> Self;
 }

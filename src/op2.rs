@@ -43,10 +43,19 @@ pub struct ReLU<Tn: Tensor> {
 }
 
 impl<Tn: Tensor> ReLU<Tn> {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Box<Self> {
+        Box::new(Self {
             _markers: PhantomData,
-        }
+        })
+    }
+}
+
+impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
+    fn forward(&self, input: OpInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
+        todo!()
+    }
+    fn backward<'a>(&self, data: &'a Box<dyn BasicTensor<Tn::T>>) -> OpInput<Tn::T> {
+        todo!()
     }
 }
 
