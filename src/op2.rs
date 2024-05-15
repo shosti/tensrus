@@ -1,16 +1,19 @@
-// use crate::tensor::Tensor;
+use crate::{
+    numeric::Numeric,
+    tensor::{BasicTensor, Tensor},
+};
 // use std::any::Any;
 // use std::cell::RefCell;
-// use std::fmt::Debug;
-// use std::marker::PhantomData;
+use std::fmt::Debug;
+use std::marker::PhantomData;
 // use std::rc::Rc;
 // use num::Zero;
 
-// #[derive(Debug, Clone)]
-// pub enum Input {
-//     Unary(Rc<dyn Any>),
-//     Binary(Rc<dyn Any>, Rc<dyn Any>),
-// }
+#[derive(Debug)]
+pub enum Input<T: Numeric> {
+    Unary(Box<dyn BasicTensor<T>>),
+    Binary(Box<dyn BasicTensor<T>>, Box<dyn BasicTensor<T>>),
+}
 
 // impl Input {
 //     fn downcast_unary<Tn: Tensor>(&self) -> &Tn {
@@ -29,25 +32,23 @@
 //     }
 // }
 
-// pub trait Op: Debug {
-//     type Output: Tensor;
+pub trait Op<T: Numeric>: Debug {
+    fn forward(&self, input: Input<T>) -> Box<dyn BasicTensor<T>>;
+    fn backward(&self, data: Box<dyn BasicTensor<T>>) -> Input<T>;
+}
 
-//     fn forward(&self, input: Input) -> Self::Output;
-//     fn backward(&self, input_grads: Input, to_data: &Self::Output, to_data: &Self::Output) -> Input;
-// }
+#[derive(Debug)]
+pub struct ReLU<Tn: Tensor> {
+    _markers: PhantomData<Tn>,
+}
 
-// #[derive(Debug)]
-// pub struct ReLU<Tn: Tensor> {
-//     _markers: PhantomData<Tn>,
-// }
-
-// impl<Tn: Tensor> ReLU<Tn> {
-//     pub fn new() -> Self {
-//         Self {
-//             _markers: PhantomData,
-//         }
-//     }
-// }
+impl<Tn: Tensor> ReLU<Tn> {
+    pub fn new() -> Self {
+        Self {
+            _markers: PhantomData,
+        }
+    }
+}
 
 // impl<Tn: Tensor> Op for ReLU<Tn> {
 //     type Output = Tn;

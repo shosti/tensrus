@@ -1,4 +1,5 @@
 use crate::numeric::Numeric;
+use crate::op2::ReLU;
 // use crate::op2::{Op, ReLU};
 use crate::tensor::{BasicTensor, Tensor};
 use std::any::Any;
@@ -45,13 +46,6 @@ impl<T: Numeric> Var<T> {
         }
     }
 
-    // pub fn data(&self) -> Rc<RefCell<Tn>> {
-    //     match self {
-    //         Self::Parameter(Param { data, .. }) => data.clone(),
-    //         Self::Output(Output { data, .. }) => data.clone(),
-    //     }
-    // }
-
     fn next_id() -> Id {
         let mut id = 0;
         NEXT_ID.with(|n| {
@@ -61,25 +55,6 @@ impl<T: Numeric> Var<T> {
 
         id
     }
-
-    // fn as_ref(&self) -> VarRef {
-    //     match self {
-    //         Self::Parameter(_) => VarRef {
-    //             var: Box::new(self.clone()),
-    //             children: vec![],
-    //         },
-    //         Self::Output(o) => {
-    //             let children = match o.children {
-    //                 Children::Unary(id) => vec![id],
-    //                 Children::Binary(a, b) => vec![a, b],
-    //             };
-    //             VarRef {
-    //                 var: Box::new(self.clone()),
-    //                 children,
-    //             }
-    //         }
-    //     }
-    // }
 
     // fn new_from_unary(&self, op: Rc<dyn Op<Output = Tn>>) -> Self {
     //     let id = Self::next_id();
@@ -152,12 +127,13 @@ impl<T: Numeric> Var<T> {
     // }
 }
 
-impl<Tn: Tensor> From<Tn> for Var<Tn::T> {
-    fn from(data: Tn) -> Self {
-        Self::Parameter(Rc::new(RefCell::new(Param {
-            id: Self::next_id(),
-            data: Box::new(data),
-            grad: None,
-        })))
+impl<Tn: Tensor> VarOps<Tn> for Var<Tn::T> {}
+
+pub trait VarOps<Tn: Tensor>: Sized {
+    fn relu(&self) -> Self {
+        let op = ReLU::<Tn>::new();
+
+        todo!()
+        // self.new_from_unary(op)
     }
 }
