@@ -4,7 +4,7 @@ use crate::op2::{Op, OpInput, ReLU};
 use crate::tensor::{BasicTensor, Tensor};
 use std::any::Any;
 use std::cell::{Ref, RefCell};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::rc::Rc;
 
 pub type Id = u64;
@@ -88,36 +88,48 @@ impl<T: Numeric> Var<T> {
         Self::Output(Rc::new(RefCell::new(out)))
     }
 
-    // fn new_from_unary(&self, op: Rc<dyn Op<Output = Tn>>) -> Self {
-    //     let id = Self::next_id();
-    //     let vars = match self {
-    //         Self::Parameter(_) => {
-    //             let mut h: HashMap<Id, VarRef> = HashMap::new();
-    //             h.insert(self.id(), self.as_ref());
-    //             Rc::new(RefCell::new(h))
-    //         }
-    //         Self::Output(Output { vars, .. }) => {
-    //             let mut h = vars.borrow_mut();
-    //             h.insert(self.id(), self.as_ref());
-    //             vars.clone()
-    //         }
-    //     };
+    fn backward_grad(&mut self, zero_grad: Box<dyn BasicTensor<T>>) {
+        match self {
+            Self::Parameter(p) => {
+                let mut param = p.borrow_mut();
+                param.grad = Some(zero_grad);
+                return;
+            }
+            Self::Output(o) => {
+                let mut topo = Vec::new();
+                let mut visited = HashSet::new();
 
-    //     let data = op.forward(self.data().into());
-    //     Self::Output(Output {
-    //         id,
-    //         children: Children::Unary(self.id()),
-    //         op,
-    //         vars,
-    //         data: Rc::new(RefCell::new(data)),
-    //     })
-    // }
+                Self::build_topo(self, &mut topo, &mut visited);
 
-    // pub fn relu(&self) -> Self {
-    //     let op = Rc::new(ReLU::new());
+                for v in topo.iter().rev() {}
+            }
+        }
+    }
 
-    //     self.new_from_unary(op)
-    // }
+    fn children(&self) -> Vec<Var<T>> {
+        match self {
+            Self::Parameter(_) => vec![],
+            Self::Output(o) => {
+                let out = o.borrow();
+                match &out.children {
+                    Children::Unary(c) => vec![c.clone()],
+                    Children::Binary(c1, c2) => vec![c1.clone(), c2.clone()],
+                }
+            }
+        }
+    }
+
+    fn build_topo(cur: &Var<T>, topo: &mut Vec<Var<T>>, visited: &mut HashSet<Id>) {
+        if visited.contains(&cur.id()) {
+            return;
+        }
+
+        visited.insert(cur.id());
+        for child in cur.children().iter() {
+            Self::build_topo(child, topo, visited);
+        }
+        topo.push(cur.clone());
+    }
 
     // pub fn backward(&mut self) {
     //     match self {
@@ -165,8 +177,14 @@ impl<Tn: Tensor> VarOps<Tn> for Var<Tn::T> {
 
         self.new_from_unary(op)
     }
+
+    fn backward(&mut self) {
+        let zero_grad = Box::new(Tn::zeros());
+        self.backward_grad(zero_grad)
+    }
 }
 
 pub trait VarOps<Tn: Tensor>: Sized {
+    fn backward(&mut self);
     fn relu(&self) -> Self;
 }
