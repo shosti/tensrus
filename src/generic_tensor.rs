@@ -8,6 +8,7 @@ use crate::tensor::{
 };
 use crate::type_assert::{Assert, IsTrue};
 use num::ToPrimitive;
+use std::any::Any;
 use std::ops::{Add, Index, Mul};
 
 #[derive(Debug, Clone)]
@@ -204,7 +205,11 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
     }
 }
 
-impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTensor<T, R, S> {}
+impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTensor<T, R, S> {
+    fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+}
 
 impl<T: Numeric, const R: usize, const S: Shape> Index<&[usize; R]> for GenericTensor<T, R, S> {
     type Output = T;

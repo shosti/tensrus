@@ -1,4 +1,5 @@
 use num::{One, Zero};
+use std::any::Any;
 use std::fmt::Debug;
 use std::iter::Map;
 use std::ops::{Add, Index, Mul};
@@ -98,7 +99,9 @@ pub const fn stride(r: usize, s: Shape) -> [usize; 5] {
     res
 }
 
-pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {}
+pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {
+    fn into_any(self: Box<Self>) -> Box<dyn Any>;
+}
 
 pub trait Tensor:
     BasicTensor<Self::T>
@@ -123,6 +126,11 @@ pub trait Tensor:
     }
     fn iter(&self) -> TensorIterator<Self> {
         TensorIterator::new(self)
+    }
+
+    fn from_basic(from: Box<dyn BasicTensor<Self::T>>) -> Box<Self> {
+        let anybox = from.into_any();
+        anybox.downcast().unwrap()
     }
 
     fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self;

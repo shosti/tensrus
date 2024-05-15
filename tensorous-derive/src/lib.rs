@@ -56,6 +56,9 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         }
 
         impl #impl_generics crate::tensor::BasicTensor<T> for #name #type_generics #where_clause {
+            fn into_any(self: Box<Self>) -> Box<dyn std::any::Any> {
+                self
+            }
         }
 
         impl #f_impl_generics FromIterator<F> for #name #type_generics #where_clause

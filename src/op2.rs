@@ -52,7 +52,11 @@ impl<Tn: Tensor> ReLU<Tn> {
 
 impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
     fn forward(&self, input: OpInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
-        todo!()
+        if let OpInput::Unary(input) = input {
+            todo!()
+        } else {
+            panic!("non-unary input to ReLU")
+        }
     }
     fn backward<'a>(&self, data: &'a Box<dyn BasicTensor<Tn::T>>) -> OpInput<Tn::T> {
         todo!()
