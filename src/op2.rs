@@ -15,23 +15,6 @@ pub enum OpInput<'a, T: Numeric> {
     Binary(&'a Box<dyn BasicTensor<T>>, &'a Box<dyn BasicTensor<T>>),
 }
 
-// impl Input {
-//     fn downcast_unary<Tn: Tensor>(&self) -> &Tn {
-//         if let Input::Unary(val) = self {
-//             let data: &Tn = val.downcast_ref().unwrap();
-//             data
-//         } else {
-//             panic!("tried to call downcast_unary on a non-unary input")
-//         }
-//     }
-// }
-
-// impl<Tn: Tensor> From<Rc<RefCell<Tn>>> for Input {
-//     fn from(t: Rc<RefCell<Tn>>) -> Self {
-//         Self::Unary(t)
-//     }
-// }
-
 pub trait Op<T: Numeric>: Debug {
     fn forward(&self, input: OpInput<T>) -> Box<dyn BasicTensor<T>>;
     fn backward<'a>(&self, data: &'a Box<dyn BasicTensor<T>>) -> OpInput<T>;

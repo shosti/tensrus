@@ -4,7 +4,7 @@ use crate::op2::{Op, OpInput, ReLU};
 use crate::tensor::{BasicTensor, Tensor};
 use std::any::Any;
 use std::cell::{Ref, RefCell};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 pub type Id = u64;
@@ -88,7 +88,7 @@ impl<T: Numeric> Var<T> {
         Self::Output(Rc::new(RefCell::new(out)))
     }
 
-    fn backward_grad(&mut self, zero_grad: Box<dyn BasicTensor<T>>) {
+    fn backward_grad(&mut self, zero_grad: Box<dyn BasicTensor<T>>, one_grad: Box<dyn BasicTensor<T>>) {
         match self {
             Self::Parameter(p) => {
                 let mut param = p.borrow_mut();
@@ -100,8 +100,25 @@ impl<T: Numeric> Var<T> {
                 let mut visited = HashSet::new();
 
                 Self::build_topo(self, &mut topo, &mut visited);
+                Self::update_grads(topo, zero_grad, one_grad);
+            }
+        }
+    }
 
-                for v in topo.iter().rev() {}
+    fn update_grads(
+        topo: Vec<Var<T>>,
+        zero_grad: Box<dyn BasicTensor<T>>,
+        one_grad: Box<dyn BasicTensor<T>>,
+    ) {
+        let mut accumulators = HashMap::<Id, Box<dyn BasicTensor<T>>>::new();
+        for v in topo.iter().rev() {
+            match v {
+                Self::Parameter(p) => {
+                    todo!()
+                }
+                Self::Output(p) => {
+                    todo!()
+                }
             }
         }
     }
@@ -179,8 +196,9 @@ impl<Tn: Tensor> VarOps<Tn> for Var<Tn::T> {
     }
 
     fn backward(&mut self) {
-        let zero_grad = Box::new(Tn::zeros());
-        self.backward_grad(zero_grad)
+        let zero_grad = Tn::zeros();
+        let one_grad = Tn::ones();
+        self.backward_grad(Box::new(zero_grad), Box::new(one_grad));
     }
 }
 
