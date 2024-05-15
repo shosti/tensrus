@@ -1,5 +1,5 @@
 use crate::numeric::Numeric;
-use crate::op2::ReLU;
+use crate::op2::{Op, OpInput, ReLU};
 // use crate::op2::{Op, ReLU};
 use crate::tensor::{BasicTensor, Tensor};
 use std::any::Any;
@@ -28,7 +28,7 @@ pub struct Param<T: Numeric> {
 pub struct Output<T: Numeric> {
     id: Id,
     data: Box<dyn BasicTensor<T>>,
-    // op: Box<dyn Op<Output = Tn>>,
+    op: Box<dyn Op<T>>,
     children: Children<T>,
 }
 
@@ -54,6 +54,38 @@ impl<T: Numeric> Var<T> {
         });
 
         id
+    }
+
+    fn new_from_unary(&self, op: Box<dyn Op<T>>) -> Self {
+        let children = Children::Unary(self.clone());
+        let id = Self::next_id();
+
+        let out = match self {
+            Self::Parameter(p) => {
+                let param = p.borrow();
+                let input = OpInput::Unary(&param.data);
+                let data = op.forward(input);
+                Output {
+                    id,
+                    data,
+                    op,
+                    children,
+                }
+            }
+            Self::Output(o) => {
+                let last_out = o.borrow();
+                let input = OpInput::Unary(&last_out.data);
+                let data = op.forward(input);
+                Output {
+                    id,
+                    data,
+                    op,
+                    children,
+                }
+            }
+        };
+
+        Self::Output(Rc::new(RefCell::new(out)))
     }
 
     // fn new_from_unary(&self, op: Rc<dyn Op<Output = Tn>>) -> Self {

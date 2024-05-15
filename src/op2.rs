@@ -10,9 +10,9 @@ use std::marker::PhantomData;
 // use num::Zero;
 
 #[derive(Debug)]
-pub enum Input<T: Numeric> {
-    Unary(Box<dyn BasicTensor<T>>),
-    Binary(Box<dyn BasicTensor<T>>, Box<dyn BasicTensor<T>>),
+pub enum OpInput<'a, T: Numeric> {
+    Unary(&'a Box<dyn BasicTensor<T>>),
+    Binary(&'a Box<dyn BasicTensor<T>>, &'a Box<dyn BasicTensor<T>>),
 }
 
 // impl Input {
@@ -33,8 +33,8 @@ pub enum Input<T: Numeric> {
 // }
 
 pub trait Op<T: Numeric>: Debug {
-    fn forward(&self, input: Input<T>) -> Box<dyn BasicTensor<T>>;
-    fn backward(&self, data: Box<dyn BasicTensor<T>>) -> Input<T>;
+    fn forward(&self, input: OpInput<T>) -> Box<dyn BasicTensor<T>>;
+    fn backward<'a>(&self, data: &'a Box<dyn BasicTensor<T>>) -> OpInput<T>;
 }
 
 #[derive(Debug)]
