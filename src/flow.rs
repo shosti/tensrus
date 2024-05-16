@@ -88,7 +88,7 @@ impl<Tn: Tensor> Var<Tn> {
 }
 
 impl<T: Numeric> VarRef<T> {
-    pub fn id(&self) -> Id {
+    fn id(&self) -> Id {
         match self {
             Self::Parameter(p) => p.borrow().id,
             Self::Output(o) => o.borrow().id,
@@ -158,45 +158,6 @@ impl<T: Numeric> VarRef<T> {
         }
         topo.push(cur.clone());
     }
-
-    // pub fn backward(&mut self) {
-    //     match self {
-    //         Self::Parameter(p) => {
-    //             p.grad = Some(Rc::new(RefCell::new(Tn::zeros())));
-    //             return;
-    //         }
-    //         Self::Output(Output { vars, id, .. }) => {
-    //             let mut topo = Vec::new();
-    //             let mut visited = HashSet::new();
-    //             let cur = *id;
-    //             let v = vars.borrow();
-
-    //             Self::build_topo(cur, &mut topo, &mut visited, &v);
-
-    //             for id in topo.iter().rev() {
-    //                 // let var = vars.borrow()[id];
-    //             }
-    //         }
-    //     }
-    // }
-
-    // fn build_topo(
-    //     cur: Id,
-    //     topo: &mut Vec<Id>,
-    //     visited: &mut HashSet<Id>,
-    //     vars: &Ref<HashMap<Id, VarRef>>,
-    // ) {
-    //     if visited.contains(&cur) {
-    //         return;
-    //     }
-
-    //     visited.insert(cur);
-
-    //     for child in &vars[&cur].children {
-    //         Self::build_topo(*child, topo, visited, vars);
-    //     }
-    //     topo.push(cur);
-    // }
 }
 
 impl<Tn: Tensor> From<&Var<Tn>> for VarRef<Tn::T> {

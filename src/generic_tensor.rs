@@ -220,6 +220,14 @@ impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTenso
     fn clone(self: Box<Self>) -> Box<dyn BasicTensor<T>> {
         Box::new(self.as_ref().clone())
     }
+
+    fn add(self: Box<Self>, other: &Box<dyn BasicTensor<T>>) -> Box<dyn BasicTensor<T>> {
+        if self.num_elems() != other.num_elems() {
+            panic!("adding non-matching BasicTensors");
+        }
+
+        Box::new(self.map(|idx, val| val + other[idx]))
+    }
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> Index<&[usize; R]> for GenericTensor<T, R, S> {

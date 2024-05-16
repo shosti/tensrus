@@ -71,6 +71,10 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             fn clone(self: Box<Self>) -> Box<dyn crate::tensor::BasicTensor<T>> {
                 Box::new(self.as_ref().clone())
             }
+
+            fn add(self: Box<Self>, other: &Box<dyn crate::tensor::BasicTensor<T>>) -> Box<dyn crate::tensor::BasicTensor<T>> {
+                Box::new(crate::tensor::Tensor::map(*self, |idx, val| val + other[idx]))
+            }
         }
 
         impl #f_impl_generics FromIterator<F> for #name #type_generics #where_clause
