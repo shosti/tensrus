@@ -17,7 +17,11 @@ pub enum OpInput<'a, T: Numeric> {
 
 pub trait Op<T: Numeric>: Debug {
     fn forward(&self, input: OpInput<T>) -> Box<dyn BasicTensor<T>>;
-    fn backward<'a>(&self, data: &'a Box<dyn BasicTensor<T>>) -> OpInput<T>;
+    fn backward<'a>(
+        &self,
+        out_data: &'a Box<dyn BasicTensor<T>>,
+        out_grad: &'a Box<dyn BasicTensor<T>>,
+    ) -> OpInput<T>;
 }
 
 #[derive(Debug)]
@@ -42,7 +46,11 @@ impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
             panic!("non-unary input to ReLU")
         }
     }
-    fn backward<'a>(&self, data: &'a Box<dyn BasicTensor<Tn::T>>) -> OpInput<Tn::T> {
+    fn backward<'a>(
+        &self,
+        out_data: &'a Box<dyn BasicTensor<Tn::T>>,
+        out_grad: &'a Box<dyn BasicTensor<Tn::T>>,
+    ) -> OpInput<Tn::T> {
         todo!()
     }
 }

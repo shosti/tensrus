@@ -217,8 +217,8 @@ impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTenso
         Self::storage_size()
     }
 
-    fn clone(self: Box<Self>) -> Box<dyn BasicTensor<T>> {
-        Box::new(self.as_ref().clone())
+    fn clone_boxed(&self) -> Box<dyn BasicTensor<T>> {
+        Box::new(self.clone())
     }
 
     fn add(self: Box<Self>, other: &Box<dyn BasicTensor<T>>) -> Box<dyn BasicTensor<T>> {

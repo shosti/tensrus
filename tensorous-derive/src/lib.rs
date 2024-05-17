@@ -68,8 +68,8 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 self.0.num_elems()
             }
 
-            fn clone(self: Box<Self>) -> Box<dyn crate::tensor::BasicTensor<T>> {
-                Box::new(self.as_ref().clone())
+            fn clone_boxed(&self) -> Box<dyn crate::tensor::BasicTensor<T>> {
+                Box::new(self.clone())
             }
 
             fn add(self: Box<Self>, other: &Box<dyn crate::tensor::BasicTensor<T>>) -> Box<dyn crate::tensor::BasicTensor<T>> {

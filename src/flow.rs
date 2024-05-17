@@ -103,7 +103,7 @@ impl<T: Numeric> VarRef<T> {
         match self {
             Self::Parameter(p) => {
                 let mut param = p.borrow_mut();
-                param.grad = Some(zero_grad.clone());
+                param.grad = Some(zero_grad.clone_boxed());
                 return;
             }
             Self::Output(_) => {
@@ -111,27 +111,57 @@ impl<T: Numeric> VarRef<T> {
                 let mut visited = HashSet::new();
 
                 Self::build_topo(self, &mut topo, &mut visited);
-                Self::update_grads(topo, zero_grad, one_grad);
+                Self::update_grads(topo, &zero_grad, &one_grad);
             }
         }
     }
 
     fn update_grads(
         topo: Vec<VarRef<T>>,
-        zero_grad: Box<dyn BasicTensor<T>>,
-        one_grad: Box<dyn BasicTensor<T>>,
+        zero_grad: &Box<dyn BasicTensor<T>>,
+        one_grad: &Box<dyn BasicTensor<T>>,
     ) {
         let mut accumulators = HashMap::<Id, Box<dyn BasicTensor<T>>>::new();
         for v in topo.iter().rev() {
             match v {
                 Self::Parameter(p) => {
-                    todo!()
+                    // We're at a parameter which has no children; nothing left
+                    // to do
                 }
-                Self::Output(p) => {
-                    todo!()
+                Self::Output(o) => {
+                    let out = o.borrow();
+                    let out_grad = accumulators
+                        .entry(out.id)
+                        .or_insert_with(|| zero_grad.clone_boxed());
+                    let grads = out.op.backward(&out.data, out_grad);
+                    match &out.children {
+                        Children::Unary(c) => {
+                            if let OpInput::Unary(grad) = grads {
+                                Self::update_grad(c, grad, &accumulators);
+                            } else {
+                                panic!("op backwards() outputted non-unary grads for unary children");
+                            }
+                        }
+                        Children::Binary(c1, c2) => {
+                            if let OpInput::Binary(g1, g2) = grads {
+                                Self::update_grad(c1, g1, &accumulators);
+                                Self::update_grad(c2, g2, &accumulators);
+                            } else {
+                                panic!("op backwards() outputted non-binary grads for binary children");
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    fn update_grad(
+        var: &VarRef<T>,
+        grad: &Box<dyn BasicTensor<T>>,
+        accumulators: &HashMap<Id, Box<dyn BasicTensor<T>>>,
+    ) {
+        todo!();
     }
 
     fn children(&self) -> Vec<VarRef<T>> {

@@ -102,7 +102,7 @@ pub const fn stride(r: usize, s: Shape) -> [usize; 5] {
 pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {
     fn as_any(&self) -> &dyn Any;
     fn num_elems(&self) -> usize;
-    fn clone(self: Box<Self>) -> Box<dyn BasicTensor<T>>;
+    fn clone_boxed(&self) -> Box<dyn BasicTensor<T>>;
     fn add(self: Box<Self>, other: &Box<dyn BasicTensor<T>>) -> Box<dyn BasicTensor<T>>;
 }
 
