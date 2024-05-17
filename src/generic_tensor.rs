@@ -228,6 +228,14 @@ impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTenso
 
         Box::new(self.map(|idx, val| val + other[idx]))
     }
+
+    fn zeros_with_shape(&self) -> Box<dyn BasicTensor<T>> {
+        Box::new(Self::zeros())
+    }
+
+    fn ones_with_shape(&self) -> Box<dyn BasicTensor<T>> {
+        Box::new(Self::ones())
+    }
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> Index<&[usize; R]> for GenericTensor<T, R, S> {

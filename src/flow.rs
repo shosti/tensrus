@@ -95,15 +95,11 @@ impl<T: Numeric> VarRef<T> {
         }
     }
 
-    fn backward_grad(
-        &mut self,
-        zero_grad: Box<dyn BasicTensor<T>>,
-        one_grad: Box<dyn BasicTensor<T>>,
-    ) {
+    fn backward(&mut self) {
         match self {
             Self::Parameter(p) => {
                 let mut param = p.borrow_mut();
-                param.grad = Some(zero_grad.clone_boxed());
+                param.grad = Some(param.data.ones_with_shape());
                 return;
             }
             Self::Output(_) => {
@@ -111,17 +107,19 @@ impl<T: Numeric> VarRef<T> {
                 let mut visited = HashSet::new();
 
                 Self::build_topo(self, &mut topo, &mut visited);
-                Self::update_grads(topo, &zero_grad, &one_grad);
+                self.update_grads(topo);
             }
         }
     }
 
-    fn update_grads(
-        topo: Vec<VarRef<T>>,
-        zero_grad: &Box<dyn BasicTensor<T>>,
-        one_grad: &Box<dyn BasicTensor<T>>,
-    ) {
+    fn update_grads(&self, topo: Vec<VarRef<T>>) {
         let mut accumulators = HashMap::<Id, Box<dyn BasicTensor<T>>>::new();
+        let ones = match self {
+            Self::Parameter(p) => p.borrow().data.ones_with_shape(),
+            Self::Output(o) => o.borrow().data.ones_with_shape(),
+        };
+        accumulators.insert(self.id(), ones);
+
         for v in topo.iter().rev() {
             match v {
                 Self::Parameter(p) => {
@@ -132,14 +130,16 @@ impl<T: Numeric> VarRef<T> {
                     let out = o.borrow();
                     let out_grad = accumulators
                         .entry(out.id)
-                        .or_insert_with(|| zero_grad.clone_boxed());
+                        .or_insert_with(|| out.data.ones_with_shape());
                     let grads = out.op.backward(&out.data, out_grad);
                     match &out.children {
                         Children::Unary(c) => {
                             if let OpInput::Unary(grad) = grads {
                                 Self::update_grad(c, grad, &accumulators);
                             } else {
-                                panic!("op backwards() outputted non-unary grads for unary children");
+                                panic!(
+                                    "op backwards() outputted non-unary grads for unary children"
+                                );
                             }
                         }
                         Children::Binary(c1, c2) => {
@@ -147,7 +147,9 @@ impl<T: Numeric> VarRef<T> {
                                 Self::update_grad(c1, g1, &accumulators);
                                 Self::update_grad(c2, g2, &accumulators);
                             } else {
-                                panic!("op backwards() outputted non-binary grads for binary children");
+                                panic!(
+                                    "op backwards() outputted non-binary grads for binary children"
+                                );
                             }
                         }
                     }
@@ -207,9 +209,7 @@ impl<Tn: Tensor> Var<Tn> {
     }
 
     pub fn backward(&self) {
-        let zero_grad = Tn::zeros();
-        let one_grad = Tn::ones();
-        VarRef::from(self).backward_grad(Box::new(zero_grad), Box::new(one_grad));
+        VarRef::from(self).backward();
     }
 }
 
