@@ -1,5 +1,5 @@
 use crate::numeric::Numeric;
-use crate::op2::{Op, OpInput, ReLU};
+use crate::op2::{BackwardOutput, ForwardInput, Op, ReLU};
 use crate::tensor::{BasicTensor, Tensor};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -61,7 +61,7 @@ impl<Tn: Tensor> Var<Tn> {
         let out = match self {
             Self::Parameter(p, _) => {
                 let param = p.borrow();
-                let input = OpInput::Unary(&param.data);
+                let input = ForwardInput::Unary(&param.data);
                 let data = op.forward(input);
                 Output {
                     id,
@@ -72,7 +72,7 @@ impl<Tn: Tensor> Var<Tn> {
             }
             Self::Output(o, _) => {
                 let last_out = o.borrow();
-                let input = OpInput::Unary(&last_out.data);
+                let input = ForwardInput::Unary(&last_out.data);
                 let data = op.forward(input);
                 Output {
                     id,
@@ -134,8 +134,8 @@ impl<T: Numeric> VarRef<T> {
                     let grads = out.op.backward(&out.data, out_grad);
                     match &out.children {
                         Children::Unary(c) => {
-                            if let OpInput::Unary(grad) = grads {
-                                Self::update_grad(c, grad, &accumulators);
+                            if let BackwardOutput::Unary(grad) = grads {
+                                Self::update_grad(c, grad, &mut accumulators);
                             } else {
                                 panic!(
                                     "op backwards() outputted non-unary grads for unary children"
@@ -143,9 +143,9 @@ impl<T: Numeric> VarRef<T> {
                             }
                         }
                         Children::Binary(c1, c2) => {
-                            if let OpInput::Binary(g1, g2) = grads {
-                                Self::update_grad(c1, g1, &accumulators);
-                                Self::update_grad(c2, g2, &accumulators);
+                            if let BackwardOutput::Binary(g1, g2) = grads {
+                                Self::update_grad(c1, g1, &mut accumulators);
+                                Self::update_grad(c2, g2, &mut accumulators);
                             } else {
                                 panic!(
                                     "op backwards() outputted non-binary grads for binary children"
@@ -160,10 +160,18 @@ impl<T: Numeric> VarRef<T> {
 
     fn update_grad(
         var: &VarRef<T>,
-        grad: &Box<dyn BasicTensor<T>>,
-        accumulators: &HashMap<Id, Box<dyn BasicTensor<T>>>,
+        grad: Box<dyn BasicTensor<T>>,
+        accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>,
     ) {
-        todo!();
+        let k = var.id();
+        match accumulators.remove(&k) {
+            Some(old_grad) => {
+                accumulators.insert(k, old_grad.add(&grad));
+            }
+            None => {
+                accumulators.insert(k, grad);
+            }
+        }
     }
 
     fn children(&self) -> Vec<VarRef<T>> {
