@@ -203,24 +203,19 @@ impl<T: Numeric> Output<T> {
         match &self.children {
             Children::Unary(c) => {
                 let in_grad = c.grad(accumulators);
-                let updated_grad = self.calc_in_grads(BackwardOutput::Unary(in_grad), accumulators);
-                if let BackwardOutput::Unary(grad) = updated_grad {
-                    c.set_grad(grad, accumulators);
-                } else {
-                    panic!("non-unary output");
-                }
+                let updated_grad = self
+                    .calc_in_grads(BackwardOutput::Unary(in_grad), accumulators)
+                    .unary();
+                c.set_grad(updated_grad, accumulators);
             }
             Children::Binary(c1, c2) => {
                 let in_grad_1 = c1.grad(accumulators);
                 let in_grad_2 = c2.grad(accumulators);
-                let updated_grads =
-                    self.calc_in_grads(BackwardOutput::Binary(in_grad_1, in_grad_2), accumulators);
-                if let BackwardOutput::Binary(grad1, grad2) = updated_grads {
-                    c1.set_grad(grad1, accumulators);
-                    c2.set_grad(grad2, accumulators);
-                } else {
-                    panic!("non-binary output");
-                }
+                let (grad1, grad2) = self
+                    .calc_in_grads(BackwardOutput::Binary(in_grad_1, in_grad_2), accumulators)
+                    .binary();
+                c1.set_grad(grad1, accumulators);
+                c2.set_grad(grad2, accumulators);
             }
         }
     }

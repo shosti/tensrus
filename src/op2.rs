@@ -12,10 +12,46 @@ pub enum ForwardInput<'a, T: Numeric> {
     Binary(&'a Box<dyn BasicTensor<T>>, &'a Box<dyn BasicTensor<T>>),
 }
 
+impl<'a, T: Numeric> ForwardInput<'a, T> {
+    pub fn unary(&'a self) -> &'a Box<dyn BasicTensor<T>> {
+        if let Self::Unary(t) = self {
+            t
+        } else {
+            panic!("non-unary input")
+        }
+    }
+
+    pub fn binary(&'a self) -> (&'a Box<dyn BasicTensor<T>>, &'a Box<dyn BasicTensor<T>>) {
+        if let Self::Binary(t1, t2) = self {
+            (t1, t2)
+        } else {
+            panic!("non-binary input")
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum BackwardOutput<T: Numeric> {
     Unary(Box<dyn BasicTensor<T>>),
     Binary(Box<dyn BasicTensor<T>>, Box<dyn BasicTensor<T>>),
+}
+
+impl<T: Numeric> BackwardOutput<T> {
+    pub fn unary(self) -> Box<dyn BasicTensor<T>> {
+        if let Self::Unary(out) = self {
+            out
+        } else {
+            panic!("non-unary output")
+        }
+    }
+
+    pub fn binary(self) -> (Box<dyn BasicTensor<T>>, Box<dyn BasicTensor<T>>) {
+        if let Self::Binary(out1, out2) = self {
+            (out1, out2)
+        } else {
+            panic!("non-binary output")
+        }
+    }
 }
 
 pub trait Op<T: Numeric>: Debug {
@@ -42,34 +78,28 @@ impl<Tn: Tensor> ReLU<Tn> {
 }
 
 impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
-    fn forward(&self, input: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
-        if let ForwardInput::Unary(input) = input {
-            let out = Tn::from_basic(input.as_ref()).relu();
-            Box::new(out)
-        } else {
-            panic!("non-unary input to ReLU")
-        }
+    fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
+        let input = inputs.unary();
+        let out = Tn::from_basic(input.as_ref()).relu();
+        Box::new(out)
     }
     fn backward<'a>(
         &self,
-        in_grad: BackwardOutput<Tn::T>,
+        in_grads: BackwardOutput<Tn::T>,
         out_data: &'a Box<dyn BasicTensor<Tn::T>>,
         out_grad: &'a Box<dyn BasicTensor<Tn::T>>,
     ) -> BackwardOutput<Tn::T> {
-        if let BackwardOutput::Unary(in_grad_untyped) = in_grad {
-            let in_grad = Tn::from_basic_boxed(in_grad_untyped);
-            let updated_grad = in_grad.map(|idx, in_grad| {
-                let diff = if out_data[idx.as_ref()] > Tn::T::zero() {
-                    out_grad[idx.as_ref()]
-                } else {
-                    Tn::T::zero()
-                };
+        let in_grad_untyped = in_grads.unary();
+        let in_grad = Tn::from_basic_boxed(in_grad_untyped);
+        let updated_grad = in_grad.map(|idx, in_grad| {
+            let diff = if out_data[idx.as_ref()] > Tn::T::zero() {
+                out_grad[idx.as_ref()]
+            } else {
+                Tn::T::zero()
+            };
 
-                in_grad + diff
-            });
-            BackwardOutput::Unary(Box::new(updated_grad))
-        } else {
-            panic!("non-unary backward output passed to ReLU");
-        }
+            in_grad + diff
+        });
+        BackwardOutput::Unary(Box::new(updated_grad))
     }
 }
