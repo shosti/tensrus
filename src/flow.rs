@@ -1,9 +1,10 @@
 use crate::numeric::Numeric;
-use crate::op2::{BackwardOutput, ForwardInput, Op, ReLU};
+use crate::op2::{AddOp, BackwardOutput, ForwardInput, Op, ReLU};
 use crate::tensor::{BasicTensor, Tensor};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
+use std::ops::Add;
 use std::rc::Rc;
 
 pub type Id = u64;
@@ -83,6 +84,45 @@ impl<Tn: Tensor> Var<Tn> {
             }
         };
 
+        Self::Output(Rc::new(RefCell::new(out)), PhantomData)
+    }
+
+    fn new_from_binary(&self, other: VarRef<Tn::T>, op: Box<dyn Op<Tn::T>>) -> Self {
+        let id = Self::next_id();
+
+        let data = match self {
+            Self::Parameter(s, _) => match &other {
+                VarRef::Parameter(o) => {
+                    let (v1, v2) = (s.borrow(), o.borrow());
+                    let input = ForwardInput::Binary(&v1.data, &v2.data);
+                    op.forward(input)
+                }
+                VarRef::Output(o) => {
+                    let (v1, v2) = (s.borrow(), o.borrow());
+                    let input = ForwardInput::Binary(&v1.data, &v2.data);
+                    op.forward(input)
+                }
+            },
+            Self::Output(s, _) => match &other {
+                VarRef::Parameter(o) => {
+                    let (v1, v2) = (s.borrow(), o.borrow());
+                    let input = ForwardInput::Binary(&v1.data, &v2.data);
+                    op.forward(input)
+                }
+                VarRef::Output(o) => {
+                    let (v1, v2) = (s.borrow(), o.borrow());
+                    let input = ForwardInput::Binary(&v1.data, &v2.data);
+                    op.forward(input)
+                }
+            },
+        };
+        let children = Children::Binary(self.into(), other);
+        let out = Output {
+            id,
+            data,
+            op,
+            children,
+        };
         Self::Output(Rc::new(RefCell::new(out)), PhantomData)
     }
 }
@@ -250,6 +290,17 @@ impl<Tn: Tensor> Var<Tn> {
 
     pub fn backward(&self) {
         VarRef::from(self).backward();
+    }
+}
+
+impl<Tn: Tensor> Add<Var<Tn>> for Var<Tn> {
+    type Output = Self;
+
+    fn add(self, other: Var<Tn>) -> Self {
+        let op = AddOp::<Tn>::new();
+        let other_ref: VarRef<Tn::T> = (&other).into();
+
+        self.new_from_binary(other_ref, op)
     }
 }
 

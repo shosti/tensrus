@@ -103,3 +103,38 @@ impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
         BackwardOutput::Unary(Box::new(updated_grad))
     }
 }
+
+#[derive(Debug)]
+pub struct AddOp<Tn: Tensor> {
+    _markers: PhantomData<Tn>,
+}
+
+impl<Tn: Tensor> AddOp<Tn> {
+    pub fn new() -> Box<Self> {
+        Box::new(Self {
+            _markers: PhantomData,
+        })
+    }
+}
+
+impl<Tn: Tensor> Op<Tn::T> for AddOp<Tn> {
+    fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
+        let (a, b) = inputs.binary();
+        let out = Tn::from_basic(a.as_ref()) + Tn::ref_from_basic(b.as_ref());
+        Box::new(out)
+    }
+    fn backward<'a>(
+        &self,
+        in_grads: BackwardOutput<Tn::T>,
+        _out_data: &'a Box<dyn BasicTensor<Tn::T>>,
+        out_grad: &'a Box<dyn BasicTensor<Tn::T>>,
+    ) -> BackwardOutput<Tn::T> {
+        let (a_grad_basic, b_grad_basic) = in_grads.binary();
+        let a_grad = Tn::from_basic_boxed(a_grad_basic);
+        let b_grad = Tn::from_basic_boxed(b_grad_basic);
+
+        let a_grad_updated = a_grad.map(|idx, in_grad| in_grad + out_grad[idx.as_ref()]);
+        let b_grad_updated = b_grad.map(|idx, in_grad| in_grad + out_grad[idx.as_ref()]);
+        BackwardOutput::Binary(Box::new(a_grad_updated), Box::new(b_grad_updated))
+    }
+}
