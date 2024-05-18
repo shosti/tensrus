@@ -2,11 +2,8 @@ use crate::{
     numeric::Numeric,
     tensor::{BasicTensor, Tensor},
 };
-// use std::any::Any;
-// use std::cell::RefCell;
 use std::fmt::Debug;
 use std::marker::PhantomData;
-// use std::rc::Rc;
 use num::Zero;
 
 #[derive(Debug)]
@@ -68,48 +65,3 @@ impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
         BackwardOutput::Unary(Box::new(in_grad))
     }
 }
-
-// // macro_rules! create_unary_op {
-// //     ($name:ident <$( $generic:ident ),*> { in_type: $inty:ty, out_type: $outty:ty, forward: $forward:expr , backward: $back:expr , }) => {
-// //         #[derive(Debug)]
-// //         pub struct $name<$( $generic : Tensor ),*> {
-// //             _markers: ( $( ::std::marker::PhantomData<$generic> )*, ),
-// //         }
-
-// //         impl<$( $generic: Tensor ),*> $name<$( $generic ),*> {
-// //             pub fn new() -> Self {
-// //                 Self {}
-// //             }
-// //         }
-
-// //         impl<$( $generic: Tensor ),*> Op for $name<$( $generic ),*> {
-// //             type Output = $outty;
-
-// //             fn forward(&self, input: &Input) -> Self::Output {
-// //                 if let Input::Unary(var_ref) = input {
-// //                     todo!()
-// //                     // let var_rc = var_ref.clone().into_var::<Tn>();
-// //                     // let var = var_rc.borrow();
-// //                     // var.map($forward).into()
-// //                 } else {
-// //                     panic!("non-unary input to unary op")
-// //                 }
-// //             }
-
-// //             fn backward(&self) {
-// //                 todo!()
-// //             }
-// //         }
-// //     };
-// // }
-
-// // create_unary_op!(ReLU<Tn> {
-// //     in_type: Tn,
-// //     out_type: Tn,
-// //     forward: |t| t.clone().relu(),
-// //     backward: |to_val, to_grad, from_val, from_grad| {
-// //         let diff = if to_data > 0 { to_grad } else { 0 };
-
-// //         from_grad + diff
-// //     },
-// // });
