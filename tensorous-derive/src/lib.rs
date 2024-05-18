@@ -64,6 +64,10 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 self
             }
 
+            fn as_any_boxed(self: Box<Self>) -> Box<dyn std::any::Any> {
+                self
+            }
+
             fn num_elems(&self) -> usize {
                 self.0.num_elems()
             }

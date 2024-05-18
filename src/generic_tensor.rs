@@ -213,6 +213,10 @@ impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTenso
         self
     }
 
+    fn as_any_boxed(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+
     fn num_elems(&self) -> usize {
         Self::storage_size()
     }

@@ -128,48 +128,8 @@ impl<T: Numeric> VarRef<T> {
                 }
                 Self::Output(o) => {
                     let out = o.borrow();
-                    let out_grad = accumulators
-                        .entry(out.id)
-                        .or_insert_with(|| out.data.ones_with_shape());
-                    let grads = out.op.backward(&out.data, out_grad);
-                    match &out.children {
-                        Children::Unary(c) => {
-                            if let BackwardOutput::Unary(grad) = grads {
-                                Self::update_grad(c, grad, &mut accumulators);
-                            } else {
-                                panic!(
-                                    "op backwards() outputted non-unary grads for unary children"
-                                );
-                            }
-                        }
-                        Children::Binary(c1, c2) => {
-                            if let BackwardOutput::Binary(g1, g2) = grads {
-                                Self::update_grad(c1, g1, &mut accumulators);
-                                Self::update_grad(c2, g2, &mut accumulators);
-                            } else {
-                                panic!(
-                                    "op backwards() outputted non-binary grads for binary children"
-                                );
-                            }
-                        }
-                    }
+                    out.update_child_grads(&mut accumulators);
                 }
-            }
-        }
-    }
-
-    fn update_grad(
-        var: &VarRef<T>,
-        grad: Box<dyn BasicTensor<T>>,
-        accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>,
-    ) {
-        let k = var.id();
-        match accumulators.remove(&k) {
-            Some(old_grad) => {
-                accumulators.insert(k, old_grad.add(&grad));
-            }
-            None => {
-                accumulators.insert(k, grad);
             }
         }
     }
@@ -197,6 +157,83 @@ impl<T: Numeric> VarRef<T> {
             Self::build_topo(child, topo, visited);
         }
         topo.push(cur.clone());
+    }
+
+    fn grad(
+        &self,
+        accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>,
+    ) -> Box<dyn BasicTensor<T>> {
+        match self {
+            Self::Parameter(p) => {
+                let mut param = p.borrow_mut();
+                param
+                    .grad
+                    .take()
+                    .unwrap_or_else(|| param.data.zeros_with_shape())
+            }
+            Self::Output(o) => accumulators
+                .remove(&o.borrow().id)
+                .unwrap_or_else(|| o.borrow().data.zeros_with_shape()),
+        }
+    }
+
+    fn set_grad(
+        &self,
+        grad: Box<dyn BasicTensor<T>>,
+        accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>,
+    ) {
+        match self {
+            Self::Parameter(p) => {
+                let mut param = p.borrow_mut();
+                assert!(
+                    param.grad.is_none(),
+                    "Setting parameter gradient when it already exists"
+                );
+                param.grad = Some(grad);
+            }
+            Self::Output(o) => {
+                accumulators.insert(o.borrow().id, grad);
+            }
+        }
+    }
+}
+
+impl<T: Numeric> Output<T> {
+    fn update_child_grads(&self, accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>) {
+        match &self.children {
+            Children::Unary(c) => {
+                let in_grad = c.grad(accumulators);
+                let updated_grad = self.calc_in_grads(BackwardOutput::Unary(in_grad), accumulators);
+                if let BackwardOutput::Unary(grad) = updated_grad {
+                    c.set_grad(grad, accumulators);
+                } else {
+                    panic!("non-unary output");
+                }
+            }
+            Children::Binary(c1, c2) => {
+                let in_grad_1 = c1.grad(accumulators);
+                let in_grad_2 = c2.grad(accumulators);
+                let updated_grads =
+                    self.calc_in_grads(BackwardOutput::Binary(in_grad_1, in_grad_2), accumulators);
+                if let BackwardOutput::Binary(grad1, grad2) = updated_grads {
+                    c1.set_grad(grad1, accumulators);
+                    c2.set_grad(grad2, accumulators);
+                } else {
+                    panic!("non-binary output");
+                }
+            }
+        }
+    }
+
+    fn calc_in_grads(
+        &self,
+        grads: BackwardOutput<T>,
+        accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>,
+    ) -> BackwardOutput<T> {
+        let out_grad = accumulators
+            .get(&self.id)
+            .expect("Expected out gradient to have been set");
+        self.op.backward(grads, &self.data, out_grad)
     }
 }
 
