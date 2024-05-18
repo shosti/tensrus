@@ -225,14 +225,6 @@ impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTenso
         Box::new(self.clone())
     }
 
-    fn add(self: Box<Self>, other: &Box<dyn BasicTensor<T>>) -> Box<dyn BasicTensor<T>> {
-        if self.num_elems() != other.num_elems() {
-            panic!("adding non-matching BasicTensors");
-        }
-
-        Box::new(self.map(|idx, val| val + other[idx]))
-    }
-
     fn zeros_with_shape(&self) -> Box<dyn BasicTensor<T>> {
         Box::new(Self::zeros())
     }

@@ -62,7 +62,7 @@ impl<Tn: Tensor> Var<Tn> {
         let out = match self {
             Self::Parameter(p, _) => {
                 let param = p.borrow();
-                let input = ForwardInput::Unary(&param.data);
+                let input = ForwardInput::Unary(param.data.as_ref());
                 let data = op.forward(input);
                 Output {
                     id,
@@ -73,7 +73,7 @@ impl<Tn: Tensor> Var<Tn> {
             }
             Self::Output(o, _) => {
                 let last_out = o.borrow();
-                let input = ForwardInput::Unary(&last_out.data);
+                let input = ForwardInput::Unary(last_out.data.as_ref());
                 let data = op.forward(input);
                 Output {
                     id,
@@ -94,24 +94,24 @@ impl<Tn: Tensor> Var<Tn> {
             Self::Parameter(s, _) => match &other {
                 VarRef::Parameter(o) => {
                     let (v1, v2) = (s.borrow(), o.borrow());
-                    let input = ForwardInput::Binary(&v1.data, &v2.data);
+                    let input = ForwardInput::Binary(v1.data.as_ref(), v2.data.as_ref());
                     op.forward(input)
                 }
                 VarRef::Output(o) => {
                     let (v1, v2) = (s.borrow(), o.borrow());
-                    let input = ForwardInput::Binary(&v1.data, &v2.data);
+                    let input = ForwardInput::Binary(v1.data.as_ref(), v2.data.as_ref());
                     op.forward(input)
                 }
             },
             Self::Output(s, _) => match &other {
                 VarRef::Parameter(o) => {
                     let (v1, v2) = (s.borrow(), o.borrow());
-                    let input = ForwardInput::Binary(&v1.data, &v2.data);
+                    let input = ForwardInput::Binary(v1.data.as_ref(), v2.data.as_ref());
                     op.forward(input)
                 }
                 VarRef::Output(o) => {
                     let (v1, v2) = (s.borrow(), o.borrow());
-                    let input = ForwardInput::Binary(&v1.data, &v2.data);
+                    let input = ForwardInput::Binary(v1.data.as_ref(), v2.data.as_ref());
                     op.forward(input)
                 }
             },
@@ -140,7 +140,6 @@ impl<T: Numeric> VarRef<T> {
             Self::Parameter(p) => {
                 let mut param = p.borrow_mut();
                 param.grad = Some(param.data.ones_with_shape());
-                return;
             }
             Self::Output(_) => {
                 let mut topo = Vec::new();
@@ -268,7 +267,8 @@ impl<T: Numeric> Output<T> {
         let out_grad = accumulators
             .get(&self.id)
             .expect("Expected out gradient to have been set");
-        self.op.backward(grads, &self.data, out_grad)
+        self.op
+            .backward(grads, self.data.as_ref(), out_grad.as_ref())
     }
 }
 

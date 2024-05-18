@@ -104,7 +104,6 @@ pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T
     fn as_any_boxed(self: Box<Self>) -> Box<dyn Any>;
     fn num_elems(&self) -> usize;
     fn clone_boxed(&self) -> Box<dyn BasicTensor<T>>;
-    fn add(self: Box<Self>, other: &Box<dyn BasicTensor<T>>) -> Box<dyn BasicTensor<T>>;
 
     // Returns a new tensor of zeros with the same shape as self
     fn zeros_with_shape(&self) -> Box<dyn BasicTensor<T>>;

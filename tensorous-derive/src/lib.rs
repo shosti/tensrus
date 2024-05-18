@@ -76,10 +76,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 Box::new(self.clone())
             }
 
-            fn add(self: Box<Self>, other: &Box<dyn crate::tensor::BasicTensor<T>>) -> Box<dyn crate::tensor::BasicTensor<T>> {
-                Box::new(crate::tensor::Tensor::map(*self, |idx, val| val + other[idx]))
-            }
-
             fn zeros_with_shape(&self) -> Box<dyn crate::tensor::BasicTensor<T>> {
                 Box::new(<Self as crate::tensor::Tensor>::zeros())
             }
