@@ -122,7 +122,7 @@ impl<T: Numeric> VarRef<T> {
 
         for v in topo.iter().rev() {
             match v {
-                Self::Parameter(p) => {
+                Self::Parameter(_) => {
                     // We're at a parameter which has no children; nothing left
                     // to do
                 }

@@ -7,7 +7,7 @@ use crate::{
 use std::fmt::Debug;
 use std::marker::PhantomData;
 // use std::rc::Rc;
-// use num::Zero;
+use num::Zero;
 
 #[derive(Debug)]
 pub enum ForwardInput<'a, T: Numeric> {
@@ -57,41 +57,18 @@ impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
         out_data: &'a Box<dyn BasicTensor<Tn::T>>,
         out_grad: &'a Box<dyn BasicTensor<Tn::T>>,
     ) -> BackwardOutput<Tn::T> {
-        todo!()
+        let t: Tn = Tn::from_basic(out_grad.as_ref());
+        let in_grad = t.map(|idx, out_grad_val| {
+            if out_data[idx.as_ref()] > Tn::T::zero() {
+                out_grad_val
+            } else {
+                Tn::T::zero()
+            }
+        });
+        BackwardOutput::Unary(Box::new(in_grad))
     }
 }
 
-// impl<Tn: Tensor> Op for ReLU<Tn> {
-//     type Output = Tn;
-
-//     fn forward(&self, input: Input) -> Self::Output {
-//         let data: &Self::Output = input.downcast_unary();
-//         data.clone().relu()
-//     }
-
-//     fn backward(&self, input_grads: Input, to_grad: &Self::Output, to_data: &Self::Output) -> Input {
-//         if let Input::Unary(input_grad) = input_grads {
-//             let in_typed: Rc<Self::Output> = input_grad.downcast().unwrap();
-//             let in_grad = Rc::into_inner(in_typed).unwrap();
-//             let grad = in_grad.map(|idx, val| {
-//                 val
-//             });
-
-//             let res = grad.map(|idx, g|{
-//                 let diff = if to_data[idx] > Tn::T::zero() {
-//                     to_grad[idx]
-//                 } else {
-//                     Tn::T::zero()
-//                 };
-
-//                 g + diff
-//             });
-//             Input::Unary(Rc::new(res))
-//         } else {
-//             panic!("non-unary input grads sent to relu")
-//         }
-//     }
-// }
 // // macro_rules! create_unary_op {
 // //     ($name:ident <$( $generic:ident ),*> { in_type: $inty:ty, out_type: $outty:ty, forward: $forward:expr , backward: $back:expr , }) => {
 // //         #[derive(Debug)]
