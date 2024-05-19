@@ -1,5 +1,5 @@
 use crate::numeric::Numeric;
-use crate::op2::{AddOp, BackwardArgs, ElemPowOp, ForwardInput, Op, ReLU};
+use crate::op2::{AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, Op, ReLU};
 use crate::tensor::{BasicTensor, Tensor};
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -267,6 +267,13 @@ impl<Tn: Tensor> Var<Tn> {
         let op = ElemPowOp::<Tn>::new(n);
 
         self.new_from_unary(op)
+    }
+
+    pub fn elem_mul(&self, other: Var<Tn>) -> Self {
+        let op = ElemMulOp::<Tn>::new();
+        let other_ref = (&other).into();
+
+        self.new_from_binary(other_ref, op)
     }
 
     pub fn backward(&self) {
