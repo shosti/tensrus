@@ -31,6 +31,22 @@ impl<'a, T: Numeric> ForwardInput<'a, T> {
 }
 
 #[derive(Debug)]
+pub enum BackwardArgs<'a, T: Numeric> {
+    Unary {
+        in_grad: Box<dyn BasicTensor<T>>,
+        in_data: &'a dyn BasicTensor<T>,
+        out_grad: &'a dyn BasicTensor<T>,
+        out_data: &'a dyn BasicTensor<T>,
+    },
+    Binary {
+        in_grad: (Box<dyn BasicTensor<T>>, Box<dyn BasicTensor<T>>),
+        in_data: (&'a dyn BasicTensor<T>, &'a dyn BasicTensor<T>),
+        out_grad: &'a dyn BasicTensor<T>,
+        out_data: &'a dyn BasicTensor<T>,
+    },
+}
+
+#[derive(Debug)]
 pub enum BackwardOutput<T: Numeric> {
     Unary(Box<dyn BasicTensor<T>>),
     Binary(Box<dyn BasicTensor<T>>, Box<dyn BasicTensor<T>>),
@@ -56,12 +72,7 @@ impl<T: Numeric> BackwardOutput<T> {
 
 pub trait Op<T: Numeric>: Debug {
     fn forward(&self, input: ForwardInput<T>) -> Box<dyn BasicTensor<T>>;
-    fn backward<'a>(
-        &self,
-        in_grad: BackwardOutput<T>,
-        out_data: &'a dyn BasicTensor<T>,
-        out_grad: &'a dyn BasicTensor<T>,
-    ) -> BackwardOutput<T>;
+    fn backward<'a>(&self, args: BackwardArgs<T>) -> BackwardOutput<T>;
 }
 
 #[derive(Debug)]
@@ -83,24 +94,28 @@ impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
         let out = Tn::from_basic(input).relu();
         Box::new(out)
     }
-    fn backward<'a>(
-        &self,
-        in_grads: BackwardOutput<Tn::T>,
-        out_data: &'a dyn BasicTensor<Tn::T>,
-        out_grad: &'a dyn BasicTensor<Tn::T>,
-    ) -> BackwardOutput<Tn::T> {
-        let in_grad_untyped = in_grads.unary();
-        let in_grad = Tn::from_basic_boxed(in_grad_untyped);
-        let updated_grad = in_grad.map(|idx, in_grad| {
-            let diff = if out_data[idx.as_ref()] > Tn::T::zero() {
-                out_grad[idx.as_ref()]
-            } else {
-                Tn::T::zero()
-            };
+    fn backward<'a>(&self, args: BackwardArgs<Tn::T>) -> BackwardOutput<Tn::T> {
+        if let BackwardArgs::Unary {
+            in_grad: in_grad_basic,
+            out_grad,
+            out_data,
+            ..
+        } = args
+        {
+            let in_grad: Box<Tn> = Tn::from_basic_boxed(in_grad_basic);
+            let updated_grad = in_grad.map(|idx, in_grad| {
+                let diff = if out_data[idx.as_ref()] > Tn::T::zero() {
+                    out_grad[idx.as_ref()]
+                } else {
+                    Tn::T::zero()
+                };
 
-            in_grad + diff
-        });
-        BackwardOutput::Unary(Box::new(updated_grad))
+                in_grad + diff
+            });
+            BackwardOutput::Unary(Box::new(updated_grad))
+        } else {
+            panic!("non-unary args passed to backwad()");
+        }
     }
 }
 
@@ -123,18 +138,22 @@ impl<Tn: Tensor> Op<Tn::T> for AddOp<Tn> {
         let out = Tn::from_basic(a) + Tn::ref_from_basic(b);
         Box::new(out)
     }
-    fn backward<'a>(
-        &self,
-        in_grads: BackwardOutput<Tn::T>,
-        _out_data: &'a dyn BasicTensor<Tn::T>,
-        out_grad: &'a dyn BasicTensor<Tn::T>,
-    ) -> BackwardOutput<Tn::T> {
-        let (a_grad_basic, b_grad_basic) = in_grads.binary();
-        let a_grad = Tn::from_basic_boxed(a_grad_basic);
-        let b_grad = Tn::from_basic_boxed(b_grad_basic);
+    fn backward<'a>(&self, args: BackwardArgs<Tn::T>) -> BackwardOutput<Tn::T> {
+        if let BackwardArgs::Binary {
+            in_grad: (in_grad_basic_1, in_grad_basic_2),
+            out_grad,
+            ..
+        } = args
+        {
+            let in_grad_1: Box<Tn> = Tn::from_basic_boxed(in_grad_basic_1);
+            let in_grad_2: Box<Tn> = Tn::from_basic_boxed(in_grad_basic_2);
 
-        let a_grad_updated = a_grad.map(|idx, in_grad| in_grad + out_grad[idx.as_ref()]);
-        let b_grad_updated = b_grad.map(|idx, in_grad| in_grad + out_grad[idx.as_ref()]);
-        BackwardOutput::Binary(Box::new(a_grad_updated), Box::new(b_grad_updated))
+            let in_grad_1_updated = in_grad_1.map(|idx, in_grad| in_grad + out_grad[idx.as_ref()]);
+            let in_grad_2_updated = in_grad_2.map(|idx, in_grad| in_grad + out_grad[idx.as_ref()]);
+
+            BackwardOutput::Binary(Box::new(in_grad_1_updated), Box::new(in_grad_2_updated))
+        } else {
+            panic!("non-binary backward args");
+        }
     }
 }

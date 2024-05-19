@@ -1,7 +1,7 @@
 use crate::numeric::Numeric;
-use crate::op2::{AddOp, BackwardOutput, ForwardInput, Op, ReLU};
+use crate::op2::{AddOp, BackwardArgs, ForwardInput, Op, ReLU};
 use crate::tensor::{BasicTensor, Tensor};
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
 use std::ops::Add;
@@ -56,73 +56,36 @@ impl<Tn: Tensor> Var<Tn> {
     }
 
     fn new_from_unary(&self, op: Box<dyn Op<Tn::T>>) -> Self {
-        let children = Children::Unary(self.into());
-        let id = Self::next_id();
+        let self_ref = VarRef::from(self);
+        let self_data = self_ref.data();
+        let data = op.forward(ForwardInput::Unary(self_data.as_ref()));
 
-        let out = match self {
-            Self::Parameter(p, _) => {
-                let param = p.borrow();
-                let input = ForwardInput::Unary(param.data.as_ref());
-                let data = op.forward(input);
-                Output {
-                    id,
-                    data,
-                    op,
-                    children,
-                }
-            }
-            Self::Output(o, _) => {
-                let last_out = o.borrow();
-                let input = ForwardInput::Unary(last_out.data.as_ref());
-                let data = op.forward(input);
-                Output {
-                    id,
-                    data,
-                    op,
-                    children,
-                }
-            }
+        let out = Output {
+            id: Self::next_id(),
+            data,
+            op,
+            children: Children::Unary(self_ref.clone()),
         };
 
         Self::Output(Rc::new(RefCell::new(out)), PhantomData)
     }
 
     fn new_from_binary(&self, other: VarRef<Tn::T>, op: Box<dyn Op<Tn::T>>) -> Self {
-        let id = Self::next_id();
+        let self_ref = VarRef::from(self);
+        let self_data = self_ref.data();
+        let other_data = other.data();
+        let data = op.forward(ForwardInput::Binary(
+            self_data.as_ref(),
+            other_data.as_ref(),
+        ));
 
-        let data = match self {
-            Self::Parameter(s, _) => match &other {
-                VarRef::Parameter(o) => {
-                    let (v1, v2) = (s.borrow(), o.borrow());
-                    let input = ForwardInput::Binary(v1.data.as_ref(), v2.data.as_ref());
-                    op.forward(input)
-                }
-                VarRef::Output(o) => {
-                    let (v1, v2) = (s.borrow(), o.borrow());
-                    let input = ForwardInput::Binary(v1.data.as_ref(), v2.data.as_ref());
-                    op.forward(input)
-                }
-            },
-            Self::Output(s, _) => match &other {
-                VarRef::Parameter(o) => {
-                    let (v1, v2) = (s.borrow(), o.borrow());
-                    let input = ForwardInput::Binary(v1.data.as_ref(), v2.data.as_ref());
-                    op.forward(input)
-                }
-                VarRef::Output(o) => {
-                    let (v1, v2) = (s.borrow(), o.borrow());
-                    let input = ForwardInput::Binary(v1.data.as_ref(), v2.data.as_ref());
-                    op.forward(input)
-                }
-            },
-        };
-        let children = Children::Binary(self.into(), other);
         let out = Output {
-            id,
+            id: Self::next_id(),
             data,
             op,
-            children,
+            children: Children::Binary(self_ref.clone(), other.clone()),
         };
+
         Self::Output(Rc::new(RefCell::new(out)), PhantomData)
     }
 }
@@ -148,6 +111,13 @@ impl<T: Numeric> VarRef<T> {
                 Self::build_topo(self, &mut topo, &mut visited);
                 self.update_grads(topo);
             }
+        }
+    }
+
+    fn data(&self) -> Ref<Box<dyn BasicTensor<T>>> {
+        match self {
+            Self::Parameter(p) => Ref::map(p.borrow(), |p| &p.data),
+            Self::Output(o) => Ref::map(o.borrow(), |o| &o.data),
         }
     }
 
@@ -242,33 +212,38 @@ impl<T: Numeric> Output<T> {
         match &self.children {
             Children::Unary(c) => {
                 let in_grad = c.grad(accumulators);
-                let updated_grad = self
-                    .calc_in_grads(BackwardOutput::Unary(in_grad), accumulators)
-                    .unary();
-                c.set_grad(updated_grad, accumulators);
+                let in_data = c.data();
+                let out_grad = accumulators
+                    .get(&self.id)
+                    .expect("expected out gradient to have been set");
+                let args = BackwardArgs::Unary {
+                    in_grad,
+                    in_data: in_data.as_ref(),
+                    out_grad: out_grad.as_ref(),
+                    out_data: self.data.as_ref(),
+                };
+                let updated_grad = self.op.backward(args);
+                c.set_grad(updated_grad.unary(), accumulators);
             }
             Children::Binary(c1, c2) => {
                 let in_grad_1 = c1.grad(accumulators);
                 let in_grad_2 = c2.grad(accumulators);
-                let (grad1, grad2) = self
-                    .calc_in_grads(BackwardOutput::Binary(in_grad_1, in_grad_2), accumulators)
-                    .binary();
-                c1.set_grad(grad1, accumulators);
-                c2.set_grad(grad2, accumulators);
+                let in_data_1 = c1.data();
+                let in_data_2 = c2.data();
+                let out_grad = accumulators
+                    .get(&self.id)
+                    .expect("expected out gradient to have been set");
+                let args = BackwardArgs::Binary {
+                    in_grad: (in_grad_1, in_grad_2),
+                    in_data: (in_data_1.as_ref(), in_data_2.as_ref()),
+                    out_grad: out_grad.as_ref(),
+                    out_data: self.data.as_ref(),
+                };
+                let (updated_grad_1, updated_grad_2) = self.op.backward(args).binary();
+                c1.set_grad(updated_grad_1, accumulators);
+                c2.set_grad(updated_grad_2, accumulators);
             }
         }
-    }
-
-    fn calc_in_grads(
-        &self,
-        grads: BackwardOutput<T>,
-        accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>,
-    ) -> BackwardOutput<T> {
-        let out_grad = accumulators
-            .get(&self.id)
-            .expect("Expected out gradient to have been set");
-        self.op
-            .backward(grads, self.data.as_ref(), out_grad.as_ref())
     }
 }
 
