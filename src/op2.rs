@@ -2,7 +2,7 @@ use crate::{
     numeric::Numeric,
     tensor::{BasicTensor, Tensor},
 };
-use num::Zero;
+use num::{traits::real::Real, One, Zero};
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -154,6 +154,49 @@ impl<Tn: Tensor> Op<Tn::T> for AddOp<Tn> {
             BackwardOutput::Binary(Box::new(in_grad_1_updated), Box::new(in_grad_2_updated))
         } else {
             panic!("non-binary backward args");
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ElemPowOp<Tn: Tensor> {
+    _markers: PhantomData<Tn>,
+    n: Tn::T,
+}
+
+impl<Tn: Tensor> ElemPowOp<Tn> {
+    pub fn new(n: Tn::T) -> Box<Self> {
+        Box::new(Self {
+            _markers: PhantomData,
+            n,
+        })
+    }
+}
+
+impl<Tn: Tensor> Op<Tn::T> for ElemPowOp<Tn> {
+    fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
+        let input = inputs.unary();
+        let out = Tn::from_fn(|idx| input[idx.as_ref()].powf(self.n));
+        Box::new(out)
+    }
+    fn backward<'a>(&self, args: BackwardArgs<Tn::T>) -> BackwardOutput<Tn::T> {
+        if let BackwardArgs::Unary {
+            in_grad: in_grad_basic,
+            in_data: in_datas,
+            out_grad: out_grads,
+            ..
+        } = args
+        {
+            let in_grad: Box<Tn> = Tn::from_basic_boxed(in_grad_basic);
+            let updated_grad = in_grad.map(|idx, in_grad| {
+                let out_grad = out_grads[idx.as_ref()];
+                let in_data = in_datas[idx.as_ref()];
+
+                in_grad + ((self.n * in_data.powf(self.n - Tn::T::one())) * out_grad)
+            });
+            BackwardOutput::Unary(Box::new(updated_grad))
+        } else {
+            panic!("non-unary backward args");
         }
     }
 }

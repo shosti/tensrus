@@ -1,5 +1,5 @@
 use crate::numeric::Numeric;
-use crate::op2::{AddOp, BackwardArgs, ForwardInput, Op, ReLU};
+use crate::op2::{AddOp, BackwardArgs, ElemPowOp, ForwardInput, Op, ReLU};
 use crate::tensor::{BasicTensor, Tensor};
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -259,6 +259,12 @@ impl<Tn: Tensor> From<&Var<Tn>> for VarRef<Tn::T> {
 impl<Tn: Tensor> Var<Tn> {
     pub fn relu(&self) -> Self {
         let op = ReLU::<Tn>::new();
+
+        self.new_from_unary(op)
+    }
+
+    pub fn elem_pow(&self, n: Tn::T) -> Self {
+        let op = ElemPowOp::<Tn>::new(n);
 
         self.new_from_unary(op)
     }
