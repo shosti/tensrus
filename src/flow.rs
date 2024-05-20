@@ -2,11 +2,12 @@ use crate::numeric::Numeric;
 use crate::op2::{AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, Op, ReLU, ScalarMulOp};
 use crate::scalar::Scalar;
 use crate::tensor::{BasicTensor, Tensor};
+use num::One;
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::iter::Sum;
 use std::marker::PhantomData;
-use std::ops::{Add, Mul};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::rc::Rc;
 
 pub type Id = u64;
@@ -334,11 +335,37 @@ impl<Tn: Tensor> Add<Var<Tn>> for Var<Tn> {
 impl<Tn: Tensor> Mul<Var<Scalar<Tn::T>>> for Var<Tn> {
     type Output = Self;
 
-    fn mul(self, other: Var<Scalar<Tn::T>>) -> Var<Tn> {
+    fn mul(self, other: Var<Scalar<Tn::T>>) -> Self {
         let op = ScalarMulOp::<Tn>::new();
         let other_ref: VarRef<Tn::T> = (&other).into();
 
         self.new_from_binary(other_ref, op)
+    }
+}
+
+impl<Tn: Tensor> Div<Var<Scalar<Tn::T>>> for Var<Tn> {
+    type Output = Self;
+
+    fn div(self, other: Var<Scalar<Tn::T>>) -> Self {
+        let inv = other.elem_pow(-Tn::T::one());
+
+        self * inv
+    }
+}
+
+impl<Tn: Tensor> Neg for Var<Tn> {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        self * Var::from(Scalar::from(-Tn::T::one()))
+    }
+}
+
+impl<Tn: Tensor> Sub for Var<Tn> {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        self + (-other)
     }
 }
 
