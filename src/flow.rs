@@ -1,11 +1,11 @@
 use crate::numeric::Numeric;
-use crate::op2::{AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, Op, ReLU};
+use crate::op2::{AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, Op, ReLU, ScalarMulOp};
 use crate::scalar::Scalar;
 use crate::tensor::{BasicTensor, Tensor};
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
-use std::ops::Add;
+use std::ops::{Add, Mul};
 use std::rc::Rc;
 
 pub type Id = u64;
@@ -294,6 +294,17 @@ impl<Tn: Tensor> Add<Var<Tn>> for Var<Tn> {
 
     fn add(self, other: Var<Tn>) -> Self {
         let op = AddOp::<Tn>::new();
+        let other_ref: VarRef<Tn::T> = (&other).into();
+
+        self.new_from_binary(other_ref, op)
+    }
+}
+
+impl<Tn: Tensor> Mul<Var<Scalar<Tn::T>>> for Var<Tn> {
+    type Output = Self;
+
+    fn mul(self, other: Var<Scalar<Tn::T>>) -> Var<Tn> {
+        let op = ScalarMulOp::<Tn>::new();
         let other_ref: VarRef<Tn::T> = (&other).into();
 
         self.new_from_binary(other_ref, op)

@@ -1,5 +1,6 @@
 use crate::{
     numeric::Numeric,
+    scalar::Scalar,
     tensor::{BasicTensor, Tensor},
 };
 use num::{traits::real::Real, One, Zero};
@@ -236,6 +237,54 @@ impl<Tn: Tensor> Op<Tn::T> for ElemMulOp<Tn> {
                 .map(|idx, in_grad| in_grad + in_data_2[idx.as_ref()] * out_grad[idx.as_ref()]);
             let in_grad_2_updated = in_grad_2
                 .map(|idx, in_grad| in_grad + in_data_1[idx.as_ref()] * out_grad[idx.as_ref()]);
+
+            BackwardOutput::Binary(Box::new(in_grad_1_updated), Box::new(in_grad_2_updated))
+        } else {
+            panic!("non-binary backward args");
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ScalarMulOp<Tn: Tensor> {
+    _markers: (PhantomData<Tn>, PhantomData<Scalar<Tn::T>>),
+}
+
+impl<Tn: Tensor> ScalarMulOp<Tn> {
+    pub fn new() -> Box<Self> {
+        Box::new(Self {
+            _markers: (PhantomData, PhantomData),
+        })
+    }
+}
+
+impl<Tn: Tensor> Op<Tn::T> for ScalarMulOp<Tn> {
+    fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
+        let (a_basic, b_basic) = inputs.binary();
+        let a: Tn = Tn::from_basic(a_basic);
+        let b: &Scalar<Tn::T> = Scalar::ref_from_basic(b_basic);
+
+        Box::new(a * b.val())
+    }
+    fn backward<'a>(&self, args: BackwardArgs<Tn::T>) -> BackwardOutput<Tn::T> {
+        if let BackwardArgs::Binary {
+            in_grad: (in_grad_basic_1, in_grad_basic_2),
+            in_data: (in_data_1, in_data_2_basic),
+            out_grad,
+            ..
+        } = args
+        {
+            let in_grad_1: Box<Tn> = Tn::from_basic_boxed(in_grad_basic_1);
+            let in_grad_2: Scalar<Tn::T> = *Scalar::from_basic_boxed(in_grad_basic_2);
+            let in_data_2: &Scalar<Tn::T> = Scalar::ref_from_basic(in_data_2_basic);
+
+            let mut in_grad_2_updated = in_grad_2;
+            for (idx, _) in in_grad_1.iter() {
+                in_grad_2_updated = in_grad_2_updated
+                    .map(|_, in_grad| in_grad + in_data_1[idx.as_ref()] * out_grad[idx.as_ref()]);
+            }
+            let in_grad_1_updated =
+                in_grad_1.map(|idx, in_grad| in_grad + in_data_2.val() * out_grad[idx.as_ref()]);
 
             BackwardOutput::Binary(Box::new(in_grad_1_updated), Box::new(in_grad_2_updated))
         } else {
