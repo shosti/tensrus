@@ -48,6 +48,16 @@ enum Children<T: Numeric> {
 }
 
 impl<Tn: Tensor> Var<Tn> {
+    pub fn new(t: Tn) -> Self {
+        let param = Param {
+            id: Self::next_id(),
+            data: Box::new(t),
+            grad: None,
+        };
+
+        Self::Parameter(Rc::new(RefCell::new(param)), PhantomData)
+    }
+
     fn next_id() -> Id {
         let mut id = 0;
         NEXT_ID.with(|n| {
@@ -259,6 +269,12 @@ impl<Tn: Tensor> From<&Var<Tn>> for VarRef<Tn::T> {
     }
 }
 
+impl<T: Numeric> From<T> for Var<Scalar<T>> {
+    fn from(v: T) -> Self {
+        Self::new(Scalar::from(v))
+    }
+}
+
 impl<Tn: Tensor> Var<Tn> {
     pub fn val(&self) -> Ref<Tn> {
         match self {
@@ -293,10 +309,7 @@ impl<Tn: Tensor> Var<Tn> {
     }
 
     pub fn sum_elems(&self) -> Var<Scalar<Tn::T>> {
-        self.val()
-            .iter()
-            .map(|(_, val)| Var::from(Scalar::from(val)))
-            .sum()
+        self.val().iter().map(|(_, val)| Var::from(val)).sum()
     }
 }
 
@@ -306,16 +319,11 @@ impl<Tn: Tensor> Sum for Var<Tn> {
         I: Iterator<Item = Self>,
     {
         iter.reduce(|a, b| a + b)
-            .unwrap_or_else(|| Var::from(Tn::zeros()))
+            .unwrap_or_else(|| Var::new(Tn::zeros()))
     }
 }
 
 impl<T: Numeric> Var<Scalar<T>> {
-    pub fn from_scalar(v: T) -> Self {
-        let t = Scalar::from(v);
-        Self::from(t)
-    }
-
     pub fn backward(&self) {
         VarRef::from(self).backward();
     }
@@ -357,7 +365,7 @@ impl<Tn: Tensor> Neg for Var<Tn> {
     type Output = Self;
 
     fn neg(self) -> Self {
-        self * Var::from(Scalar::from(-Tn::T::one()))
+        self * Var::from(-Tn::T::one())
     }
 }
 
@@ -366,18 +374,6 @@ impl<Tn: Tensor> Sub for Var<Tn> {
 
     fn sub(self, other: Self) -> Self {
         self + (-other)
-    }
-}
-
-impl<Tn: Tensor> From<Tn> for Var<Tn> {
-    fn from(t: Tn) -> Self {
-        let param = Param {
-            id: Self::next_id(),
-            data: Box::new(t),
-            grad: None,
-        };
-
-        Self::Parameter(Rc::new(RefCell::new(param)), PhantomData)
     }
 }
 
@@ -390,7 +386,7 @@ mod tests {
     #[test]
     fn test_equal() {
         let m: Matrix<f64, 3, 2> = Matrix::from([[1, 2], [3, 4], [5, 6]]);
-        let v = Var::from(m);
+        let v = Var::new(m);
         let s = v.sum_elems();
 
         assert_eq!(Scalar::from(1 + 2 + 3 + 4 + 5 + 6), *s.val());
