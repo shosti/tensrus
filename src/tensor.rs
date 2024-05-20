@@ -3,6 +3,7 @@ use std::any::Any;
 use std::fmt::Debug;
 use std::iter::Map;
 use std::ops::{Add, Index, Mul};
+use std::cmp::PartialEq;
 
 use crate::numeric::Numeric;
 use crate::slice::Slice;
@@ -118,6 +119,7 @@ pub trait Tensor:
     + for<'a> Add<&'a Self, Output = Self>
     + Mul<Self::T, Output = Self>
     + for<'a> Index<&'a Self::Idx, Output = Self::T>
+    + PartialEq
     + 'static
 {
     type T: Numeric;

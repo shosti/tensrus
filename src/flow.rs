@@ -4,6 +4,7 @@ use crate::scalar::Scalar;
 use crate::tensor::{BasicTensor, Tensor};
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
+use std::iter::Sum;
 use std::marker::PhantomData;
 use std::ops::{Add, Mul};
 use std::rc::Rc;
@@ -258,6 +259,19 @@ impl<Tn: Tensor> From<&Var<Tn>> for VarRef<Tn::T> {
 }
 
 impl<Tn: Tensor> Var<Tn> {
+    pub fn val(&self) -> Ref<Tn> {
+        match self {
+            Self::Parameter(p, _) => Ref::map(p.borrow(), |p| {
+                let data = Tn::ref_from_basic(p.data.as_ref());
+                data
+            }),
+            Self::Output(o, _) => Ref::map(o.borrow(), |o| {
+                let data = Tn::ref_from_basic(o.data.as_ref());
+                data
+            }),
+        }
+    }
+
     pub fn relu(&self) -> Self {
         let op = ReLU::<Tn>::new();
 
@@ -275,6 +289,23 @@ impl<Tn: Tensor> Var<Tn> {
         let other_ref = (&other).into();
 
         self.new_from_binary(other_ref, op)
+    }
+
+    pub fn sum_elems(&self) -> Var<Scalar<Tn::T>> {
+        self.val()
+            .iter()
+            .map(|(_, val)| Var::from(Scalar::from(val)))
+            .sum()
+    }
+}
+
+impl<Tn: Tensor> Sum for Var<Tn> {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.reduce(|a, b| a + b)
+            .unwrap_or_else(|| Var::from(Tn::zeros()))
     }
 }
 
@@ -320,5 +351,21 @@ impl<Tn: Tensor> From<Tn> for Var<Tn> {
         };
 
         Self::Parameter(Rc::new(RefCell::new(param)), PhantomData)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::matrix::Matrix;
+
+    use super::*;
+
+    #[test]
+    fn test_equal() {
+        let m: Matrix<f64, 3, 2> = Matrix::from([[1, 2], [3, 4], [5, 6]]);
+        let v = Var::from(m);
+        let s = v.sum_elems();
+
+        assert_eq!(Scalar::from(1 + 2 + 3 + 4 + 5 + 6), *s.val());
     }
 }
