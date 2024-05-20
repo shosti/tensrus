@@ -1,5 +1,6 @@
 use crate::numeric::Numeric;
 use crate::op2::{AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, Op, ReLU};
+use crate::scalar::Scalar;
 use crate::tensor::{BasicTensor, Tensor};
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -278,6 +279,13 @@ impl<Tn: Tensor> Var<Tn> {
 
     pub fn backward(&self) {
         VarRef::from(self).backward();
+    }
+}
+
+impl<T: Numeric> Var<Scalar<T>> {
+    pub fn from_scalar(v: T) -> Self {
+        let t = Scalar::from(v);
+        Self::from(t)
     }
 }
 
