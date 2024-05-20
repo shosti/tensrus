@@ -276,16 +276,16 @@ impl<Tn: Tensor> Var<Tn> {
 
         self.new_from_binary(other_ref, op)
     }
-
-    pub fn backward(&self) {
-        VarRef::from(self).backward();
-    }
 }
 
 impl<T: Numeric> Var<Scalar<T>> {
     pub fn from_scalar(v: T) -> Self {
         let t = Scalar::from(v);
         Self::from(t)
+    }
+
+    pub fn backward(&self) {
+        VarRef::from(self).backward();
     }
 }
 
