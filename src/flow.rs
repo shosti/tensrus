@@ -38,13 +38,14 @@ pub struct Output<T: Numeric> {
     id: Id,
     data: Box<dyn BasicTensor<T>>,
     op: Box<dyn Op<T>>,
-    children: Children<T>,
+    children: Children,
+    all_children: HashMap<Id, VarRef<T>>,
 }
 
 #[derive(Debug)]
-enum Children<T: Numeric> {
-    Unary(VarRef<T>),
-    Binary(VarRef<T>, VarRef<T>),
+enum Children {
+    Unary(Id),
+    Binary(Id, Id),
 }
 
 impl<Tn: Tensor> Var<Tn> {
@@ -70,6 +71,9 @@ impl<Tn: Tensor> Var<Tn> {
 
     fn new_from_unary(&self, op: Box<dyn Op<Tn::T>>) -> Self {
         let self_ref = VarRef::from(self);
+        let all_children = self_ref.take_all_children();
+        let children = Children::Unary(self_ref.id());
+
         let self_data = self_ref.data();
         let data = op.forward(ForwardInput::Unary(self_data.as_ref()));
 
@@ -77,7 +81,8 @@ impl<Tn: Tensor> Var<Tn> {
             id: Self::next_id(),
             data,
             op,
-            children: Children::Unary(self_ref.clone()),
+            children,
+            all_children,
         };
 
         Self::Output(Rc::new(RefCell::new(out)), PhantomData)
@@ -85,6 +90,11 @@ impl<Tn: Tensor> Var<Tn> {
 
     fn new_from_binary(&self, other: VarRef<Tn::T>, op: Box<dyn Op<Tn::T>>) -> Self {
         let self_ref = VarRef::from(self);
+
+        let self_children = self_ref.take_all_children();
+        let all_children = other.merge_all_children(self_children);
+        let children = Children::Binary(self_ref.id(), other.id());
+
         let self_data = self_ref.data();
         let other_data = other.data();
         let data = op.forward(ForwardInput::Binary(
@@ -96,7 +106,8 @@ impl<Tn: Tensor> Var<Tn> {
             id: Self::next_id(),
             data,
             op,
-            children: Children::Binary(self_ref.clone(), other.clone()),
+            children,
+            all_children,
         };
 
         Self::Output(Rc::new(RefCell::new(out)), PhantomData)
@@ -112,17 +123,52 @@ impl<T: Numeric> VarRef<T> {
     }
 
     fn backward(&mut self) {
-        match self {
+        match self.clone() {
             Self::Parameter(p) => {
                 let mut param = p.borrow_mut();
                 param.grad = Some(param.data.ones_with_shape());
             }
-            Self::Output(_) => {
+            Self::Output(o) => {
                 let mut topo = Vec::new();
                 let mut visited = HashSet::new();
+                let out = o.borrow();
 
-                Self::build_topo(self, &mut topo, &mut visited);
-                self.update_grads(topo);
+                Self::build_topo(self, &mut topo, &mut visited, &out.all_children);
+                self.update_grads(topo, &out.all_children);
+            }
+        }
+    }
+
+    fn take_all_children(&self) -> HashMap<Id, VarRef<T>> {
+        let mut blank_children = HashMap::new();
+
+        match self {
+            Self::Parameter(p) => {
+                blank_children.insert(p.borrow().id, self.clone());
+                blank_children
+            }
+            Self::Output(o) => {
+                let mut self_out = o.borrow_mut();
+                let mut all_children =
+                    std::mem::replace(&mut self_out.all_children, blank_children);
+                all_children.insert(self_out.id, self.clone());
+                all_children
+            }
+        }
+    }
+
+    fn merge_all_children(
+        &self,
+        mut all_children: HashMap<Id, VarRef<T>>,
+    ) -> HashMap<Id, VarRef<T>> {
+        all_children.insert(self.id(), self.clone());
+
+        match self {
+            Self::Parameter(_) => all_children,
+            Self::Output(o) => {
+                let mut self_out = o.borrow_mut();
+                all_children.extend(self_out.all_children.drain());
+                all_children
             }
         }
     }
@@ -134,7 +180,7 @@ impl<T: Numeric> VarRef<T> {
         }
     }
 
-    fn update_grads(&self, topo: Vec<VarRef<T>>) {
+    fn update_grads(&self, topo: Vec<VarRef<T>>, all_children: &HashMap<Id, VarRef<T>>) {
         let mut accumulators = HashMap::<Id, Box<dyn BasicTensor<T>>>::new();
         let ones = match self {
             Self::Parameter(p) => p.borrow().data.ones_with_shape(),
@@ -150,33 +196,55 @@ impl<T: Numeric> VarRef<T> {
                 }
                 Self::Output(o) => {
                     let out = o.borrow();
-                    out.update_child_grads(&mut accumulators);
+                    out.update_child_grads(&mut accumulators, all_children);
+                }
+            }
+        }
+
+        for v in topo.iter() {
+            match v {
+                Self::Parameter(p) => {
+                    let mut param = p.borrow_mut();
+                    let grad = accumulators
+                        .remove(&param.id)
+                        .expect("backward() did not calculate grad for parameter");
+                    param.grad = Some(grad);
+                }
+                Self::Output(_) => {
+                    // We just throw away non-param grads
                 }
             }
         }
     }
 
-    fn children(&self) -> Vec<VarRef<T>> {
+    fn children(&self, all_children: &HashMap<Id, VarRef<T>>) -> Vec<VarRef<T>> {
         match self {
             Self::Parameter(_) => vec![],
             Self::Output(o) => {
                 let out = o.borrow();
                 match &out.children {
-                    Children::Unary(c) => vec![c.clone()],
-                    Children::Binary(c1, c2) => vec![c1.clone(), c2.clone()],
+                    Children::Unary(c) => vec![all_children[c].clone()],
+                    Children::Binary(c1, c2) => {
+                        vec![all_children[c1].clone(), all_children[c2].clone()]
+                    }
                 }
             }
         }
     }
 
-    fn build_topo(cur: &VarRef<T>, topo: &mut Vec<VarRef<T>>, visited: &mut HashSet<Id>) {
+    fn build_topo(
+        cur: &VarRef<T>,
+        topo: &mut Vec<VarRef<T>>,
+        visited: &mut HashSet<Id>,
+        all_children: &HashMap<Id, VarRef<T>>,
+    ) {
         if visited.contains(&cur.id()) {
             return;
         }
 
         visited.insert(cur.id());
-        for child in cur.children().iter() {
-            Self::build_topo(child, topo, visited);
+        for child in cur.children(all_children).iter() {
+            Self::build_topo(child, topo, visited, all_children);
         }
         topo.push(cur.clone());
     }
@@ -199,31 +267,36 @@ impl<T: Numeric> VarRef<T> {
         }
     }
 
-    fn set_grad(
-        &self,
-        grad: Box<dyn BasicTensor<T>>,
-        accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>,
-    ) {
-        match self {
-            Self::Parameter(p) => {
-                let mut param = p.borrow_mut();
-                assert!(
-                    param.grad.is_none(),
-                    "Setting parameter gradient when it already exists"
-                );
-                param.grad = Some(grad);
-            }
-            Self::Output(o) => {
-                accumulators.insert(o.borrow().id, grad);
-            }
-        }
-    }
+    // fn set_grad(
+    //     &self,
+    //     grad: Box<dyn BasicTensor<T>>,
+    //     accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>,
+    // ) {
+    //     match self {
+    //         Self::Parameter(p) => {
+    //             let mut param = p.borrow_mut();
+    //             assert!(
+    //                 param.grad.is_none(),
+    //                 "Setting parameter gradient when it already exists"
+    //             );
+    //             param.grad = Some(grad);
+    //         }
+    //         Self::Output(o) => {
+    //             accumulators.insert(o.borrow().id, grad);
+    //         }
+    //     }
+    // }
 }
 
 impl<T: Numeric> Output<T> {
-    fn update_child_grads(&self, accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>) {
+    fn update_child_grads(
+        &self,
+        accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>,
+        all_children: &HashMap<Id, VarRef<T>>,
+    ) {
         match &self.children {
-            Children::Unary(c) => {
+            Children::Unary(c_id) => {
+                let c = all_children[c_id].clone();
                 let in_grad = c.grad(accumulators);
                 let in_data = c.data();
                 let out_grad = accumulators
@@ -235,10 +308,12 @@ impl<T: Numeric> Output<T> {
                     out_grad: out_grad.as_ref(),
                     out_data: self.data.as_ref(),
                 };
-                let updated_grad = self.op.backward(args);
-                c.set_grad(updated_grad.unary(), accumulators);
+                let updated_grad = self.op.backward(args).unary();
+                accumulators.insert(*c_id, updated_grad);
             }
-            Children::Binary(c1, c2) => {
+            Children::Binary(c1_id, c2_id) => {
+                let c1 = all_children[c1_id].clone();
+                let c2 = all_children[c2_id].clone();
                 let in_grad_1 = c1.grad(accumulators);
                 let in_grad_2 = c2.grad(accumulators);
                 let in_data_1 = c1.data();
@@ -253,8 +328,8 @@ impl<T: Numeric> Output<T> {
                     out_data: self.data.as_ref(),
                 };
                 let (updated_grad_1, updated_grad_2) = self.op.backward(args).binary();
-                c1.set_grad(updated_grad_1, accumulators);
-                c2.set_grad(updated_grad_2, accumulators);
+                accumulators.insert(*c1_id, updated_grad_1);
+                accumulators.insert(*c2_id, updated_grad_2);
             }
         }
     }
