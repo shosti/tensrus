@@ -1,6 +1,7 @@
 use crate::{
     numeric::Numeric,
     op::{AddOp, MulOp, NoOp, Op, PowOp, ReluOp},
+    render::{Graphable, Node, NodeId},
     scalar::Scalar,
     tensor::Tensor,
 };
@@ -83,17 +84,6 @@ impl<Tn: Tensor> Var<Tn> {
         self.grad = None;
     }
 
-    // returns (nodes, edges)
-    pub fn trace(&self) -> (HashSet<VarRef>, HashSet<(VarRef, VarRef)>) {
-        let mut nodes = HashSet::new();
-        let mut edges = HashSet::new();
-        let val: VarRef = self.clone().into();
-
-        Self::build_trace(&val, &mut nodes, &mut edges);
-
-        (nodes, edges)
-    }
-
     fn build_trace(
         val: &VarRef,
         nodes: &mut HashSet<VarRef>,
@@ -106,6 +96,40 @@ impl<Tn: Tensor> Var<Tn> {
                 Self::build_trace(child, nodes, edges);
             }
         }
+    }
+}
+
+impl<T: Numeric> Graphable for Var<Scalar<T>> {
+    fn trace(&self) -> (HashSet<Node>, HashSet<(NodeId, NodeId)>) {
+        let mut nodes = HashSet::new();
+        let mut edges = HashSet::new();
+        let val: VarRef = self.clone().into();
+
+        Self::build_trace(&val, &mut nodes, &mut edges);
+
+        let g_nodes = nodes
+            .iter()
+            .map(|n| {
+                let data: &Scalar<T> = n.data();
+                let grad: &Scalar<T> = n.grad();
+                let label = format!(
+                    "{} | data: {:?} | grad: {:?} | {:?}",
+                    n.id,
+                    data,
+                    grad,
+                    n.op()
+                );
+                let id = format!("{}", n.id);
+
+                Node { id, label }
+            })
+            .collect();
+        let g_edges = edges
+            .iter()
+            .map(|(from, to)| (format!("{}", from.id), format!("{}", to.id)))
+            .collect();
+
+        (g_nodes, g_edges)
     }
 }
 

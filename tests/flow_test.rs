@@ -1,9 +1,9 @@
 extern crate tensorous;
 
-// use std::fs::File;
-// use std::process::Command;
+use std::fs::File;
+use std::process::Command;
 use tensorous::flow::Var;
-// use tensorous::render::Graph;
+use tensorous::render::Graph;
 use tensorous::scalar::Scalar;
 
 #[test]
@@ -14,7 +14,7 @@ fn flow_sanity_test() {
     let h = (z.clone() * z.clone()).relu();
     let y = h.clone() + q.clone() + q.clone() * x.clone();
     y.backward();
-    // render_graph(y.clone(), "thing".to_string());
+    render_graph(&y, "thing".to_string());
 
     assert_eq!(y.data().val(), -20.0);
     assert_eq!(x.data().val(), 46.0);
@@ -43,15 +43,15 @@ fn test_more_ops() {
     assert!((b.grad().unwrap().val() - 645.5772594752187).abs() < tol);
 }
 
-// fn render_graph(x: Var<Scalar<f64>>, id: String) {
-//     let g = Graph::new(x.clone());
-//     let dotfile = format!("/tmp/{}.dot", id);
-//     let mut f = File::create(&dotfile).unwrap();
-//     g.render_to(&mut f);
-//     let pdffile = format!("/tmp/{}.pdf", id);
-//     Command::new("dot")
-//         .args(["-Tpdf", format!("-o{}", pdffile).as_ref(), &dotfile])
-//         .output()
-//         .unwrap();
-//     println!("rendered {}", pdffile);
-// }
+fn render_graph(x: &Var<Scalar<f64>>, id: String) {
+    let g = Graph::new(x);
+    let dotfile = format!("/tmp/{}.dot", id);
+    let mut f = File::create(&dotfile).unwrap();
+    g.render_to(&mut f);
+    let pdffile = format!("/tmp/{}.pdf", id);
+    Command::new("dot")
+        .args(["-Tpdf", format!("-o{}", pdffile).as_ref(), &dotfile])
+        .output()
+        .unwrap();
+    println!("rendered {}", pdffile);
+}

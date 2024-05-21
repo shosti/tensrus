@@ -1,5 +1,6 @@
 use crate::numeric::Numeric;
 use crate::op2::{AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, Op, ReLU, ScalarMulOp};
+use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
 use crate::tensor::{BasicTensor, Tensor};
 use num::One;
@@ -76,16 +77,26 @@ impl<Tn: Tensor> Var<Tn> {
 
         let self_data = self_ref.data();
         let data = op.forward(ForwardInput::Unary(self_data.as_ref()));
+        let id = Self::next_id();
 
         let out = Output {
-            id: Self::next_id(),
+            id,
             data,
             op,
             children,
             all_children,
         };
 
-        Self::Output(Rc::new(RefCell::new(out)), PhantomData)
+        let out_var = Self::Output(Rc::new(RefCell::new(out)), PhantomData);
+
+        // Insert newly created ref into all_children
+        let out_ref = VarRef::from(&out_var.clone());
+        if let Self::Output(o, _) = &out_var {
+            let mut out = o.borrow_mut();
+            out.all_children.insert(id, out_ref);
+        }
+
+        out_var
     }
 
     fn new_from_binary(&self, other: VarRef<Tn::T>, op: Box<dyn Op<Tn::T>>) -> Self {
@@ -102,15 +113,24 @@ impl<Tn: Tensor> Var<Tn> {
             other_data.as_ref(),
         ));
 
+        let id = Self::next_id();
         let out = Output {
-            id: Self::next_id(),
+            id,
             data,
             op,
             children,
             all_children,
         };
+        let out_var = Self::Output(Rc::new(RefCell::new(out)), PhantomData);
 
-        Self::Output(Rc::new(RefCell::new(out)), PhantomData)
+        // Insert newly created ref into all_children
+        let out_ref = VarRef::from(&out_var.clone());
+        if let Self::Output(o, _) = &out_var {
+            let mut out = o.borrow_mut();
+            out.all_children.insert(id, out_ref);
+        }
+
+        out_var
     }
 }
 
@@ -140,18 +160,15 @@ impl<T: Numeric> VarRef<T> {
     }
 
     fn take_all_children(&self) -> HashMap<Id, VarRef<T>> {
-        let mut blank_children = HashMap::new();
-
         match self {
             Self::Parameter(p) => {
+                let mut blank_children = HashMap::new();
                 blank_children.insert(p.borrow().id, self.clone());
                 blank_children
             }
             Self::Output(o) => {
                 let mut self_out = o.borrow_mut();
-                let mut all_children =
-                    std::mem::replace(&mut self_out.all_children, blank_children);
-                all_children.insert(self_out.id, self.clone());
+                let all_children = std::mem::take(&mut self_out.all_children);
                 all_children
             }
         }
@@ -161,10 +178,11 @@ impl<T: Numeric> VarRef<T> {
         &self,
         mut all_children: HashMap<Id, VarRef<T>>,
     ) -> HashMap<Id, VarRef<T>> {
-        all_children.insert(self.id(), self.clone());
-
         match self {
-            Self::Parameter(_) => all_children,
+            Self::Parameter(p) => {
+                all_children.insert(p.borrow().id, self.clone());
+                all_children
+            }
             Self::Output(o) => {
                 let mut self_out = o.borrow_mut();
                 all_children.extend(self_out.all_children.drain());
@@ -256,6 +274,96 @@ impl<T: Numeric> VarRef<T> {
         accumulators
             .remove(&self.id())
             .unwrap_or_else(|| self.data().zeros_with_shape())
+    }
+
+    fn to_graph_node(&self) -> Node {
+        let op = match self {
+            VarRef::Parameter(_) => "None".to_string(),
+            VarRef::Output(o) => format!("{:?}", o.borrow().op),
+        };
+        let data = self.data();
+        let grad = match self {
+            Self::Parameter(p) => format!("{:?}", p.borrow().grad),
+            Self::Output(_) => "<Intermediate>".to_string(),
+        };
+        let label = format!(
+            "{} | data: {:?} | grad: {} | {:?}",
+            self.id(),
+            data,
+            grad,
+            op
+        );
+        let id = format!("{}", self.id());
+
+        Node { id, label }
+    }
+
+    fn trace(&self) -> (HashSet<Node>, HashSet<Edge>) {
+        match self {
+            Self::Parameter(_) => (HashSet::from([self.to_graph_node()]), HashSet::new()),
+            Self::Output(o) => {
+                let out = o.borrow();
+                let mut nodes = HashSet::new();
+                let mut edges = HashSet::new();
+                let all_children = &out.all_children;
+
+                Self::build_trace(self, &mut nodes, &mut edges, all_children);
+
+                let g_nodes = nodes
+                    .iter()
+                    .map(|n| all_children[n].to_graph_node())
+                    .collect();
+                let g_edges = edges
+                    .iter()
+                    .map(|(from, to)| (format!("{}", from), format!("{}", to)))
+                    .collect();
+
+                (g_nodes, g_edges)
+            }
+        }
+
+        // let g_nodes = nodes
+        //     .iter()
+        //     .map(|n| {
+        //         let op = match n {
+        //             VarRef::Parameter(_) => "None",
+        //             VarRef::Output(o) => format!("{:?}", o.borrow().op),
+        //         };
+        //         let data: &Scalar<T> = n.data();
+        //         let grad: &Scalar<T> = n.grad();
+        //         let label = format!(
+        //             "{} | data: {:?} | grad: {:?} | {:?}",
+        //             n.id(),
+        //             data,
+        //             grad,
+        //             op
+        //         );
+        //         let id = format!("{}", n.id());
+
+        //         Node { id, label }
+        //     })
+        //     .collect();
+        // let g_edges = edges
+        //     .iter()
+        //     .map(|(from, to)| (format!("{}", from.id()), format!("{}", to.id())))
+        //     .collect();
+
+        // (g_nodes, g_edges)
+    }
+
+    fn build_trace(
+        val: &VarRef<T>,
+        nodes: &mut HashSet<Id>,
+        edges: &mut HashSet<(Id, Id)>,
+        all_children: &HashMap<Id, VarRef<T>>,
+    ) {
+        if !nodes.contains(&val.id()) {
+            nodes.insert(val.id());
+            for child in val.children(all_children).iter() {
+                edges.insert((child.id(), val.id()));
+                Self::build_trace(child, nodes, edges, all_children);
+            }
+        }
     }
 }
 
@@ -436,6 +544,13 @@ impl<Tn: Tensor> Sub for Var<Tn> {
 
     fn sub(self, other: Self) -> Self {
         self + (-other)
+    }
+}
+
+impl<T: Numeric> Graphable for Var<Scalar<T>> {
+    fn trace(&self) -> (HashSet<Node>, HashSet<Edge>) {
+        let val: VarRef<T> = self.into();
+        val.trace()
     }
 }
 
