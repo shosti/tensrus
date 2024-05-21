@@ -276,7 +276,7 @@ impl<T: Numeric> From<T> for Var<Scalar<T>> {
 }
 
 impl<Tn: Tensor> Var<Tn> {
-    pub fn val(&self) -> Ref<Tn> {
+    pub fn data(&self) -> Ref<Tn> {
         match self {
             Self::Parameter(p, _) => Ref::map(p.borrow(), |p| {
                 let data = Tn::ref_from_basic(p.data.as_ref());
@@ -286,6 +286,22 @@ impl<Tn: Tensor> Var<Tn> {
                 let data = Tn::ref_from_basic(o.data.as_ref());
                 data
             }),
+        }
+    }
+
+    pub fn grad(&self) -> Option<Ref<Tn>> {
+        match self {
+            Self::Parameter(p, _) => {
+                let param = p.borrow();
+                match (*param).grad {
+                    Some(_) => Some(Ref::map(param, |p| {
+                        let grad = Tn::ref_from_basic(p.grad.as_ref().unwrap().as_ref());
+                        grad
+                    })),
+                    None => None,
+                }
+            }
+            Self::Output(_, _) => None,
         }
     }
 
@@ -309,7 +325,7 @@ impl<Tn: Tensor> Var<Tn> {
     }
 
     pub fn sum_elems(&self) -> Var<Scalar<Tn::T>> {
-        self.val().iter().map(|(_, val)| Var::from(val)).sum()
+        self.data().iter().map(|(_, val)| Var::from(val)).sum()
     }
 }
 
@@ -389,6 +405,6 @@ mod tests {
         let v = Var::new(m);
         let s = v.sum_elems();
 
-        assert_eq!(Scalar::from(1 + 2 + 3 + 4 + 5 + 6), *s.val());
+        assert_eq!(Scalar::from(1 + 2 + 3 + 4 + 5 + 6), *s.data());
     }
 }
