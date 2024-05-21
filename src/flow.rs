@@ -253,39 +253,10 @@ impl<T: Numeric> VarRef<T> {
         &self,
         accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>,
     ) -> Box<dyn BasicTensor<T>> {
-        match self {
-            Self::Parameter(p) => {
-                let mut param = p.borrow_mut();
-                param
-                    .grad
-                    .take()
-                    .unwrap_or_else(|| param.data.zeros_with_shape())
-            }
-            Self::Output(o) => accumulators
-                .remove(&o.borrow().id)
-                .unwrap_or_else(|| o.borrow().data.zeros_with_shape()),
-        }
+        accumulators
+            .remove(&self.id())
+            .unwrap_or_else(|| self.data().zeros_with_shape())
     }
-
-    // fn set_grad(
-    //     &self,
-    //     grad: Box<dyn BasicTensor<T>>,
-    //     accumulators: &mut HashMap<Id, Box<dyn BasicTensor<T>>>,
-    // ) {
-    //     match self {
-    //         Self::Parameter(p) => {
-    //             let mut param = p.borrow_mut();
-    //             assert!(
-    //                 param.grad.is_none(),
-    //                 "Setting parameter gradient when it already exists"
-    //             );
-    //             param.grad = Some(grad);
-    //         }
-    //         Self::Output(o) => {
-    //             accumulators.insert(o.borrow().id, grad);
-    //         }
-    //     }
-    // }
 }
 
 impl<T: Numeric> Output<T> {
