@@ -149,12 +149,8 @@ impl<T: Numeric> VarRef<T> {
                 param.grad = Some(param.data.ones_with_shape());
             }
             Self::Output(o) => {
-                let mut topo = Vec::new();
-                let mut visited = HashSet::new();
                 let out = o.borrow();
-
-                Self::build_topo(self, &mut topo, &mut visited, &out.all_children);
-                self.update_grads(topo, &out.all_children);
+                self.update_grads(&out.all_children);
             }
         }
     }
@@ -198,12 +194,32 @@ impl<T: Numeric> VarRef<T> {
         }
     }
 
-    fn update_grads(&self, topo: Vec<VarRef<T>>, all_children: &HashMap<Id, VarRef<T>>) {
-        let mut accumulators = HashMap::<Id, Box<dyn BasicTensor<T>>>::new();
-        let ones = match self {
-            Self::Parameter(p) => p.borrow().data.ones_with_shape(),
-            Self::Output(o) => o.borrow().data.ones_with_shape(),
-        };
+    fn update_grads(&self, all_children: &HashMap<Id, VarRef<T>>) {
+        let grads = self.calc_grads(all_children);
+        for (id, grad) in grads.into_iter() {
+            let v = &all_children[&id];
+            match v {
+                Self::Parameter(p) => {
+                    let mut param = p.borrow_mut();
+                    param.grad = Some(grad);
+                }
+                Self::Output(_) => {
+                    // We just throw away non-param grads
+                }
+            }
+        }
+    }
+
+    fn calc_grads(
+        &self,
+        all_children: &HashMap<Id, VarRef<T>>,
+    ) -> HashMap<Id, Box<dyn BasicTensor<T>>> {
+        let mut topo = Vec::new();
+        let mut visited = HashSet::new();
+        Self::build_topo(self, &mut topo, &mut visited, &all_children);
+
+        let mut accumulators = HashMap::new();
+        let ones = self.data().ones_with_shape();
         accumulators.insert(self.id(), ones);
 
         for v in topo.iter().rev() {
@@ -218,21 +234,7 @@ impl<T: Numeric> VarRef<T> {
                 }
             }
         }
-
-        for v in topo.iter() {
-            match v {
-                Self::Parameter(p) => {
-                    let mut param = p.borrow_mut();
-                    let grad = accumulators
-                        .remove(&param.id)
-                        .expect("backward() did not calculate grad for parameter");
-                    param.grad = Some(grad);
-                }
-                Self::Output(_) => {
-                    // We just throw away non-param grads
-                }
-            }
-        }
+        accumulators
     }
 
     fn children(&self, all_children: &HashMap<Id, VarRef<T>>) -> Vec<VarRef<T>> {
