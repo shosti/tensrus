@@ -1,9 +1,9 @@
 use num::{One, Zero};
 use std::any::Any;
+use std::cmp::PartialEq;
 use std::fmt::Debug;
 use std::iter::Map;
 use std::ops::{Add, Index, Mul};
-use std::cmp::PartialEq;
 
 use crate::numeric::Numeric;
 use crate::slice::Slice;

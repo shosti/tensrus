@@ -278,22 +278,15 @@ impl<T: Numeric> VarRef<T> {
             .unwrap_or_else(|| self.data().zeros_with_shape())
     }
 
-    fn to_graph_node(&self) -> Node {
-        let op = match self {
-            VarRef::Parameter(_) => "None".to_string(),
-            VarRef::Output(o) => format!("{:?}", o.borrow().op),
-        };
+    fn to_graph_node(&self, grads: &HashMap<Id, Box<dyn BasicTensor<T>>>) -> Node {
         let data = self.data();
-        let grad = match self {
-            Self::Parameter(p) => format!("{:?}", p.borrow().grad),
-            Self::Output(_) => "<Intermediate>".to_string(),
-        };
+        let grad = &grads[&self.id()];
         let label = format!(
-            "{} | data: {:?} | grad: {} | {:?}",
+            "{} | data: {} | grad: {}",
             self.id(),
-            data,
-            grad,
-            op
+            // TODO: non-scalars?
+            data[&[]],
+            grad[&[]],
         );
         let id = format!("{}", self.id());
 
@@ -302,7 +295,7 @@ impl<T: Numeric> VarRef<T> {
 
     fn trace(&self) -> (HashSet<Node>, HashSet<Edge>) {
         match self {
-            Self::Parameter(_) => (HashSet::from([self.to_graph_node()]), HashSet::new()),
+            Self::Parameter(_) => panic!("can't trace a parameter"),
             Self::Output(o) => {
                 let out = o.borrow();
                 let mut nodes = HashSet::new();
@@ -310,10 +303,11 @@ impl<T: Numeric> VarRef<T> {
                 let all_children = &out.all_children;
 
                 Self::build_trace(self, &mut nodes, &mut edges, all_children);
+                let grads = self.calc_grads(all_children);
 
                 let g_nodes = nodes
                     .iter()
-                    .map(|n| all_children[n].to_graph_node())
+                    .map(|n| all_children[n].to_graph_node(&grads))
                     .collect();
                 let g_edges = edges
                     .iter()
@@ -323,34 +317,6 @@ impl<T: Numeric> VarRef<T> {
                 (g_nodes, g_edges)
             }
         }
-
-        // let g_nodes = nodes
-        //     .iter()
-        //     .map(|n| {
-        //         let op = match n {
-        //             VarRef::Parameter(_) => "None",
-        //             VarRef::Output(o) => format!("{:?}", o.borrow().op),
-        //         };
-        //         let data: &Scalar<T> = n.data();
-        //         let grad: &Scalar<T> = n.grad();
-        //         let label = format!(
-        //             "{} | data: {:?} | grad: {:?} | {:?}",
-        //             n.id(),
-        //             data,
-        //             grad,
-        //             op
-        //         );
-        //         let id = format!("{}", n.id());
-
-        //         Node { id, label }
-        //     })
-        //     .collect();
-        // let g_edges = edges
-        //     .iter()
-        //     .map(|(from, to)| (format!("{}", from.id()), format!("{}", to.id())))
-        //     .collect();
-
-        // (g_nodes, g_edges)
     }
 
     fn build_trace(
