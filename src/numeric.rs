@@ -11,6 +11,9 @@ pub trait Numeric:
     + BLASOps
     + 'static
 {
+    fn two() -> Self {
+        Self::one() + Self::one()
+    }
 }
 
 impl Numeric for f32 {}

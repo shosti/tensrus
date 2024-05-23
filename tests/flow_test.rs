@@ -17,7 +17,7 @@ fn flow_sanity_test() {
     render_graph(&y, "thing".to_string());
 
     assert_eq!(y.data().val(), -20.0);
-    assert_eq!(x.data().val(), 46.0);
+    assert_eq!(x.grad().unwrap().val(), 46.0);
 }
 
 #[test]

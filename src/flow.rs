@@ -60,6 +60,13 @@ impl<Tn: Tensor> Var<Tn> {
         Self::Parameter(Rc::new(RefCell::new(param)), PhantomData)
     }
 
+    pub fn id(&self) -> Id {
+        match self {
+            Self::Parameter(p, _) => p.borrow().id,
+            Self::Output(o, _) => o.borrow().id,
+        }
+    }
+
     fn next_id() -> Id {
         let mut id = 0;
         NEXT_ID.with(|n| {
@@ -101,6 +108,9 @@ impl<Tn: Tensor> Var<Tn> {
 
     fn new_from_binary(&self, other: VarRef<Tn::T>, op: Box<dyn Op<Tn::T>>) -> Self {
         let self_ref = VarRef::from(self);
+        if self_ref.id() == other.id() {
+            panic!("cannot use the same var for both arguments of a binary op");
+        }
 
         let self_children = self_ref.take_all_children();
         let all_children = other.merge_all_children(self_children);
@@ -440,6 +450,9 @@ impl<Tn: Tensor> Var<Tn> {
     }
 
     pub fn elem_mul(&self, other: Var<Tn>) -> Self {
+        if self.id() == other.id() {
+            return self.elem_pow(Tn::T::two());
+        }
         let op = ElemMulOp::<Tn>::new();
         let other_ref = (&other).into();
 
@@ -471,6 +484,9 @@ impl<Tn: Tensor> Add<Var<Tn>> for Var<Tn> {
     type Output = Self;
 
     fn add(self, other: Var<Tn>) -> Self {
+        if self.id() == other.id() {
+            return self * Var::from(Tn::T::two());
+        }
         let op = AddOp::<Tn>::new();
         let other_ref: VarRef<Tn::T> = (&other).into();
 
@@ -482,6 +498,9 @@ impl<Tn: Tensor> Mul<Var<Scalar<Tn::T>>> for Var<Tn> {
     type Output = Self;
 
     fn mul(self, other: Var<Scalar<Tn::T>>) -> Self {
+        if self.id() == other.id() {
+            return self.elem_pow(Tn::T::two());
+        }
         let op = ScalarMulOp::<Tn>::new();
         let other_ref: VarRef<Tn::T> = (&other).into();
 
