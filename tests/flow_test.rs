@@ -2,9 +2,9 @@ extern crate tensorous;
 
 use std::fs::File;
 use std::process::Command;
-use tensorous::var::Var;
 use tensorous::render::Graph;
 use tensorous::scalar::Scalar;
+use tensorous::var::Var;
 
 #[test]
 fn flow_sanity_test() {

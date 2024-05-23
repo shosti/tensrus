@@ -73,7 +73,7 @@ impl<T: Numeric> BackwardOutput<T> {
 
 pub trait Op<T: Numeric>: Debug {
     fn forward(&self, input: ForwardInput<T>) -> Box<dyn BasicTensor<T>>;
-    fn backward<'a>(&self, args: BackwardArgs<T>) -> BackwardOutput<T>;
+    fn backward(&self, args: BackwardArgs<T>) -> BackwardOutput<T>;
 }
 
 #[derive(Debug)]

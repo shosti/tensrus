@@ -186,8 +186,7 @@ impl<T: Numeric> VarRef<T> {
             }
             Self::Output(o) => {
                 let mut self_out = o.borrow_mut();
-                let all_children = self_out.all_children.take().unwrap_or_default();
-                all_children
+                self_out.all_children.take().unwrap_or_default()
             }
         }
     }
@@ -239,7 +238,7 @@ impl<T: Numeric> VarRef<T> {
     ) -> HashMap<Id, Box<dyn BasicTensor<T>>> {
         let mut topo = Vec::new();
         let mut visited = HashSet::new();
-        Self::build_topo(self, &mut topo, &mut visited, &all_children);
+        Self::build_topo(self, &mut topo, &mut visited, all_children);
 
         let mut accumulators = HashMap::new();
         let ones = self.data().ones_with_shape();
@@ -441,7 +440,10 @@ impl<Tn: Tensor> Var<Tn> {
         match self {
             Self::Parameter(p, _) => {
                 let param = p.borrow();
-                match (*param).grad {
+                // I can't for the life of me figure out how to get this to work
+                // using Option#map
+                #[allow(clippy::manual_map)]
+                match param.grad {
                     Some(_) => Some(Ref::map(param, |p| {
                         let grad = Tn::ref_from_basic(p.grad.as_ref().unwrap().as_ref());
                         grad

@@ -21,8 +21,12 @@ impl Numeric for f64 {}
 
 macro_rules! blas_ops {
     ( $( $name:ident ( $( $var:ident : $t:ty , )* ) -> $ret:ty , )* ) => {
+        #[allow(clippy::missing_safety_doc)]
+        #[allow(clippy::too_many_arguments)]
         pub trait BLASOps: Sized {
-            $( unsafe fn $name ( $( $var : $t , )* ) -> $ret ; )*
+            $(
+                unsafe fn $name ( $( $var : $t , )* ) -> $ret ;
+            )*
         }
 
         impl BLASOps for f32 {
