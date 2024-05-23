@@ -2,7 +2,7 @@ extern crate tensorous;
 
 use std::fs::File;
 use std::process::Command;
-use tensorous::flow::Var;
+use tensorous::var::Var;
 use tensorous::render::Graph;
 use tensorous::scalar::Scalar;
 
