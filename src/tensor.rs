@@ -111,6 +111,8 @@ pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T
 
     // Returns a new tensor of ones with the same shape as self
     fn ones_with_shape(&self) -> Box<dyn BasicTensor<T>>;
+
+    fn add(self: Box<Self>, other: &dyn BasicTensor<T>, scale: T) -> Box<dyn BasicTensor<T>>;
 }
 
 pub trait Tensor:

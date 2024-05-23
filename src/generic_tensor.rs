@@ -232,6 +232,13 @@ impl<T: Numeric, const R: usize, const S: Shape> BasicTensor<T> for GenericTenso
     fn ones_with_shape(&self) -> Box<dyn BasicTensor<T>> {
         Box::new(Self::ones())
     }
+
+    // Scales `self` by `scale` and adds to `other`
+    fn add(self: Box<Self>, other_basic: &dyn BasicTensor<T>, scale: T) -> Box<dyn BasicTensor<T>> {
+        let other = Self::ref_from_basic(other_basic);
+        let out = (*self * scale) + other;
+        Box::new(out)
+    }
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> Index<&[usize; R]> for GenericTensor<T, R, S> {

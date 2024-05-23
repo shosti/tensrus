@@ -9,29 +9,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1fdabc7756949593fe60f30ec81974b613357de856987752631dea1e3394c80"
 
 [[package]]
-name = "tensorous"
-version = "0.1.0"
+name = "blas"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae980f75c3215bfe8203c349b28149b0f4130a262e072913ccb55f877cd239dc"
 dependencies = [
- "tensorous-derive",
- "dot",
- "num",
- "rand",
+ "blas-sys",
+ "libc",
+ "num-complex",
 ]
 
 [[package]]
-name = "tensorous-demo"
-version = "0.1.0"
+name = "blas-sys"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13b1b279ceb25d7c4faaea95a5f7addbe7d8c34f9462044bd8e630cebcfc2440"
 dependencies = [
- "tensorous",
-]
-
-[[package]]
-name = "tensorous-derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
+ "libc",
 ]
 
 [[package]]
@@ -200,6 +194,33 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "tensorous"
+version = "0.1.0"
+dependencies = [
+ "blas",
+ "dot",
+ "num",
+ "rand",
+ "tensorous-derive",
+]
+
+[[package]]
+name = "tensorous-demo"
+version = "0.1.0"
+dependencies = [
+ "tensorous",
+]
+
+[[package]]
+name = "tensorous-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

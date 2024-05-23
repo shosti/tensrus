@@ -28,6 +28,12 @@ pub enum BackwardError {
 }
 
 #[derive(Debug, Clone)]
+pub enum UpdateFromGradError {
+    AlreadyUpdated,
+    IntermediateOutput,
+}
+
+#[derive(Debug, Clone)]
 enum VarRef<T: Numeric> {
     Parameter(Rc<RefCell<Param<T>>>),
     Output(Rc<RefCell<Output<T>>>),
@@ -70,6 +76,22 @@ impl<Tn: Tensor> Var<Tn> {
         match self {
             Self::Parameter(p, _) => p.borrow().id,
             Self::Output(o, _) => o.borrow().id,
+        }
+    }
+
+    pub fn update_from_grad(&self, epsilon: Tn::T) -> Result<(), UpdateFromGradError> {
+        match self {
+            Self::Parameter(p, _) => {
+                let mut param = p.borrow_mut();
+                let updated = param
+                    .grad
+                    .take()
+                    .ok_or(UpdateFromGradError::AlreadyUpdated)?
+                    .add(param.data.as_ref(), epsilon);
+                param.data = updated;
+                Ok(())
+            }
+            Self::Output(_, _) => Err(UpdateFromGradError::IntermediateOutput),
         }
     }
 
