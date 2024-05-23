@@ -13,7 +13,7 @@ fn flow_sanity_test() {
     let q = z.clone().relu() + z.clone() * x.clone();
     let h = (z.clone() * z.clone()).relu();
     let y = h.clone() + q.clone() + q.clone() * x.clone();
-    y.backward();
+    y.backward().unwrap();
     render_graph(&y, "thing".to_string());
 
     assert_eq!(y.data().val(), -20.0);
@@ -34,7 +34,7 @@ fn test_more_ops() {
     let f = e.elem_pow(2.0);
     let mut g: Var<Scalar<f64>> = f.clone() / Var::from(2.0);
     g = g.clone() + (Var::from(10.0) / f.clone());
-    g.backward();
+    g.backward().unwrap();
 
     let tol = 0.00000001;
 

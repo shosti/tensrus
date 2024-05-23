@@ -6,6 +6,7 @@ use crate::tensor::{BasicTensor, Tensor};
 use num::One;
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
 use std::iter::Sum;
 use std::marker::PhantomData;
 use std::ops::{Add, Div, Mul, Neg, Sub};
@@ -19,6 +20,11 @@ thread_local!(static NEXT_ID: RefCell<Id> = const { RefCell::new(1) });
 pub enum Var<Tn: Tensor> {
     Parameter(Rc<RefCell<Param<Tn::T>>>, PhantomData<Tn>),
     Output(Rc<RefCell<Output<Tn::T>>>, PhantomData<Tn>),
+}
+
+#[derive(Debug, Clone)]
+pub enum BackwardError {
+    NonRootNode,
 }
 
 #[derive(Debug, Clone)]
@@ -40,7 +46,7 @@ pub struct Output<T: Numeric> {
     data: Box<dyn BasicTensor<T>>,
     op: Box<dyn Op<T>>,
     children: Children,
-    all_children: HashMap<Id, VarRef<T>>,
+    all_children: Option<HashMap<Id, VarRef<T>>>,
 }
 
 #[derive(Debug)]
@@ -91,7 +97,7 @@ impl<Tn: Tensor> Var<Tn> {
             data,
             op,
             children,
-            all_children,
+            all_children: Some(all_children),
         };
 
         let out_var = Self::Output(Rc::new(RefCell::new(out)), PhantomData);
@@ -100,7 +106,7 @@ impl<Tn: Tensor> Var<Tn> {
         let out_ref = VarRef::from(&out_var.clone());
         if let Self::Output(o, _) = &out_var {
             let mut out = o.borrow_mut();
-            out.all_children.insert(id, out_ref);
+            out.all_children.as_mut().unwrap().insert(id, out_ref);
         }
 
         out_var
@@ -129,7 +135,7 @@ impl<Tn: Tensor> Var<Tn> {
             data,
             op,
             children,
-            all_children,
+            all_children: Some(all_children),
         };
         let out_var = Self::Output(Rc::new(RefCell::new(out)), PhantomData);
 
@@ -137,7 +143,7 @@ impl<Tn: Tensor> Var<Tn> {
         let out_ref = VarRef::from(&out_var.clone());
         if let Self::Output(o, _) = &out_var {
             let mut out = o.borrow_mut();
-            out.all_children.insert(id, out_ref);
+            out.all_children.as_mut().unwrap().insert(id, out_ref);
         }
 
         out_var
@@ -152,15 +158,21 @@ impl<T: Numeric> VarRef<T> {
         }
     }
 
-    fn backward(&mut self) {
+    fn backward(&mut self) -> Result<(), BackwardError> {
         match self.clone() {
             Self::Parameter(p) => {
                 let mut param = p.borrow_mut();
                 param.grad = Some(param.data.ones_with_shape());
+                Ok(())
             }
             Self::Output(o) => {
                 let out = o.borrow();
-                self.update_grads(&out.all_children);
+                let all_children = &out
+                    .all_children
+                    .as_ref()
+                    .ok_or(BackwardError::NonRootNode)?;
+                self.update_grads(all_children);
+                Ok(())
             }
         }
     }
@@ -174,7 +186,7 @@ impl<T: Numeric> VarRef<T> {
             }
             Self::Output(o) => {
                 let mut self_out = o.borrow_mut();
-                let all_children = std::mem::take(&mut self_out.all_children);
+                let all_children = self_out.all_children.take().unwrap_or_default();
                 all_children
             }
         }
@@ -191,7 +203,8 @@ impl<T: Numeric> VarRef<T> {
             }
             Self::Output(o) => {
                 let mut self_out = o.borrow_mut();
-                all_children.extend(self_out.all_children.drain());
+                let mut self_children = self_out.all_children.take().unwrap_or_default();
+                all_children.extend(self_children.drain());
                 all_children
             }
         }
@@ -310,7 +323,10 @@ impl<T: Numeric> VarRef<T> {
                 let out = o.borrow();
                 let mut nodes = HashSet::new();
                 let mut edges = HashSet::new();
-                let all_children = &out.all_children;
+                let all_children = &out
+                    .all_children
+                    .as_ref()
+                    .expect("Cannot call trace() on non-root node");
 
                 Self::build_trace(self, &mut nodes, &mut edges, all_children);
                 let grads = self.calc_grads(all_children);
@@ -475,8 +491,8 @@ impl<Tn: Tensor> Sum for Var<Tn> {
 }
 
 impl<T: Numeric> Var<Scalar<T>> {
-    pub fn backward(&self) {
-        VarRef::from(self).backward();
+    pub fn backward(&self) -> Result<(), BackwardError> {
+        VarRef::from(self).backward()
     }
 }
 
