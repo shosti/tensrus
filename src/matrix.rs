@@ -238,23 +238,40 @@ mod tests {
         }
     });
 
-    seq!(N in 1..=10 {
-        seq!(M in 1..=10 {
+    seq!(M in 1..=10 {
+        seq!(N in 1..=10 {
             seq!(P in 1..10 {
                 proptest! {
                     #[test]
                     #[cfg(feature = "proptest")]
-                    fn test_matmul_~N~M~P(v_a in proptest::collection::vec((-10000.0)..(10000.0), N * M),
-                                          v_b in proptest::collection::vec((-10000.0)..(10000.0), M * P)) {
-                        let a: Matrix::<f64, N, M> = v_a.into_iter().collect();
-                        let b: Matrix::<f64, M, P> = v_b.into_iter().collect();
+                    fn test_matmul_~M~N~P(v_a in proptest::collection::vec((-10000.0)..(10000.0), M * N),
+                                          v_b in proptest::collection::vec((-10000.0)..(10000.0), N * P)) {
+                        let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
+                        let b: Matrix::<f64, N, P> = v_b.into_iter().collect();
 
                         let c = &a * &b;
 
-                        for i in 0..N {
+                        for i in 0..M {
                             for j in 0..P {
                                 const TOLERANCE: f64 = 0.00001;
                                 assert!((a.row(i).unwrap().dot(&b.col(j).unwrap()) - c[&[i, j]]).abs() < TOLERANCE);
+                            }
+                        }
+                    }
+
+                    #[test]
+                    #[cfg(feature = "proptest")]
+                    fn test_matmul_transpose_~M~N~P(v_a in proptest::collection::vec((-10000.0)..(10000.0), M * N),
+                                                    v_b in proptest::collection::vec((-10000.0)..(10000.0), N * P)) {
+                        let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
+                        let b: Matrix::<f64, N, P> = v_b.into_iter().collect();
+
+                        let c = &a * &b;
+                        let c2 = (&b.transpose() * &a.transpose()).transpose();
+                        for i in 0..M {
+                            for j in 0..P {
+                                const TOLERANCE: f64 = 0.00001;
+                                assert!((c[&[i, j]] - c2[&[i, j]]).abs() < TOLERANCE);
                             }
                         }
                     }
