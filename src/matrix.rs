@@ -268,8 +268,9 @@ mod tests {
                 proptest! {
                     #[test]
                     #[cfg(feature = "proptest")]
-                    fn test_matmul_~M~N~P(v_a in proptest::collection::vec((-10000.0)..(10000.0), M * N),
-                                          v_b in proptest::collection::vec((-10000.0)..(10000.0), N * P)) {
+                    #[allow(clippy::identity_op)]
+                    fn test_matmul_~M~N~P(v_a in proptest::collection::vec(-10000.0..10000.0, M * N),
+                                          v_b in proptest::collection::vec(-10000.0..10000.0, N * P)) {
                         let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
                         let b: Matrix::<f64, N, P> = v_b.into_iter().collect();
 
@@ -285,9 +286,10 @@ mod tests {
 
                     #[test]
                     #[cfg(feature = "proptest")]
-                    fn test_matmul_distributivity_~M~N~P(v_a in proptest::collection::vec((-10000.0)..(10000.0), M * N),
-                                                         v_b in proptest::collection::vec((-10000.0)..(10000.0), N * P),
-                                                         v_c in proptest::collection::vec((-10000.0)..(10000.0), N * P)) {
+                    #[allow(clippy::identity_op)]
+                    fn test_matmul_distributivity_~M~N~P(v_a in proptest::collection::vec(-10000.0..10000.0, M * N),
+                                                         v_b in proptest::collection::vec(-10000.0..10000.0, N * P),
+                                                         v_c in proptest::collection::vec(-10000.0..10000.0, N * P)) {
                         let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
                         let b: Matrix::<f64, N, P> = v_b.into_iter().collect();
                         let c: Matrix::<f64, N, P> = v_c.into_iter().collect();
@@ -297,8 +299,9 @@ mod tests {
 
                     #[test]
                     #[cfg(feature = "proptest")]
-                    fn test_matmul_transpose_~M~N~P(v_a in proptest::collection::vec((-10000.0)..(10000.0), M * N),
-                                                    v_b in proptest::collection::vec((-10000.0)..(10000.0), N * P)) {
+                    #[allow(clippy::identity_op)]
+                    fn test_matmul_transpose_~M~N~P(v_a in proptest::collection::vec(-10000.0..10000.0, M * N),
+                                                    v_b in proptest::collection::vec(-10000.0..10000.0, N * P)) {
                         let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
                         let b: Matrix::<f64, N, P> = v_b.into_iter().collect();
 
@@ -327,8 +330,9 @@ mod tests {
             proptest! {
                 #[test]
                 #[cfg(feature = "proptest")]
-                fn test_matvecmul_~M~N(v_a in proptest::collection::vec((-10000.0)..(10000.0), M * N),
-                                       v_x in proptest::collection::vec((-10000.0)..(10000.0), N)) {
+                #[allow(clippy::identity_op)]
+                fn test_matvecmul_~M~N(v_a in proptest::collection::vec(-10000.0..10000.0, M * N),
+                                       v_x in proptest::collection::vec(-10000.0..10000.0, N)) {
                     let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
                     let x: Vector::<f64, N> = v_x.into_iter().collect();
 
