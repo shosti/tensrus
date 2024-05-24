@@ -187,7 +187,8 @@ mod tests {
     use super::*;
     use crate::tensor::IndexError;
     use crate::vector::Vector;
-    use rand::{thread_rng, Rng};
+    use proptest::prelude::*;
+    use seq_macro::seq;
 
     #[test]
     #[rustfmt::skip]
@@ -223,30 +224,18 @@ mod tests {
         assert_eq!(x, y);
     }
 
-    #[test]
-    fn test_identity() {
-        test_identity_with_size::<1>();
-        test_identity_with_size::<2>();
-        test_identity_with_size::<3>();
-        test_identity_with_size::<4>();
-        test_identity_with_size::<5>();
-        test_identity_with_size::<6>();
-        test_identity_with_size::<10>();
-    }
+    seq!(N in 1..=20 {
+        proptest! {
+            #[test]
+            fn test_identity_with_size_~N(v in prop::collection::vec(any::<f64>(), N)) {
+                let i = Matrix::<f64, N, N>::identity();
+                let x: Matrix::<f64, N, N> = v.into_iter().collect();
 
-    fn test_identity_with_size<const N: usize>()
-    where
-        [(); num_elems(2, matrix_shape(N, N))]:,
-    {
-        let i = Matrix::<f64, N, N>::identity();
-        let x = Matrix::<f64, N, N>::from_fn(|_| {
-            let mut rng = thread_rng();
-            rng.gen_range(-1000.0..1000.0)
-        });
-
-        assert_eq!(&i * &x, x);
-        assert_eq!(&x * &i, x);
-    }
+                assert_eq!(&i * &x, x);
+                assert_eq!(&x * &i, x);
+            }
+        }
+    });
 
     #[test]
     #[allow(clippy::zero_prefixed_literal)]

@@ -14,4 +14,7 @@ num = "0.4"
 rand = "0.8"
 tensorous-derive = { path = "tensorous-derive" }
 blas = "0.22"
-# blas-src = { version = "0.10", features = ["accelerate"] }
+seq-macro = "0.3"
+
+[dev-dependencies]
+proptest = "1.0.0"
