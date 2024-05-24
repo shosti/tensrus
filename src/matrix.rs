@@ -227,7 +227,8 @@ mod tests {
     seq!(N in 1..=20 {
         proptest! {
             #[test]
-            fn test_identity_with_size_~N(v in prop::collection::vec(any::<f64>(), N)) {
+            #[cfg(feature = "proptest")]
+            fn test_identity_~N(v in prop::collection::vec(any::<f64>(), N)) {
                 let i = Matrix::<f64, N, N>::identity();
                 let x: Matrix::<f64, N, N> = v.into_iter().collect();
 
@@ -259,6 +260,40 @@ mod tests {
                     }
                 }
             });
+        });
+    });
+
+    seq!(N in 1..=20 {
+        proptest! {
+            #[test]
+            #[cfg(feature = "proptest")]
+            fn test_matvecmul_identity_~N(v in prop::collection::vec(any::<f64>(), N)) {
+                let i = Matrix::<f64, N, N>::identity();
+                let x: Vector::<f64, N> = v.into_iter().collect();
+
+                assert_eq!(&i * &x, x);
+            }
+        }
+    });
+
+    seq!(M in 1..=10 {
+        seq!(N in 1..=10 {
+            proptest! {
+                #[test]
+                #[cfg(feature = "proptest")]
+                fn test_matvecmul_~M~N(v_a in proptest::collection::vec((-10000.0)..(10000.0), M * N),
+                                       v_x in proptest::collection::vec((-10000.0)..(10000.0), N)) {
+                    let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
+                    let x: Vector::<f64, N> = v_x.into_iter().collect();
+
+                    let b = &a * &x;
+
+                    for i in 0..M {
+                        const TOLERANCE: f64 = 0.00001;
+                        assert!((a.row(i).unwrap().dot(&x) - b[&[i]]).abs() < TOLERANCE);
+                    }
+                }
+            }
         });
     });
 
