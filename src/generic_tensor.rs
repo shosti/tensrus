@@ -40,36 +40,6 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
         num_elems(R, S)
     }
 
-    fn stride() -> [usize; R] {
-        let s = crate::tensor::stride(R, S);
-        std::array::from_fn(|i| s[i])
-    }
-
-    fn idx_from_storage_idx(idx: usize, transpose: Transpose) -> Result<[usize; R], IndexError> {
-        if idx >= Self::storage_size() {
-            return Err(IndexError {});
-        }
-
-        let mut res = [0; R];
-        let mut i = idx;
-        let str = Self::stride();
-
-        for (dim, item) in res.iter_mut().enumerate() {
-            let s: usize = str[dim];
-            let cur = i / s;
-            *item = cur;
-            i -= cur * s;
-        }
-
-        match transpose {
-            Transpose::None => Ok(res),
-            Transpose::Transposed => {
-                res.reverse();
-                Ok(res)
-            }
-        }
-    }
-
     fn storage_idx(&self, idx: &[usize; R]) -> Result<usize, IndexError> {
         if R == 0 {
             return Ok(0);
@@ -163,15 +133,16 @@ impl<T: Numeric, const R: usize, const S: Shape> Tensor for GenericTensor<T, R, 
         }
     }
 
-    fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
-        let mut storage = self.storage;
-        for (i, v) in storage.iter_mut().enumerate() {
-            let idx = Self::idx_from_storage_idx(i, self.transpose).unwrap();
-            *v = f(&idx, *v);
+    fn map(mut self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
+        let mut next_idx = Some(Self::default_idx());
+        while let Some(idx) = next_idx {
+            let i = self.storage_idx(&idx).unwrap();
+            self.storage[i] = f(&idx, self.storage[i]);
+            next_idx = self.next_idx(&idx);
         }
 
         Self {
-            storage,
+            storage: self.storage,
             transpose: self.transpose,
         }
     }
