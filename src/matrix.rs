@@ -237,6 +237,31 @@ mod tests {
         }
     });
 
+    seq!(N in 1..=10 {
+        seq!(M in 1..=10 {
+            seq!(P in 1..10 {
+                proptest! {
+                    #[test]
+                    #[cfg(feature = "proptest")]
+                    fn test_matmul_~N~M~P(v_a in proptest::collection::vec((-10000.0)..(10000.0), N * M),
+                                          v_b in proptest::collection::vec((-10000.0)..(10000.0), M * P)) {
+                        let a: Matrix::<f64, N, M> = v_a.into_iter().collect();
+                        let b: Matrix::<f64, M, P> = v_b.into_iter().collect();
+
+                        let c = &a * &b;
+
+                        for i in 0..N {
+                            for j in 0..P {
+                                const TOLERANCE: f64 = 0.00001;
+                                assert!((a.row(i).unwrap().dot(&b.col(j).unwrap()) - c[&[i, j]]).abs() < TOLERANCE);
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    });
+
     #[test]
     #[allow(clippy::zero_prefixed_literal)]
     fn test_from_fn() {
