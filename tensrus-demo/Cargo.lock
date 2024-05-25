@@ -186,6 +186,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "seq-macro"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a3f0bf26fd526d2a95683cd0f87bf103b8539e2ca1ef48ce002d67aad59aa0b4"
+
+[[package]]
 name = "syn"
 version = "2.0.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -197,25 +203,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "tensorous"
+name = "tensrus"
 version = "0.1.0"
 dependencies = [
  "blas",
  "dot",
  "num",
  "rand",
- "tensorous-derive",
+ "seq-macro",
+ "tensrus-derive",
 ]
 
 [[package]]
-name = "tensorous-demo"
+name = "tensrus-demo"
 version = "0.1.0"
 dependencies = [
- "tensorous",
+ "tensrus",
 ]
 
 [[package]]
-name = "tensorous-derive"
+name = "tensrus-derive"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",

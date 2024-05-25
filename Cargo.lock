@@ -343,7 +343,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tensorous"
+name = "tensrus"
 version = "0.1.0"
 dependencies = [
  "blas",
@@ -352,11 +352,11 @@ dependencies = [
  "proptest",
  "rand",
  "seq-macro",
- "tensorous-derive",
+ "tensrus-derive",
 ]
 
 [[package]]
-name = "tensorous-derive"
+name = "tensrus-derive"
 version = "0.1.0"
 dependencies = [
  "proc-macro2",

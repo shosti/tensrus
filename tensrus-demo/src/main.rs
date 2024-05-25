@@ -1,6 +1,6 @@
-use tensorous::nn::{Module, MLP};
-use tensorous::scalar::Scalar;
-use tensorous::var::Var;
+use tensrus::nn::{Module, MLP};
+use tensrus::scalar::Scalar;
+use tensrus::var::Var;
 
 fn main() {
     let xs: Vec<Vec<Var<Scalar<f64>>>> = [

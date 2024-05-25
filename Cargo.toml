@@ -1,18 +1,18 @@
 [package]
-name = "tensorous"
+name = "tensrus"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
-name = "tensorous"
+name = "tensrus"
 path = "src/lib.rs"
 
 [dependencies]
 dot = { git = "https://github.com/przygienda/dot-rust.git" }
 num = "0.4"
 rand = "0.8"
-tensorous-derive = { path = "tensorous-derive" }
+tensrus-derive = { path = "tensrus-derive" }
 blas = "0.22"
 seq-macro = "0.3"
 

@@ -1,10 +1,10 @@
-extern crate tensorous;
+extern crate tensrus;
 
 use std::fs::File;
 use std::process::Command;
-use tensorous::render::Graph;
-use tensorous::scalar::Scalar;
-use tensorous::var::Var;
+use tensrus::render::Graph;
+use tensrus::scalar::Scalar;
+use tensrus::var::Var;
 
 #[test]
 fn flow_sanity_test() {
