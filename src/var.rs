@@ -10,6 +10,7 @@ use num::One;
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use std::iter::Sum;
 use std::marker::PhantomData;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::rc::Rc;
@@ -591,6 +592,16 @@ impl<Tn: Tensor> Sub for Var<Tn> {
 
     fn sub(self, other: Self) -> Self {
         self + (-other)
+    }
+}
+
+impl<Tn: Tensor> Sum for Var<Tn> {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = Self>,
+    {
+        iter.reduce(|x, y| x + y)
+            .unwrap_or_else(|| Var::new(Tn::zeros()))
     }
 }
 
