@@ -22,11 +22,11 @@ fn main() {
 
     let mut ypred: Vec<Var<Scalar<f64>>>;
     for i in 0..50 {
-        ypred = xs.iter().map(|x| call(x.to_vec())[0].clone()).collect();
+        ypred = xs.iter().map(|x| n.call(x.to_vec())[0].clone()).collect();
         let loss = n.loss(&ys, &ypred);
         loss.backward().unwrap();
         for p in n.parameters() {
-            p.update_from_grad(0.1).unwrap();
+            p.update_from_grad(0.01).unwrap();
         }
         println!("{} LOSS: {:#?}", i, loss.data().val());
     }
