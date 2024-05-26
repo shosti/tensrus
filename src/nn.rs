@@ -1,8 +1,10 @@
+use rand::thread_rng;
+use rand_distr::{Distribution, StandardNormal};
+
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
+use crate::tensor::Tensor;
 use crate::var::Var;
-use rand::distributions::{Distribution, Uniform};
-use rand::SeedableRng;
 
 pub trait Module<T: Numeric> {
     fn parameters(&self) -> Vec<Var<Scalar<T>>>;
@@ -15,12 +17,13 @@ pub struct Neuron<T: Numeric> {
 }
 
 impl<T: Numeric> Neuron<T> {
-    pub fn new(nin: usize, nonlin: bool) -> Self {
+    pub fn new(nin: usize, nonlin: bool) -> Self
+    where
+        StandardNormal: Distribution<T>,
+    {
         let mut w = Vec::new();
-        let between = Uniform::from(-T::one()..T::one());
-        let mut rng = rand::rngs::StdRng::seed_from_u64(42);
         for _ in 0..nin {
-            w.push(Var::from(between.sample(&mut rng)));
+            w.push(Var::new(Scalar::randn(&mut thread_rng())));
         }
 
         Self {
@@ -57,7 +60,10 @@ pub struct Layer<T: Numeric> {
 }
 
 impl<T: Numeric> Layer<T> {
-    pub fn new(nin: usize, nout: usize, nonlin: bool) -> Self {
+    pub fn new(nin: usize, nout: usize, nonlin: bool) -> Self
+    where
+        StandardNormal: Distribution<T>,
+    {
         let mut neurons = Vec::new();
         for _ in 0..nout {
             neurons.push(Neuron::new(nin, nonlin));
@@ -94,7 +100,10 @@ pub struct MLP<T: Numeric> {
 }
 
 impl<T: Numeric> MLP<T> {
-    pub fn new(nin: usize, nouts: Vec<usize>) -> Self {
+    pub fn new(nin: usize, nouts: Vec<usize>) -> Self
+    where
+        StandardNormal: Distribution<T>,
+    {
         let mut sizes = vec![nin];
         sizes.extend(nouts.iter());
         let mut layers = Vec::new();

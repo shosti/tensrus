@@ -33,7 +33,10 @@ pub const fn subtensor_shape(r: usize, s: Shape) -> Shape {
 
 impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
     pub fn new(storage: Vec<T>, transpose: Transpose) -> Self {
-        Self { storage, transpose_state: transpose }
+        Self {
+            storage,
+            transpose_state: transpose,
+        }
     }
 
     fn storage_size() -> usize {

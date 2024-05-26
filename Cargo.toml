@@ -11,10 +11,11 @@ path = "src/lib.rs"
 [dependencies]
 dot = { git = "https://github.com/przygienda/dot-rust.git" }
 num = "0.4"
-rand = "0.8"
+rand = "0.9.0-alpha.1"
 tensrus-derive = { path = "tensrus-derive" }
 blas = "0.22"
 seq-macro = "0.3"
+rand_distr = "0.5.0-alpha.1"
 
 [dev-dependencies]
 proptest = "1.0.0"

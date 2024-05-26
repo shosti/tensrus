@@ -1,4 +1,6 @@
 use num::{One, Zero};
+use rand::Rng;
+use rand_distr::{Distribution, StandardNormal};
 use std::any::Any;
 use std::cmp::PartialEq;
 use std::fmt::Debug;
@@ -142,6 +144,22 @@ pub trait Tensor:
     fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self {
         Self::zeros().map(|idx, _| f(idx))
     }
+    fn rand(d: impl Distribution<Self::T>, rng: &mut impl Rng) -> Self
+    where
+        Self: FromIterator<Self::T>,
+    {
+        d.sample_iter(rng)
+            .take(<Self as Tensor>::num_elems())
+            .collect()
+    }
+    fn randn(rng: &mut impl Rng) -> Self
+    where
+        Self: FromIterator<Self::T>,
+        StandardNormal: Distribution<Self::T>,
+    {
+        Self::rand(StandardNormal, rng)
+    }
+
     fn num_elems() -> usize;
 
     fn iter(&self) -> TensorIterator<Self> {
