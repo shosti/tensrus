@@ -21,6 +21,11 @@ mod type_assert;
 pub mod var;
 pub mod vector;
 
+pub mod matrix2;
+pub mod tensor2;
+
+mod storage;
+
 // use nn::{Module, MLP};
 // use render::Graph;
 // use std::fs::File;
