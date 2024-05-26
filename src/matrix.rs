@@ -2,6 +2,7 @@ use crate::generic_tensor::GenericTensor;
 use crate::numeric::Numeric;
 use crate::slice::Slice;
 use crate::tensor::{downrank, num_elems, IndexError, Shape, SlicedTensor, Tensor, Transpose};
+use crate::type_assert::{Assert, IsTrue};
 use crate::vector::{vector_shape, Vector};
 use num::ToPrimitive;
 use std::ops::Mul;
@@ -159,7 +160,7 @@ where
         matmul_impl::<T, M, N, P>(
             &self.0.storage,
             self.0.transpose_state,
-            &other.storage,
+            other.storage,
             other.transpose_state,
         )
     }
@@ -176,7 +177,7 @@ where
 
     fn mul(self, other: &'a Matrix<T, N, P>) -> Self::Output {
         matmul_impl::<T, M, N, P>(
-            &self.storage,
+            self.storage,
             self.transpose_state,
             &other.0.storage,
             other.0.transpose_state,
@@ -195,9 +196,9 @@ where
 
     fn mul(self, other: MatrixView<'a, T, N, P>) -> Self::Output {
         matmul_impl::<T, M, N, P>(
-            &self.storage,
+            self.storage,
             self.transpose_state,
-            &other.storage,
+            other.storage,
             other.transpose_state,
         )
     }
@@ -259,6 +260,16 @@ where
         MatrixView {
             storage: self.storage,
             transpose_state: self.transpose_state.transpose(),
+        }
+    }
+
+    pub fn reshape<const M2: usize, const N2: usize>(&self) -> MatrixView<T, M2, N2>
+    where
+        Assert<{ num_elems(2, matrix_shape(M, N)) == num_elems(2, matrix_shape(M2, N2)) }>: IsTrue,
+    {
+        MatrixView {
+            storage: self.storage,
+            transpose_state: self.transpose_state,
         }
     }
 }
