@@ -129,6 +129,7 @@ pub trait Tensor:
     + Mul<Self::T, Output = Self>
     + for<'a> Index<&'a Self::Idx, Output = Self::T>
     + PartialEq
+    + FromIterator<Self::T>
     + 'static
 {
     type T: Numeric;
@@ -144,10 +145,7 @@ pub trait Tensor:
     fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self {
         Self::zeros().map(|idx, _| f(idx))
     }
-    fn rand(d: impl Distribution<Self::T>, rng: &mut impl Rng) -> Self
-    where
-        Self: FromIterator<Self::T>,
-    {
+    fn rand(d: impl Distribution<Self::T>, rng: &mut impl Rng) -> Self {
         d.sample_iter(rng)
             .take(<Self as Tensor>::num_elems())
             .collect()
