@@ -52,6 +52,48 @@ where
             self.0.transpose_state.transpose(),
         ))
     }
+
+    pub fn view(&self) -> MatrixView<T, M, N> {
+        MatrixView {
+            storage: &self.0.storage,
+            transpose_state: self.0.transpose_state,
+        }
+    }
+}
+
+fn matmul_impl<T: Numeric, const M: usize, const N: usize, const P: usize>(
+    a_storage: &[T],
+    a_transpose: Transpose,
+    b_storage: &[T],
+    b_transpose: Transpose,
+) -> Matrix<T, M, P>
+where
+    [(); num_elems(2, matrix_shape(M, P))]:,
+{
+    let mut out = Matrix::zeros();
+    // BLAS's output format is always column-major which is "transposed"
+    // from our perspective
+    out.0.transpose_state = Transpose::Transposed;
+
+    unsafe {
+        T::gemm(
+            a_transpose.to_blas(),
+            b_transpose.to_blas(),
+            M as i32,
+            P as i32,
+            N as i32,
+            T::one(),
+            a_storage,
+            if a_transpose.is_transposed() { M } else { N } as i32,
+            b_storage,
+            if b_transpose.is_transposed() { N } else { P } as i32,
+            T::one(),
+            &mut out.0.storage,
+            M as i32,
+        )
+    }
+
+    out
 }
 
 impl<T: Numeric, const N: usize> Matrix<T, N, N>
@@ -95,29 +137,69 @@ where
     type Output = Matrix<T, M, P>;
 
     fn mul(self, other: &Matrix<T, N, P>) -> Self::Output {
-        let mut out = Matrix::zeros();
-        // BLAS's output format is always column-major which is "transposed"
-        // from our perspective
-        out.0.transpose_state = Transpose::Transposed;
+        matmul_impl::<T, M, N, P>(
+            &self.0.storage,
+            self.0.transpose_state,
+            &other.0.storage,
+            other.0.transpose_state,
+        )
+    }
+}
 
-        unsafe {
-            T::gemm(
-                self.0.transpose_state.to_blas(),
-                other.0.transpose_state.to_blas(),
-                M as i32,
-                P as i32,
-                N as i32,
-                T::one(),
-                &self.0.storage,
-                if self.0.is_transposed() { M } else { N } as i32,
-                &other.0.storage,
-                if other.0.is_transposed() { N } else { P } as i32,
-                T::one(),
-                &mut out.0.storage,
-                M as i32,
-            )
-        }
-        out
+impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<MatrixView<'a, T, N, P>>
+    for &'a Matrix<T, M, N>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); num_elems(2, matrix_shape(N, P))]:,
+    [(); num_elems(2, matrix_shape(M, P))]:,
+{
+    type Output = Matrix<T, M, P>;
+
+    fn mul(self, other: MatrixView<'a, T, N, P>) -> Self::Output {
+        matmul_impl::<T, M, N, P>(
+            &self.0.storage,
+            self.0.transpose_state,
+            &other.storage,
+            other.transpose_state,
+        )
+    }
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<&'a Matrix<T, N, P>>
+    for MatrixView<'a, T, M, N>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); num_elems(2, matrix_shape(N, P))]:,
+    [(); num_elems(2, matrix_shape(M, P))]:,
+{
+    type Output = Matrix<T, M, P>;
+
+    fn mul(self, other: &'a Matrix<T, N, P>) -> Self::Output {
+        matmul_impl::<T, M, N, P>(
+            &self.storage,
+            self.transpose_state,
+            &other.0.storage,
+            other.0.transpose_state,
+        )
+    }
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<MatrixView<'a, T, N, P>>
+    for MatrixView<'a, T, M, N>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); num_elems(2, matrix_shape(N, P))]:,
+    [(); num_elems(2, matrix_shape(M, P))]:,
+{
+    type Output = Matrix<T, M, P>;
+
+    fn mul(self, other: MatrixView<'a, T, N, P>) -> Self::Output {
+        matmul_impl::<T, M, N, P>(
+            &self.storage,
+            self.transpose_state,
+            &other.storage,
+            other.transpose_state,
+        )
     }
 }
 
@@ -155,6 +237,41 @@ where
         }
 
         out
+    }
+}
+
+pub struct MatrixView<'a, T: Numeric, const M: usize, const N: usize>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+{
+    storage: &'a [T],
+    transpose_state: Transpose,
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+{
+    pub fn transpose(&self) -> MatrixView<'a, T, N, M>
+    where
+        [(); num_elems(2, matrix_shape(N, M))]:,
+    {
+        MatrixView {
+            storage: self.storage,
+            transpose_state: self.transpose_state.transpose(),
+        }
+    }
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize> Clone for MatrixView<'a, T, M, N>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+{
+    fn clone(&self) -> Self {
+        MatrixView {
+            storage: self.storage,
+            transpose_state: self.transpose_state,
+        }
     }
 }
 
@@ -305,7 +422,10 @@ mod tests {
                         let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
                         let b: Matrix::<f64, N, P> = v_b.into_iter().collect();
 
-                        assert_eq_within_tolerance(&a * &b, (&b.transpose() * &a.transpose()).transpose());
+                        assert_eq_within_tolerance(&a * &b, (&b.clone().transpose() * &a.clone().transpose()).transpose());
+                        assert_eq_within_tolerance(&a * b.view(), (&b.clone().transpose() * a.view().transpose()).transpose());
+                        assert_eq_within_tolerance(a.view() * &b, (&b.clone().transpose() * a.view().transpose()).transpose());
+                        assert_eq_within_tolerance(a.view() * b.view(), (b.view().transpose() * a.view().transpose()).transpose());
                     }
                 }
             });

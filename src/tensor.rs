@@ -29,6 +29,10 @@ impl Transpose {
         }
     }
 
+    pub fn is_transposed(self) -> bool {
+        self == Transpose::Transposed
+    }
+
     pub fn to_blas(&self) -> u8 {
         match self {
             Transpose::None => b'T',

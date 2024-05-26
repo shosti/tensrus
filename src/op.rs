@@ -374,8 +374,8 @@ where
 
             let out_grad = Matrix::<T, M, P>::ref_from_basic(out_grad_basic);
 
-            let a_diff = out_grad * &b.clone().transpose();
-            let b_diff = &a.clone().transpose() * out_grad;
+            let a_diff = out_grad * b.view().transpose();
+            let b_diff = a.view().transpose() * out_grad;
 
             let a_grad_updated = a_grad + &a_diff;
             let b_grad_updated = b_grad + &b_diff;
