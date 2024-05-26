@@ -1,7 +1,8 @@
 use crate::{
+    matrix::{matrix_shape, Matrix},
     numeric::Numeric,
     scalar::Scalar,
-    tensor::{BasicTensor, Tensor},
+    tensor::{num_elems, BasicTensor, Tensor},
 };
 use num::{traits::real::Real, One, Zero};
 use std::fmt::Debug;
@@ -18,7 +19,7 @@ impl<'a, T: Numeric> ForwardInput<'a, T> {
         if let Self::Unary(t) = self {
             *t
         } else {
-            panic!("non-unary input")
+            unreachable!()
         }
     }
 
@@ -26,7 +27,7 @@ impl<'a, T: Numeric> ForwardInput<'a, T> {
         if let Self::Binary(t1, t2) = self {
             (*t1, *t2)
         } else {
-            panic!("non-binary input")
+            unreachable!()
         }
     }
 }
@@ -58,7 +59,7 @@ impl<T: Numeric> BackwardOutput<T> {
         if let Self::Unary(out) = self {
             out
         } else {
-            panic!("non-unary output")
+            unreachable!()
         }
     }
 
@@ -66,7 +67,7 @@ impl<T: Numeric> BackwardOutput<T> {
         if let Self::Binary(out1, out2) = self {
             (out1, out2)
         } else {
-            panic!("non-binary output")
+            unreachable!()
         }
     }
 }
@@ -115,7 +116,7 @@ impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
             });
             BackwardOutput::Unary(Box::new(updated_grad))
         } else {
-            panic!("non-unary args passed to backwad()");
+            unreachable!()
         }
     }
 }
@@ -154,7 +155,7 @@ impl<Tn: Tensor> Op<Tn::T> for AddOp<Tn> {
 
             BackwardOutput::Binary(Box::new(in_grad_1_updated), Box::new(in_grad_2_updated))
         } else {
-            panic!("non-binary backward args");
+            unreachable!()
         }
     }
 }
@@ -197,7 +198,7 @@ impl<Tn: Tensor> Op<Tn::T> for ElemPowOp<Tn> {
             });
             BackwardOutput::Unary(Box::new(updated_grad))
         } else {
-            panic!("non-unary backward args");
+            unreachable!()
         }
     }
 }
@@ -240,7 +241,7 @@ impl<Tn: Tensor> Op<Tn::T> for ElemMulOp<Tn> {
 
             BackwardOutput::Binary(Box::new(in_grad_1_updated), Box::new(in_grad_2_updated))
         } else {
-            panic!("non-binary backward args");
+            unreachable!()
         }
     }
 }
@@ -288,7 +289,64 @@ impl<Tn: Tensor> Op<Tn::T> for ScalarMulOp<Tn> {
 
             BackwardOutput::Binary(Box::new(in_grad_1_updated), Box::new(in_grad_2_updated))
         } else {
-            panic!("non-binary backward args");
+            unreachable!()
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct MatMulOp<T: Numeric, const M: usize, const N: usize, const P: usize> {
+    _markers: (PhantomData<T>,),
+}
+
+impl<T: Numeric, const M: usize, const N: usize, const P: usize> MatMulOp<T, M, N, P> {
+    pub fn new() -> Box<Self> {
+        Box::new(Self {
+            _markers: (PhantomData,),
+        })
+    }
+}
+
+impl<T: Numeric, const M: usize, const N: usize, const P: usize> Op<T> for MatMulOp<T, M, N, P>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); num_elems(2, matrix_shape(N, M))]:,
+    [(); num_elems(2, matrix_shape(N, P))]:,
+    [(); num_elems(2, matrix_shape(P, N))]:,
+    [(); num_elems(2, matrix_shape(M, P))]:,
+{
+    fn forward(&self, input: ForwardInput<T>) -> Box<dyn BasicTensor<T>> {
+        let (a_basic, b_basic) = input.binary();
+        let a = Matrix::<T, M, N>::ref_from_basic(a_basic);
+        let b = Matrix::<T, N, P>::ref_from_basic(b_basic);
+        let out = a * b;
+        Box::new(out)
+    }
+    fn backward(&self, args: BackwardArgs<T>) -> BackwardOutput<T> {
+        if let BackwardArgs::Binary {
+            in_grad: (a_grad_basic, b_grad_basic),
+            in_data: (a_basic, b_basic),
+            out_grad: out_grad_basic,
+            ..
+        } = args
+        {
+            let a = Matrix::<T, M, N>::ref_from_basic(a_basic);
+            let a_grad = *Matrix::<T, M, N>::from_basic_boxed(a_grad_basic);
+
+            let b = Matrix::<T, N, P>::ref_from_basic(b_basic);
+            let b_grad = *Matrix::<T, N, P>::from_basic_boxed(b_grad_basic);
+
+            let out_grad = Matrix::<T, M, P>::ref_from_basic(out_grad_basic);
+
+            let a_diff = out_grad * &b.clone().transpose();
+            let b_diff = &a.clone().transpose() * out_grad;
+
+            let a_grad_updated = a_grad + &a_diff;
+            let b_grad_updated = b_grad + &b_diff;
+
+            BackwardOutput::Binary(Box::new(a_grad_updated), Box::new(b_grad_updated))
+        } else {
+            unreachable!()
         }
     }
 }

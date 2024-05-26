@@ -1,8 +1,11 @@
+use crate::matrix::{matrix_shape, Matrix};
 use crate::numeric::Numeric;
-use crate::op::{AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, Op, ReLU, ScalarMulOp};
+use crate::op::{
+    AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp, Op, ReLU, ScalarMulOp,
+};
 use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
-use crate::tensor::{BasicTensor, Tensor};
+use crate::tensor::{num_elems, BasicTensor, Tensor};
 use num::One;
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -105,7 +108,7 @@ impl<Tn: Tensor> Var<Tn> {
         id
     }
 
-    fn new_from_unary(&self, op: Box<dyn Op<Tn::T>>) -> Self {
+    fn new_from_unary<OutTn: Tensor<T = Tn::T>>(&self, op: Box<dyn Op<Tn::T>>) -> Var<OutTn> {
         let self_ref = VarRef::from(self);
         let all_children = self_ref.take_all_children();
         let children = Children::Unary(self_ref.id());
@@ -122,11 +125,11 @@ impl<Tn: Tensor> Var<Tn> {
             all_children: Some(all_children),
         };
 
-        let out_var = Self::Output(Rc::new(RefCell::new(out)), PhantomData);
+        let out_var = Var::<OutTn>::Output(Rc::new(RefCell::new(out)), PhantomData);
 
         // Insert newly created ref into all_children
         let out_ref = VarRef::from(&out_var.clone());
-        if let Self::Output(o, _) = &out_var {
+        if let Var::Output(o, _) = &out_var {
             let mut out = o.borrow_mut();
             out.all_children.as_mut().unwrap().insert(id, out_ref);
         }
@@ -134,7 +137,11 @@ impl<Tn: Tensor> Var<Tn> {
         out_var
     }
 
-    fn new_from_binary(&self, other: VarRef<Tn::T>, op: Box<dyn Op<Tn::T>>) -> Self {
+    fn new_from_binary<OutTn: Tensor<T = Tn::T>>(
+        &self,
+        other: VarRef<Tn::T>,
+        op: Box<dyn Op<Tn::T>>,
+    ) -> Var<OutTn> {
         let self_ref = VarRef::from(self);
         if self_ref.id() == other.id() {
             panic!("cannot use the same var for both arguments of a binary op");
@@ -159,11 +166,11 @@ impl<Tn: Tensor> Var<Tn> {
             children,
             all_children: Some(all_children),
         };
-        let out_var = Self::Output(Rc::new(RefCell::new(out)), PhantomData);
+        let out_var = Var::<OutTn>::Output(Rc::new(RefCell::new(out)), PhantomData);
 
         // Insert newly created ref into all_children
         let out_ref = VarRef::from(&out_var.clone());
-        if let Self::Output(o, _) = &out_var {
+        if let Var::Output(o, _) = &out_var {
             let mut out = o.borrow_mut();
             out.all_children.as_mut().unwrap().insert(id, out_ref);
         }
@@ -543,6 +550,28 @@ impl<Tn: Tensor> Mul<Var<Scalar<Tn::T>>> for Var<Tn> {
         }
         let op = ScalarMulOp::<Tn>::new();
         let other_ref: VarRef<Tn::T> = (&other).into();
+
+        self.new_from_binary(other_ref, op)
+    }
+}
+
+impl<T: Numeric, const M: usize, const N: usize, const P: usize> Mul<Var<Matrix<T, N, P>>>
+    for Var<Matrix<T, M, N>>
+where
+    [(); num_elems(2, matrix_shape(M, N))]:,
+    [(); num_elems(2, matrix_shape(N, M))]:,
+    [(); num_elems(2, matrix_shape(N, P))]:,
+    [(); num_elems(2, matrix_shape(P, N))]:,
+    [(); num_elems(2, matrix_shape(M, P))]:,
+{
+    type Output = Var<Matrix<T, M, P>>;
+
+    fn mul(self, other: Var<Matrix<T, N, P>>) -> Var<Matrix<T, M, P>> {
+        if self.id() == other.id() {
+            todo!()
+        }
+        let op = MatMulOp::<T, M, N, P>::new();
+        let other_ref: VarRef<T> = (&other).into();
 
         self.new_from_binary(other_ref, op)
     }
