@@ -44,7 +44,7 @@ impl<T: Numeric, const M: usize, const N: usize> Tensor2 for Matrix2<T, M, N> {
     fn map(mut self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
         let mut next_idx = Some(Self::default_idx());
         while let Some(idx) = next_idx {
-            let i = storage_idx::<RANK>(&idx, Self::shape(), self.layout).unwrap();
+            let i = storage_idx(&idx, Self::shape(), self.layout).unwrap();
             self.storage[i] = f(&idx, self.storage[i]);
             next_idx = self.next_idx(&idx);
         }
