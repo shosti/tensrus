@@ -49,7 +49,7 @@ where
     {
         Matrix(GenericTensor::new(
             self.0.storage,
-            self.0.transpose.transpose(),
+            self.0.transpose_state.transpose(),
         ))
     }
 }
@@ -98,12 +98,12 @@ where
         let mut out = Matrix::zeros();
         // BLAS's output format is always column-major which is "transposed"
         // from our perspective
-        out.0.transpose = Transpose::Transposed;
+        out.0.transpose_state = Transpose::Transposed;
 
         unsafe {
             T::gemm(
-                self.0.transpose.to_blas(),
-                other.0.transpose.to_blas(),
+                self.0.transpose_state.to_blas(),
+                other.0.transpose_state.to_blas(),
                 M as i32,
                 P as i32,
                 N as i32,

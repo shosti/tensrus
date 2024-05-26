@@ -55,7 +55,7 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> From<Slice<'a, T, R, S>>
         let storage = s.storage[s.offset..].to_vec();
         Self {
             storage,
-            transpose: s.transpose,
+            transpose_state: s.transpose,
         }
     }
 }
