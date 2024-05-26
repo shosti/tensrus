@@ -1,7 +1,11 @@
+#![feature(generic_arg_infer)]
+#![feature(generic_const_exprs)]
+#![allow(incomplete_features)]
 extern crate tensrus;
 
 use std::fs::File;
 use std::process::Command;
+use tensrus::matrix::Matrix;
 use tensrus::render::Graph;
 use tensrus::scalar::Scalar;
 use tensrus::var::Var;
@@ -41,6 +45,25 @@ fn test_more_ops() {
     assert!((g.data().val() - 24.70408163265306).abs() < tol);
     assert!((a.grad().unwrap().val() - 138.83381924198252).abs() < tol);
     assert!((b.grad().unwrap().val() - 645.5772594752187).abs() < tol);
+}
+
+#[test]
+fn test_matmul() {
+    let a = Var::new(Matrix::<f64, _, _>::from([[7, 12], [42, 3], [8, 5]]));
+    let b = Var::new(Matrix::<f64, _, _>::from([[4, 17, 9], [11, 1, 15]]));
+    let c = a.clone() * b.clone();
+    let l = c.sum_elems();
+    l.backward().unwrap();
+
+    assert_eq!(l.data().val(), 2250.0);
+    assert_eq!(
+        a.grad().unwrap().clone(),
+        Matrix::<f64, _, _>::from([[30, 27], [30, 27], [30, 27]])
+    );
+    assert_eq!(
+        b.grad().unwrap().clone(),
+        Matrix::<f64, _, _>::from([[57, 57, 57], [20, 20, 20]])
+    );
 }
 
 fn render_graph(x: &Var<Scalar<f64>>, id: String) {
