@@ -1,3 +1,5 @@
+use std::ops::Index;
+
 use num::{One, Zero};
 // use rand::Rng;
 // use rand_distr::{Distribution, StandardNormal};
@@ -14,7 +16,7 @@ pub trait Tensor2:
     Clone
     // + for<'a> Add<&'a Self, Output = Self>
     // + Mul<Self::T, Output = Self>
-    // + for<'a> Index<&'a Self::Idx, Output = Self::T>
+    + for<'a> Index<&'a Self::Idx, Output = Self::T>
     // + PartialEq
     // + FromIterator<Self::T>
     + 'static
