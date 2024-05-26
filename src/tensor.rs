@@ -2,10 +2,11 @@ use num::{One, Zero};
 use std::any::Any;
 use std::cmp::PartialEq;
 use std::fmt::Debug;
-use std::iter::Map;
+use std::iter::{Map, Sum};
 use std::ops::{Add, Index, Mul};
 
 use crate::numeric::Numeric;
+use crate::scalar::Scalar;
 use crate::slice::Slice;
 
 #[derive(Debug, PartialEq)]
@@ -165,6 +166,14 @@ pub trait Tensor:
 
     fn default_idx() -> Self::Idx;
     fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx>;
+
+    fn sum(&self) -> Scalar<Self::T>
+    where
+        Self::T: Sum,
+    {
+        let s: Self::T = self.iter().values().sum();
+        Scalar::from(s)
+    }
 
     // Operations
     fn relu(self) -> Self {

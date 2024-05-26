@@ -1,7 +1,7 @@
 use crate::matrix::{matrix_shape, Matrix};
 use crate::numeric::Numeric;
 use crate::op::{
-    AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp, Op, ReLU, ScalarMulOp,
+    AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp, Op, ReLU, ScalarMulOp, SumOp,
 };
 use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
@@ -506,18 +506,13 @@ impl<Tn: Tensor> Var<Tn> {
         self.new_from_binary(other_ref, op)
     }
 
-    pub fn sum_elems(&self) -> Var<Scalar<Tn::T>> {
-        self.data().iter().map(|(_, val)| Var::from(val)).sum()
-    }
-}
-
-impl<Tn: Tensor> Sum for Var<Tn> {
-    fn sum<I>(iter: I) -> Self
+    pub fn sum_elems(&self) -> Var<Scalar<Tn::T>>
     where
-        I: Iterator<Item = Self>,
+        Tn::T: Sum,
     {
-        iter.reduce(|a, b| a + b)
-            .unwrap_or_else(|| Var::new(Tn::zeros()))
+        let op = SumOp::<Tn>::new();
+
+        self.new_from_unary(op)
     }
 }
 
@@ -612,9 +607,9 @@ impl<T: Numeric> Graphable for Var<Scalar<T>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::matrix::Matrix;
-
     use super::*;
+    use crate::matrix::Matrix;
+    use proptest::prelude::*;
 
     #[test]
     fn test_equal() {
@@ -623,5 +618,18 @@ mod tests {
         let s = v.sum_elems();
 
         assert_eq!(Scalar::from(1 + 2 + 3 + 4 + 5 + 6), *s.data());
+    }
+
+    proptest! {
+        #[test]
+        fn test_sum(v in prop::collection::vec(any::<f64>(), 6 * 4)) {
+            let x: Matrix<f64, 6, 4> = v.into_iter().collect();
+            let v = Var::new(x);
+            let s = v.sum_elems();
+
+            s.backward().unwrap();
+
+            assert_eq!(*v.grad().unwrap(), Matrix::<f64, 6, 4>::ones());
+        }
     }
 }

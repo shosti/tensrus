@@ -11,7 +11,7 @@ pub trait Module<T: Numeric> {
 pub struct Neuron<T: Numeric> {
     w: Vec<Var<Scalar<T>>>,
     b: Var<Scalar<T>>,
-    nonlin: bool,
+    _nonlin: bool,
 }
 
 impl<T: Numeric> Neuron<T> {
@@ -26,20 +26,21 @@ impl<T: Numeric> Neuron<T> {
         Self {
             w,
             b: Var::from(T::zero()),
-            nonlin,
+            _nonlin: nonlin,
         }
     }
 
-    pub fn call(&self, x: &Vec<Var<Scalar<T>>>) -> Var<Scalar<T>> {
-        let wx: Var<Scalar<T>> = std::iter::zip(self.w.clone(), x)
-            .map(|(wi, xi)| (wi * xi.clone()))
-            .sum();
-        let act = wx + self.b.clone();
-        if self.nonlin {
-            act.relu()
-        } else {
-            act
-        }
+    pub fn call(&self, _x: &Vec<Var<Scalar<T>>>) -> Var<Scalar<T>> {
+        todo!()
+        // let wx: Var<Scalar<T>> = std::iter::zip(self.w.clone(), x)
+        //     .map(|(wi, xi)| (wi * xi.clone()))
+        //     .sum();
+        // let act = wx + self.b.clone();
+        // if self.nonlin {
+        //     act.relu()
+        // } else {
+        //     act
+        // }
     }
 }
 
@@ -116,10 +117,11 @@ impl<T: Numeric> MLP<T> {
         res
     }
 
-    pub fn loss(&self, ys: &[Var<Scalar<T>>], ypred: &[Var<Scalar<T>>]) -> Var<Scalar<T>> {
-        std::iter::zip(ys.iter(), ypred.iter())
-            .map(|(ygt, yout)| (yout.clone() - ygt.clone()).elem_pow(T::from(2.0).unwrap()))
-            .sum()
+    pub fn loss(&self, _ys: &[Var<Scalar<T>>], _ypred: &[Var<Scalar<T>>]) -> Var<Scalar<T>> {
+        todo!()
+        // std::iter::zip(ys.iter(), ypred.iter())
+        //     .map(|(ygt, yout)| (yout.clone() - ygt.clone()).elem_pow(T::from(2.0).unwrap()))
+        //     .sum()
     }
 }
 
