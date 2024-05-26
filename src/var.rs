@@ -10,7 +10,6 @@ use num::One;
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
-use std::iter::Sum;
 use std::marker::PhantomData;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::rc::Rc;
@@ -506,10 +505,7 @@ impl<Tn: Tensor> Var<Tn> {
         self.new_from_binary(other_ref, op)
     }
 
-    pub fn sum_elems(&self) -> Var<Scalar<Tn::T>>
-    where
-        Tn::T: Sum,
-    {
+    pub fn sum_elems(&self) -> Var<Scalar<Tn::T>> {
         let op = SumOp::<Tn>::new();
 
         self.new_from_unary(op)

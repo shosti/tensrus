@@ -2,7 +2,7 @@ use num::{One, Zero};
 use std::any::Any;
 use std::cmp::PartialEq;
 use std::fmt::Debug;
-use std::iter::{Map, Sum};
+use std::iter::Map;
 use std::ops::{Add, Index, Mul};
 
 use crate::numeric::Numeric;
@@ -167,10 +167,7 @@ pub trait Tensor:
     fn default_idx() -> Self::Idx;
     fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx>;
 
-    fn sum(&self) -> Scalar<Self::T>
-    where
-        Self::T: Sum,
-    {
+    fn sum(&self) -> Scalar<Self::T> {
         let s: Self::T = self.iter().values().sum();
         Scalar::from(s)
     }

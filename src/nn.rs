@@ -30,7 +30,7 @@ impl<T: Numeric> Neuron<T> {
         }
     }
 
-    pub fn call(&self, _x: &Vec<Var<Scalar<T>>>) -> Var<Scalar<T>> {
+    pub fn call(&self, _x: &[Var<Scalar<T>>]) -> Var<Scalar<T>> {
         todo!()
         // let wx: Var<Scalar<T>> = std::iter::zip(self.w.clone(), x)
         //     .map(|(wi, xi)| (wi * xi.clone()))
@@ -67,7 +67,7 @@ impl<T: Numeric> Layer<T> {
         Self { neurons }
     }
 
-    pub fn call(&self, x: &Vec<Var<Scalar<T>>>) -> Vec<Var<Scalar<T>>> {
+    pub fn call(&self, x: &[Var<Scalar<T>>]) -> Vec<Var<Scalar<T>>> {
         let mut out = Vec::new();
         for n in self.neurons.iter() {
             out.push(n.call(x));

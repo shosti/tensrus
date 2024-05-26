@@ -5,8 +5,8 @@ use crate::{
     tensor::{num_elems, BasicTensor, Tensor},
 };
 use num::{traits::real::Real, One, Zero};
+use std::fmt::Debug;
 use std::marker::PhantomData;
-use std::{fmt::Debug, iter::Sum};
 
 #[derive(Debug)]
 pub enum ForwardInput<'a, T: Numeric> {
@@ -204,17 +204,11 @@ impl<Tn: Tensor> Op<Tn::T> for ElemPowOp<Tn> {
 }
 
 #[derive(Debug)]
-pub struct SumOp<Tn: Tensor>
-where
-    Tn::T: Sum,
-{
+pub struct SumOp<Tn: Tensor> {
     _markers: PhantomData<Tn>,
 }
 
-impl<Tn: Tensor> SumOp<Tn>
-where
-    Tn::T: Sum,
-{
+impl<Tn: Tensor> SumOp<Tn> {
     pub fn new() -> Box<Self> {
         Box::new(Self {
             _markers: PhantomData,
@@ -222,10 +216,7 @@ where
     }
 }
 
-impl<Tn: Tensor> Op<Tn::T> for SumOp<Tn>
-where
-    Tn::T: Sum,
-{
+impl<Tn: Tensor> Op<Tn::T> for SumOp<Tn> {
     fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
         let input_basic = inputs.unary();
         let input = Tn::ref_from_basic(input_basic);

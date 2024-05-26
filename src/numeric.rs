@@ -7,6 +7,7 @@ pub trait Numeric:
     + std::fmt::Debug
     + std::ops::MulAssign
     + std::ops::AddAssign
+    + std::iter::Sum
     + rand::distributions::uniform::SampleUniform
     + BLASOps
     + 'static
