@@ -1,6 +1,4 @@
-use crate::{
-    shape::{transpose_shape, Shape},
-};
+use crate::shape::{transpose_shape, Shape};
 
 pub type Storage<T> = Box<[T]>;
 
@@ -9,6 +7,26 @@ pub enum Layout {
     #[default]
     Normal,
     Transposed,
+}
+
+impl Layout {
+    pub fn transpose(self) -> Layout {
+        match self {
+            Layout::Normal => Layout::Transposed,
+            Layout::Transposed => Layout::Normal,
+        }
+    }
+
+    pub fn is_transposed(self) -> bool {
+        self == Layout::Transposed
+    }
+
+    pub fn to_blas(&self) -> u8 {
+        match self {
+            Layout::Normal => b'T',
+            Layout::Transposed => b'N',
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]

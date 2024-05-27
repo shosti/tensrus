@@ -4,7 +4,6 @@ use crate::{
     storage::{Layout, Storage},
     tensor2::Tensor2,
 };
-use num::ToPrimitive;
 
 #[derive(Tensor2, Debug, Clone)]
 #[tensor_rank = "R"]
