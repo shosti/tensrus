@@ -36,3 +36,30 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::vector2::Vector2;
+
+    #[test]
+    fn basics() {
+        let a: Scalar2<f64> = Scalar2::from(42);
+
+        assert_eq!(a[&[]], 42.0);
+        assert_eq!(a.val(), 42.0);
+    }
+
+    #[test]
+    fn multiplication() {
+        assert_eq!(
+            Scalar2::<f64>::from(6) * Scalar2::<f64>::from(7),
+            Scalar2::<f64>::from(42)
+        );
+
+        let x: Vector2<f64, _> = Vector2::from([1, 2, 3]);
+        let a: Scalar2<f64> = Scalar2::from(6);
+
+        assert_eq!(x * a, Vector2::<f64, 3>::from([6, 12, 18]));
+    }
+}
