@@ -24,7 +24,7 @@ pub trait Tensor2:
     type T: Numeric;
     type Idx: AsRef<[usize]> + Copy + 'static;
 
-    // Supplied methods
+    // Required methods
     fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self;
     fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self;
 

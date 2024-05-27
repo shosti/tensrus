@@ -20,6 +20,7 @@ pub mod tensor;
 mod type_assert;
 pub mod var;
 pub mod vector;
+pub mod shape;
 
 pub mod matrix2;
 pub mod tensor2;

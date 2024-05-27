@@ -4,6 +4,7 @@ extern crate syn;
 extern crate quote;
 use proc_macro::TokenStream;
 use proc_macro2::Span;
+use quote::ToTokens;
 use syn::{
     punctuated::Punctuated, AngleBracketedGenericArguments, DeriveInput, Generics, Ident, Lifetime,
     LifetimeParam, Path, PathArguments, PathSegment, TraitBound, TypeParam, TypeParamBound,
@@ -169,6 +170,137 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         }
     };
     gen.into()
+}
+
+#[proc_macro_derive(Tensor2, attributes(tensor_rank, tensor_shape))]
+pub fn tensor2_macro_derive(input: TokenStream) -> TokenStream {
+    let ast = syn::parse(input).unwrap();
+    impl_tensor2_macro(&ast)
+}
+
+fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
+    let name = &ast.ident;
+    let rank = parse_rank(ast);
+    let shape = parse_shape(ast);
+
+    let mut f_generics = ast.generics.clone();
+    push_to_primitive_f_param(&mut f_generics);
+
+    let mut generics_with_lifetime = ast.generics.clone();
+    push_lifetime_param(&mut generics_with_lifetime);
+
+    let (impl_generics, type_generics, where_clause) = ast.generics.split_for_impl();
+    let (f_impl_generics, _, _) = f_generics.split_for_impl();
+    let (impl_generics_with_lifetime, _, _) = generics_with_lifetime.split_for_impl();
+
+    let gen = quote! {
+        impl #impl_generics Tensor2 for #name #type_generics {
+            type T = T;
+            type Idx = [usize; #rank];
+
+            fn num_elems() -> usize {
+                crate::storage::num_elems(#rank, #shape)
+            }
+
+            fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self {
+                let mut v = Vec::with_capacity(Self::num_elems());
+                let layout = Layout::Normal;
+
+                for i in 0..Self::num_elems() {
+                    let idx = crate::storage::nth_idx(i, #shape, layout).unwrap();
+                    v.push(f(&idx));
+                }
+
+                Self {
+                    storage: v.into(),
+                    layout,
+                }
+            }
+
+            fn map(mut self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
+                let mut next_idx = Some(Self::default_idx());
+                while let Some(idx) = next_idx {
+                    let i = crate::storage::storage_idx(&idx, #shape, self.layout).unwrap();
+                    self.storage[i] = f(&idx, self.storage[i]);
+                    next_idx = self.next_idx(&idx);
+                }
+
+                Self {
+                    storage: self.storage,
+                    layout: self.layout,
+                }
+            }
+
+            fn default_idx() -> Self::Idx {
+                [0; #rank]
+            }
+            fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
+                let i = crate::storage::storage_idx(idx, #shape, self.layout).ok()?;
+                if i >= Self::num_elems() - 1 {
+                    return None;
+                }
+
+                crate::storage::nth_idx(i + 1, #shape, self.layout).ok()
+            }
+        }
+
+        impl #impl_generics Index<&[usize; #rank]> for #name #type_generics {
+            type Output = T;
+
+            fn index(&self, idx: &[usize; #rank]) -> &Self::Output {
+                let i = crate::storage::storage_idx(idx, #shape, self.layout).unwrap();
+                self.storage.index(i)
+            }
+        }
+    };
+    gen.into()
+}
+
+fn parse_rank(ast: &DeriveInput) -> usize {
+    let rank_attr = ast
+        .attrs
+        .iter()
+        .find(|&attr| attr.path().is_ident("tensor_rank"))
+        .expect("tensor_rank attribute must be set");
+    if let syn::Meta::NameValue(ref val) = rank_attr.meta {
+        if let syn::Expr::Lit(ref lit) = val.value {
+            if let syn::Lit::Int(ref int) = lit.lit {
+                return int
+                    .base10_parse()
+                    .expect("unable to parse tensor_rank value");
+            }
+        }
+    };
+
+    panic!("tensor_rank attribute is the wrong format (should be #[tensor_rank = <integer>]");
+}
+
+struct ShapeParam(String);
+
+impl ToTokens for ShapeParam {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        let expr_str = format!("{{ {} }}", self.0);
+        let expr: syn::Expr = syn::parse_str(expr_str.as_str()).expect("Failed to parse code");
+        expr.to_tokens(tokens);
+    }
+}
+
+fn parse_shape(ast: &DeriveInput) -> ShapeParam {
+    let shape_attr = ast
+        .attrs
+        .iter()
+        .find(|&attr| attr.path().is_ident("tensor_shape"))
+        .expect("tensor_shape attribute must be set");
+
+    if let syn::Meta::NameValue(ref val) = shape_attr.meta {
+        if let syn::Expr::Lit(ref lit) = val.value {
+            if let syn::Lit::Str(ref s) = lit.lit {
+                return ShapeParam(s.value());
+            }
+        }
+    };
+
+    panic!("tensor_shape must be a string");
 }
 
 // This whole hullabaloo is to add <F: ToPrimitive> to the generics

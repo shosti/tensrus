@@ -1,9 +1,24 @@
 use crate::{
-    tensor::{num_elems, transpose_shape, IndexError, Shape},
+    shape::{transpose_shape, Shape},
     tensor2::Layout,
 };
 
 pub type Storage<T> = Box<[T]>;
+
+#[derive(Debug, PartialEq)]
+pub struct IndexError {}
+
+pub(crate) const fn num_elems(r: usize, s: Shape) -> usize {
+    let mut dim = 0;
+    let mut n = 1;
+
+    while dim < r {
+        n *= s[dim];
+        dim += 1;
+    }
+
+    n
+}
 
 pub(crate) fn storage_idx<const R: usize>(
     idx: &[usize; R],
@@ -32,7 +47,7 @@ pub(crate) fn storage_idx<const R: usize>(
 }
 
 fn calc_storage_idx(idx: &[usize], rank: usize, shape: Shape) -> usize {
-    let stride = crate::tensor::stride(rank, shape);
+    let stride = crate::shape::stride(rank, shape);
     let mut i = 0;
     for (dim, &cur) in idx.iter().enumerate() {
         i += stride[dim] * cur;
@@ -57,7 +72,7 @@ pub(crate) fn nth_idx<const R: usize>(
     }
 
     let mut i = n;
-    let stride = crate::tensor::stride(R, shape);
+    let stride = crate::shape::stride(R, shape);
     let mut res = [0; R];
     for dim in 0..R {
         let s = stride[dim];
@@ -76,7 +91,7 @@ mod tests {
 
     #[test]
     fn test_nth_idx() {
-        let shape = [3, 2, 0, 0, 0];
+        let shape = [3, 2, 0, 0, 0, 0];
 
         assert_eq!(nth_idx::<2>(0, shape, Layout::Normal).unwrap(), [0, 0]);
         assert_eq!(nth_idx::<2>(1, shape, Layout::Normal).unwrap(), [0, 1]);
