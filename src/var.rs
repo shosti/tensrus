@@ -609,12 +609,12 @@ impl<T: Numeric> Graphable for Var<Scalar2<T>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::matrix::Matrix;
+    use crate::matrix2::Matrix2;
     use proptest::prelude::*;
 
     #[test]
     fn test_equal() {
-        let m: Matrix<f64, 3, 2> = Matrix::from([[1, 2], [3, 4], [5, 6]]);
+        let m: Matrix2<f64, 3, 2> = Matrix2::from([[1, 2], [3, 4], [5, 6]]);
         let v = Var::new(m);
         let s = v.sum_elems();
 
@@ -624,13 +624,13 @@ mod tests {
     proptest! {
         #[test]
         fn test_sum(v in prop::collection::vec(any::<f64>(), 6 * 4)) {
-            let x: Matrix<f64, 6, 4> = v.into_iter().collect();
+            let x: Matrix2<f64, 6, 4> = v.into_iter().collect();
             let v = Var::new(x);
             let s = v.sum_elems();
 
             s.backward().unwrap();
 
-            assert_eq!(*v.grad().unwrap(), Matrix::<f64, 6, 4>::ones());
+            assert_eq!(*v.grad().unwrap(), Matrix2::<f64, 6, 4>::ones());
         }
     }
 }

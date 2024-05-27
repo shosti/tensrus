@@ -32,7 +32,7 @@ impl Layout {
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
 
-pub(crate) const fn num_elems(r: usize, s: Shape) -> usize {
+pub const fn num_elems(r: usize, s: Shape) -> usize {
     let mut dim = 0;
     let mut n = 1;
 
