@@ -244,12 +244,58 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
+        impl #impl_generics crate::tensor2::BasicTensor<T> for #name #type_generics {
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
+
+            fn as_any_boxed(self: Box<Self>) -> Box<dyn std::any::Any> {
+                self
+            }
+
+            fn clone_boxed(&self) -> Box<dyn crate::tensor2::BasicTensor<T>> {
+                Box::new(self.clone())
+            }
+
+            fn zeros_with_shape(&self) -> Box<dyn crate::tensor2::BasicTensor<T>> {
+                Box::new(Self::zeros())
+            }
+
+            fn ones_with_shape(&self) -> Box<dyn crate::tensor2::BasicTensor<T>> {
+                Box::new(Self::ones())
+            }
+
+            fn len(&self) -> usize {
+                Self::num_elems()
+            }
+
+            // Scales `self` by `scale` and adds to `other`
+            fn add(self: Box<Self>, other_basic: &dyn crate::tensor2::BasicTensor<T>, scale: T) -> Box<dyn crate::tensor2::BasicTensor<T>> {
+                let other = Self::ref_from_basic(other_basic);
+                let out = (*self * scale) + other;
+                Box::new(out)
+            }
+        }
+
         impl #impl_generics std::ops::Index<&[usize; #rank]> for #name #type_generics {
             type Output = T;
 
             fn index(&self, idx: &[usize; #rank]) -> &Self::Output {
                 let i = crate::storage::storage_idx(idx, #shape, self.layout).unwrap();
                 self.storage.index(i)
+            }
+        }
+
+        impl #impl_generics std::ops::Index<&[usize]> for #name #type_generics {
+            type Output = T;
+
+            fn index(&self, idx: &[usize]) -> &Self::Output {
+                if idx.len() != #rank {
+                    panic!("invalid index for tensor of rank {}", #rank);
+                }
+                let mut i = [0; #rank];
+                i.copy_from_slice(idx);
+                self.index(&i)
             }
         }
 

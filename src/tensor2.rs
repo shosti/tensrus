@@ -1,4 +1,6 @@
+use std::fmt::Debug;
 use std::{
+    any::Any,
     iter::Map,
     ops::{Add, Index, Mul},
 };
@@ -9,8 +11,24 @@ use rand_distr::{Distribution, StandardNormal};
 
 use crate::numeric::Numeric;
 
+pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_boxed(self: Box<Self>) -> Box<dyn Any>;
+    fn len(&self) -> usize;
+    fn clone_boxed(&self) -> Box<dyn BasicTensor<T>>;
+
+    // Returns a new tensor of zeros with the same shape as self
+    fn zeros_with_shape(&self) -> Box<dyn BasicTensor<T>>;
+
+    // Returns a new tensor of ones with the same shape as self
+    fn ones_with_shape(&self) -> Box<dyn BasicTensor<T>>;
+
+    fn add(self: Box<Self>, other: &dyn BasicTensor<T>, scale: T) -> Box<dyn BasicTensor<T>>;
+}
+
 pub trait Tensor2:
     Clone
+    + BasicTensor<Self::T>
     + for<'a> Add<&'a Self, Output = Self>
     + Mul<Self::T, Output = Self>
     + for<'a> Index<&'a Self::Idx, Output = Self::T>
@@ -55,22 +73,22 @@ pub trait Tensor2:
         TensorIterator::new(self)
     }
 
-    // fn ref_from_basic(from: &dyn BasicTensor<Self::T>) -> &Self {
-    //     let any_ref = from.as_any();
-    //     any_ref.downcast_ref().unwrap()
-    // }
+    fn ref_from_basic(from: &dyn BasicTensor<Self::T>) -> &Self {
+        let any_ref = from.as_any();
+        any_ref.downcast_ref().unwrap()
+    }
 
-    // fn from_basic(from: &dyn BasicTensor<Self::T>) -> Self {
-    //     if from.num_elems() != <Self as Tensor>::num_elems() {
-    //         panic!("cannot create a Tensor from a BasicTensor unless the number of elements is identical");
-    //     }
+    fn from_basic(from: &dyn BasicTensor<Self::T>) -> Self {
+        if from.len() != <Self as Tensor2>::num_elems() {
+            panic!("cannot create a Tensor from a BasicTensor unless the number of elements is identical");
+        }
 
-    //     Self::from_fn(|idx| from[idx.as_ref()])
-    // }
+        Self::from_fn(|idx| from[idx.as_ref()])
+    }
 
-    // fn from_basic_boxed(from: Box<dyn BasicTensor<Self::T>>) -> Box<Self> {
-    //     from.as_any_boxed().downcast().unwrap()
-    // }
+    fn from_basic_boxed(from: Box<dyn BasicTensor<Self::T>>) -> Box<Self> {
+        from.as_any_boxed().downcast().unwrap()
+    }
 
     // fn sum(&self) -> Scalar<Self::T> {
     //     let s: Self::T = self.iter().values().sum();
