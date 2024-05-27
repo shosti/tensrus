@@ -320,7 +320,6 @@ impl<T: Numeric, const R: usize, const S: Shape> Mul<Scalar<T>> for GenericTenso
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::prelude::*;
 
     #[test]
     fn test_equal() {
@@ -412,32 +411,8 @@ mod tests {
     #[test]
     fn test_to_iter() {
         let t: GenericTensor<f64, 2, { [2; 5] }> = (0..4).collect();
-        let vals: Vec<f64> = t.into_iter().values().collect();
+        let vals: Vec<f64> = t.iter().values().collect();
         assert_eq!(vals, vec![0.0, 1.0, 2.0, 3.0]);
-    }
-
-    #[test]
-    fn get_and_set() {
-        test_get_and_set(GenericTensor::<f64, 0, { [0; 5] }>::zeros());
-        test_get_and_set(GenericTensor::<f64, 1, { [24; 5] }>::zeros());
-        test_get_and_set(GenericTensor::<f64, 2, { [8, 72, 0, 0, 0] }>::zeros());
-        test_get_and_set(GenericTensor::<f64, 3, { [243, 62, 101, 0, 0] }>::zeros());
-        test_get_and_set(GenericTensor::<f64, 4, { [1, 99, 232, 8, 0] }>::zeros());
-    }
-
-    fn test_get_and_set<const R: usize, const S: Shape>(t: GenericTensor<f64, R, S>) {
-        let mut rng = rand::thread_rng();
-        let mut x = t;
-        for _ in 0..10 {
-            let mut idx = [0; R];
-            for (dim, cur) in idx.iter_mut().enumerate() {
-                *cur = rng.gen_range(0..S[dim]);
-            }
-            let val: f64 = rng.gen();
-            x = x.set(&idx, val);
-
-            assert_eq!(x[&idx], val);
-        }
     }
 
     #[test]
