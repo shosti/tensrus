@@ -1,4 +1,4 @@
-use std::ops::{Add, Index};
+use std::ops::{Add, Index, Mul};
 
 use num::{One, Zero};
 // use rand::Rng;
@@ -15,7 +15,7 @@ pub enum Layout {
 pub trait Tensor2:
     Clone
     + for<'a> Add<&'a Self, Output = Self>
-    // + Mul<Self::T, Output = Self>
+    + Mul<Self::T, Output = Self>
     + for<'a> Index<&'a Self::Idx, Output = Self::T>
     // + PartialEq
     // + FromIterator<Self::T>

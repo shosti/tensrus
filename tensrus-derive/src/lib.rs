@@ -261,6 +261,13 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
+        impl #impl_generics std::ops::Mul<T> for #name #type_generics {
+            type Output = Self;
+
+            fn mul(self, other: T) -> Self::Output {
+                self.map(|_, v| v * other)
+            }
+        }
     };
     gen.into()
 }
