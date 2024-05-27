@@ -79,54 +79,6 @@ pub trait Op<T: Numeric>: Debug {
 }
 
 #[derive(Debug)]
-pub struct ScalarMulOp<Tn: Tensor> {
-    _markers: (PhantomData<Tn>, PhantomData<Scalar<Tn::T>>),
-}
-
-impl<Tn: Tensor> ScalarMulOp<Tn> {
-    pub fn new() -> Box<Self> {
-        Box::new(Self {
-            _markers: (PhantomData, PhantomData),
-        })
-    }
-}
-
-impl<Tn: Tensor> Op<Tn::T> for ScalarMulOp<Tn> {
-    fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
-        let (a_basic, b_basic) = inputs.binary();
-        let a: Tn = Tn::from_basic(a_basic);
-        let b: &Scalar<Tn::T> = Scalar::ref_from_basic(b_basic);
-
-        Box::new(a * b.val())
-    }
-    fn backward<'a>(&self, args: BackwardArgs<Tn::T>) -> BackwardOutput<Tn::T> {
-        if let BackwardArgs::Binary {
-            in_grad: (in_grad_basic_1, in_grad_basic_2),
-            in_data: (in_data_1, in_data_2_basic),
-            out_grad,
-            ..
-        } = args
-        {
-            let in_grad_1: Box<Tn> = Tn::from_basic_boxed(in_grad_basic_1);
-            let in_grad_2: Scalar<Tn::T> = *Scalar::from_basic_boxed(in_grad_basic_2);
-            let in_data_2: &Scalar<Tn::T> = Scalar::ref_from_basic(in_data_2_basic);
-
-            let mut in_grad_2_updated = in_grad_2;
-            for (idx, _) in in_grad_1.iter() {
-                in_grad_2_updated = in_grad_2_updated
-                    .map(|_, in_grad| in_grad + in_data_1[idx.as_ref()] * out_grad[idx.as_ref()]);
-            }
-            let in_grad_1_updated =
-                in_grad_1.map(|idx, in_grad| in_grad + in_data_2.val() * out_grad[idx.as_ref()]);
-
-            BackwardOutput::Binary(Box::new(in_grad_1_updated), Box::new(in_grad_2_updated))
-        } else {
-            unreachable!()
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct MatMulOp<T: Numeric, const M: usize, const N: usize, const P: usize> {
     _markers: (PhantomData<T>,),
 }
@@ -446,4 +398,21 @@ binary_op!(ElemMulOp<Tn: Tensor> {
                  in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
     backward_2: (|in_grad: Tn, args: BinaryBackwardArgs<Tn, Tn, Tn, _>|
                  in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
+});
+
+binary_op!(ScalarMulOp<Tn: Tensor> {
+    args: (),
+    in_type_1: Tn,
+    in_type_2: Scalar<Tn::T>,
+    out_type: Tn,
+    numeric_type: Tn::T,
+    forward: |in1: &Tn, in2: &Scalar<Tn::T>, _| in1.clone() * in2.val(),
+    backward_1: (|in_grad: Tn, args: BinaryBackwardArgs<Tn, Scalar<Tn::T>, Tn, _>|
+                 in_grad.map(|idx, in_grad| in_grad + args.other_in_data.val() * args.out_grad[idx])),
+    backward_2: (|mut in_grad: Scalar<Tn::T>, args: BinaryBackwardArgs<Scalar<Tn::T>, Tn, Tn, _>| {
+        for (idx, other_in_data) in args.other_in_data.iter() {
+            in_grad = in_grad.map(|_, in_grad| in_grad + other_in_data * args.out_grad[idx.as_ref()]);
+        }
+        in_grad
+    }),
 });
