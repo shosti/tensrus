@@ -1,11 +1,13 @@
 use crate::matrix::Matrix;
 use crate::numeric::Numeric;
 use crate::op::{
-    AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp, Op, ReLU, ScalarMulOp, SumOp,
+    AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp, MatVecMulOp, Op, ReLU,
+    ScalarMulOp, SumOp,
 };
 use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
 use crate::tensor::{BasicTensor, Tensor};
+use crate::vector::Vector;
 use num::One;
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -563,6 +565,20 @@ impl<T: Numeric, const M: usize, const N: usize, const P: usize> Mul<Var<Matrix<
     }
 }
 
+impl<T: Numeric, const M: usize, const N: usize> Mul<Var<Vector<T, N>>> for Var<Matrix<T, M, N>> {
+    type Output = Var<Vector<T, M>>;
+
+    fn mul(self, other: Var<Vector<T, N>>) -> Var<Vector<T, M>> {
+        if self.id() == other.id() {
+            unreachable!()
+        }
+        let op = MatVecMulOp::<T, M, N>::new();
+        let other_ref: VarRef<T> = (&other).into();
+
+        self.new_from_binary(other_ref, op)
+    }
+}
+
 impl<Tn: Tensor> Div<Var<Scalar<Tn::T>>> for Var<Tn> {
     type Output = Self;
 
@@ -610,6 +626,7 @@ impl<T: Numeric> Graphable for Var<Scalar<T>> {
 mod tests {
     use super::*;
     use crate::matrix::Matrix;
+    use crate::vector::Vector;
     use proptest::prelude::*;
 
     #[test]
@@ -632,5 +649,25 @@ mod tests {
 
             assert_eq!(*v.grad().unwrap(), Matrix::<f64, 6, 4>::ones());
         }
+    }
+
+    #[test]
+    fn test_matvec_mul() {
+        let a = Var::new(Matrix::<f64, _, _>::from([
+            [1.0, 2.0],
+            [3.0, 4.0],
+            [5.0, 6.0],
+        ]));
+        let x = Var::new(Vector::<f64, _>::from([7.0, 8.0]));
+        let y = a.clone() * x.clone();
+        let l = y.sum_elems();
+        assert_eq!(l.data().val(), 159.0);
+
+        l.backward().unwrap();
+        assert_eq!(
+            *a.grad().unwrap(),
+            Matrix::<f64, _, _>::from([[7.0, 8.0], [7.0, 8.0], [7.0, 8.0]])
+        );
+        assert_eq!(*x.grad().unwrap(), Vector::<f64, _>::from([9.0, 12.0]));
     }
 }

@@ -1,5 +1,6 @@
 use crate::{
     generic_tensor::GenericTensor,
+    matrix::MatrixView,
     numeric::Numeric,
     shape::Shape,
     storage::{Layout, Storage},
@@ -19,9 +20,26 @@ pub struct Vector<T: Numeric, const N: usize> {
     pub layout: Layout,
 }
 
+// Convenience types for rows/columns
+type RowVector<'a, T, const N: usize> = MatrixView<'a, T, 1, N>;
+type ColumnVector<'a, T, const N: usize> = MatrixView<'a, T, N, 1>;
+
 impl<T: Numeric, const N: usize> Vector<T, N> {
     pub fn dot(&self, other: &Self) -> T {
         unsafe { T::dot(N as i32, &self.storage, 1, &other.storage, 1) }
+    }
+
+    pub fn as_col_vector(&self) -> ColumnVector<T, N> {
+        debug_assert_eq!(self.layout, Layout::Normal);
+
+        MatrixView {
+            storage: &self.storage,
+            layout: self.layout,
+        }
+    }
+
+    pub fn as_row_vector(&self) -> RowVector<T, N> {
+        self.as_col_vector().transpose()
     }
 }
 

@@ -144,8 +144,7 @@ mod tests {
         let mut x: GenericTensor<f64, 3, { [1, 2, 2, 0, 0, 0] }> =
             GenericTensor::from([1, 2, 3, 4]);
         let y: GenericTensor<f64, 3, { [1, 2, 2, 0, 0, 0] }> = GenericTensor::from([5, 6, 7, 8]);
-        let a: GenericTensor<f64, 3, { [1, 2, 2, 0, 0, 0] }> =
-            GenericTensor::from([6, 8, 10, 12]);
+        let a: GenericTensor<f64, 3, { [1, 2, 2, 0, 0, 0] }> = GenericTensor::from([6, 8, 10, 12]);
 
         assert_eq!(x.clone() + &y, a);
 

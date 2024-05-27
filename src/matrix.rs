@@ -3,6 +3,7 @@ use std::ops::Mul;
 use num::ToPrimitive;
 
 use crate::{
+    generic_tensor::GenericTensor,
     numeric::Numeric,
     shape::Shape,
     storage::{num_elems, IndexError, Layout, Storage},
@@ -89,8 +90,8 @@ impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<&'a Mat
 }
 
 pub struct MatrixView<'a, T: Numeric, const M: usize, const N: usize> {
-    storage: &'a [T],
-    layout: Layout,
+    pub(crate) storage: &'a [T],
+    pub layout: Layout,
 }
 
 impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
@@ -153,37 +154,53 @@ fn matmul_impl<T: Numeric, const M: usize, const N: usize, const P: usize>(
     out
 }
 
+fn matvecmul_impl<T: Numeric, const M: usize, const N: usize>(
+    a_storage: &[T],
+    a_transpose: Layout,
+    x_storage: &[T],
+) -> Vector<T, M> {
+    // BLAS always uses column-major format, so if we're "transposed" we're
+    // already in BLAS format, otherwise we have to transpose.
+    let mut out = Vector::zeros();
+    let trans = a_transpose.to_blas();
+    let m = if a_transpose.is_transposed() { M } else { N } as i32;
+    let n = if a_transpose.is_transposed() { N } else { M } as i32;
+    let lda = m;
+
+    unsafe {
+        T::gemv(
+            trans,
+            m,
+            n,
+            T::one(),
+            a_storage,
+            lda,
+            x_storage,
+            1,
+            T::one(),
+            &mut out.storage,
+            1,
+        );
+    }
+
+    out
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize> Mul<&'a Vector<T, N>> for &'a Matrix<T, M, N> {
+    type Output = Vector<T, M>;
+
+    fn mul(self, other: &Vector<T, N>) -> Self::Output {
+        matvecmul_impl::<T, M, N>(&self.storage, self.layout, &other.storage)
+    }
+}
+
 impl<'a, T: Numeric, const M: usize, const N: usize> Mul<&'a Vector<T, N>>
-    for &'a Matrix<T, M, N>
+    for MatrixView<'a, T, M, N>
 {
     type Output = Vector<T, M>;
 
     fn mul(self, other: &Vector<T, N>) -> Self::Output {
-        // BLAS always uses column-major format, so if we're "transposed" we're
-        // already in BLAS format, otherwise we have to transpose.
-        let mut out = Self::Output::zeros();
-        let trans = self.layout.to_blas();
-        let m = if self.layout.is_transposed() { M } else { N } as i32;
-        let n = if self.layout.is_transposed() { N } else { M } as i32;
-        let lda = m;
-
-        unsafe {
-            T::gemv(
-                trans,
-                m,
-                n,
-                T::one(),
-                &self.storage,
-                lda,
-                &other.storage,
-                1,
-                T::one(),
-                &mut out.storage,
-                1,
-            );
-        }
-
-        out
+        matvecmul_impl::<T, M, N>(self.storage, self.layout, &other.storage)
     }
 }
 
@@ -214,6 +231,28 @@ impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<MatrixV
 
     fn mul(self, other: MatrixView<'a, T, N, P>) -> Self::Output {
         matmul_impl::<T, M, N, P>(self.storage, self.layout, other.storage, other.layout)
+    }
+}
+
+impl<T: Numeric, const M: usize, const N: usize> From<GenericTensor<T, 2, { matrix_shape(M, N) }>>
+    for Matrix<T, M, N>
+{
+    fn from(t: GenericTensor<T, 2, { matrix_shape(M, N) }>) -> Self {
+        Self {
+            storage: t.storage,
+            layout: t.layout,
+        }
+    }
+}
+
+impl<T: Numeric, const M: usize, const N: usize> From<Matrix<T, M, N>>
+    for GenericTensor<T, 2, { matrix_shape(M, N) }>
+{
+    fn from(t: Matrix<T, M, N>) -> Self {
+        Self {
+            storage: t.storage,
+            layout: t.layout,
+        }
     }
 }
 
