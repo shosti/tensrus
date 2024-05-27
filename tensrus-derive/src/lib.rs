@@ -244,7 +244,7 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics Index<&[usize; #rank]> for #name #type_generics {
+        impl #impl_generics std::ops::Index<&[usize; #rank]> for #name #type_generics {
             type Output = T;
 
             fn index(&self, idx: &[usize; #rank]) -> &Self::Output {
@@ -252,6 +252,15 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
                 self.storage.index(i)
             }
         }
+
+        impl #impl_generics_with_lifetime std::ops::Add<&'a Self> for #name #type_generics {
+            type Output = Self;
+
+            fn add(self, other: &Self) -> Self::Output {
+                self.map(|idx, v| v + other[idx])
+            }
+        }
+
     };
     gen.into()
 }
