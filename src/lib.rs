@@ -10,7 +10,6 @@ extern crate tensrus_derive;
 
 pub mod generic_tensor;
 pub mod generic_tensor2;
-pub mod matrix;
 pub mod nn;
 pub mod numeric;
 pub mod op;

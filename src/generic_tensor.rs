@@ -92,10 +92,6 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
         GenericTensor::new(self.storage, self.transpose_state.transpose())
     }
 
-    pub(crate) fn is_transposed(&self) -> bool {
-        self.transpose_state == Transpose::Transposed
-    }
-
     pub fn subtensor(
         &self,
         i: usize,
