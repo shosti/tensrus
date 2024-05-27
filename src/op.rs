@@ -293,18 +293,18 @@ macro_rules! binary_op {
                     let out_data = <$inty1>::ref_from_basic(out_data_basic);
 
                     let args_1 = BinaryBackwardArgs {
-                        self_in_data: in_data_1,
+                        _self_in_data: in_data_1,
                         other_in_data: in_data_2,
                         out_grad,
-                        out_data,
-                        args: &self.args,
+                        _out_data: out_data,
+                        _args: &self.args,
                     };
                     let args_2 = BinaryBackwardArgs {
-                        self_in_data: in_data_2,
+                        _self_in_data: in_data_2,
                         other_in_data: in_data_1,
                         out_grad,
-                        out_data,
-                        args: &self.args,
+                        _out_data: out_data,
+                        _args: &self.args,
                     };
                     let in_grad_1_updated: $inty1 = ($backward1)(in_grad_1, args_1);
                     let in_grad_2_updated: $inty2 = ($backward2)(in_grad_2, args_2);
@@ -326,11 +326,11 @@ struct UnaryBackwardArgs<'a, InTn, OutTn, Args> {
 }
 
 struct BinaryBackwardArgs<'a, SelfInTn, OtherInTn, OutTn, Args> {
-    self_in_data: &'a SelfInTn,
+    _self_in_data: &'a SelfInTn,
     other_in_data: &'a OtherInTn,
     out_grad: &'a OutTn,
-    out_data: &'a OutTn,
-    args: &'a Args,
+    _out_data: &'a OutTn,
+    _args: &'a Args,
 }
 
 unary_op!(ReLUOp<Tn: Tensor> {
