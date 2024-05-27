@@ -1,13 +1,9 @@
-use std::ops::Index;
-
 use crate::{
     numeric::Numeric,
     shape::Shape,
-    storage::{nth_idx, num_elems, storage_idx, Layout, Storage},
+    storage::{Layout, Storage},
     tensor2::Tensor2,
 };
-
-const RANK: usize = 2;
 
 pub const fn matrix_shape(m: usize, n: usize) -> Shape {
     [m, n, 0, 0, 0, 0]
@@ -22,15 +18,6 @@ pub struct Matrix2<T: Numeric, const M: usize, const N: usize> {
 }
 
 impl<T: Numeric, const M: usize, const N: usize> Matrix2<T, M, N> {}
-
-// impl<T: Numeric, const M: usize, const N: usize> Index<&[usize; RANK]> for Matrix2<T, M, N> {
-// type Output = T;
-
-// fn index(&self, idx: &[usize; RANK]) -> &Self::Output {
-//     let i = storage_idx::<RANK>(idx, Self::shape(), self.layout).unwrap();
-//     self.storage.index(i)
-// }
-// }
 
 #[cfg(test)]
 mod tests {

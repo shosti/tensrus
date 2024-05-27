@@ -189,7 +189,7 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
     let mut generics_with_lifetime = ast.generics.clone();
     push_lifetime_param(&mut generics_with_lifetime);
 
-    let (impl_generics, type_generics, where_clause) = ast.generics.split_for_impl();
+    let (impl_generics, type_generics, _where_clause) = ast.generics.split_for_impl();
     let (f_impl_generics, _, _) = f_generics.split_for_impl();
     let (impl_generics_with_lifetime, _, _) = generics_with_lifetime.split_for_impl();
 

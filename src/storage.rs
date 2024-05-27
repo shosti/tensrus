@@ -1,5 +1,3 @@
-use std::default;
-
 use crate::{
     shape::{transpose_shape, Shape},
 };
