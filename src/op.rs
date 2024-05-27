@@ -1,8 +1,8 @@
 use crate::{
-    matrix2::Matrix2,
+    matrix::Matrix,
     numeric::Numeric,
-    scalar2::Scalar2,
-    tensor2::{BasicTensor, Tensor2},
+    scalar::Scalar,
+    tensor::{BasicTensor, Tensor},
 };
 use num::{traits::real::Real, One, Zero};
 use std::fmt::Debug;
@@ -78,11 +78,11 @@ pub trait Op<T: Numeric>: Debug {
 }
 
 #[derive(Debug)]
-pub struct ReLU<Tn: Tensor2> {
+pub struct ReLU<Tn: Tensor> {
     _markers: PhantomData<Tn>,
 }
 
-impl<Tn: Tensor2> ReLU<Tn> {
+impl<Tn: Tensor> ReLU<Tn> {
     pub fn new() -> Box<Self> {
         Box::new(Self {
             _markers: PhantomData,
@@ -90,7 +90,7 @@ impl<Tn: Tensor2> ReLU<Tn> {
     }
 }
 
-impl<Tn: Tensor2> Op<Tn::T> for ReLU<Tn> {
+impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
     fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
         let input = inputs.unary();
         let out = Tn::from_basic(input).relu();
@@ -122,11 +122,11 @@ impl<Tn: Tensor2> Op<Tn::T> for ReLU<Tn> {
 }
 
 #[derive(Debug)]
-pub struct AddOp<Tn: Tensor2> {
+pub struct AddOp<Tn: Tensor> {
     _markers: PhantomData<Tn>,
 }
 
-impl<Tn: Tensor2> AddOp<Tn> {
+impl<Tn: Tensor> AddOp<Tn> {
     pub fn new() -> Box<Self> {
         Box::new(Self {
             _markers: PhantomData,
@@ -134,7 +134,7 @@ impl<Tn: Tensor2> AddOp<Tn> {
     }
 }
 
-impl<Tn: Tensor2> Op<Tn::T> for AddOp<Tn> {
+impl<Tn: Tensor> Op<Tn::T> for AddOp<Tn> {
     fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
         let (a, b) = inputs.binary();
         let out = Tn::from_basic(a) + Tn::ref_from_basic(b);
@@ -161,12 +161,12 @@ impl<Tn: Tensor2> Op<Tn::T> for AddOp<Tn> {
 }
 
 #[derive(Debug)]
-pub struct ElemPowOp<Tn: Tensor2> {
+pub struct ElemPowOp<Tn: Tensor> {
     _markers: PhantomData<Tn>,
     n: Tn::T,
 }
 
-impl<Tn: Tensor2> ElemPowOp<Tn> {
+impl<Tn: Tensor> ElemPowOp<Tn> {
     pub fn new(n: Tn::T) -> Box<Self> {
         Box::new(Self {
             _markers: PhantomData,
@@ -175,7 +175,7 @@ impl<Tn: Tensor2> ElemPowOp<Tn> {
     }
 }
 
-impl<Tn: Tensor2> Op<Tn::T> for ElemPowOp<Tn> {
+impl<Tn: Tensor> Op<Tn::T> for ElemPowOp<Tn> {
     fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
         let input = inputs.unary();
         let out = Tn::from_fn(|idx| input[idx.as_ref()].powf(self.n));
@@ -204,11 +204,11 @@ impl<Tn: Tensor2> Op<Tn::T> for ElemPowOp<Tn> {
 }
 
 #[derive(Debug)]
-pub struct SumOp<Tn: Tensor2> {
+pub struct SumOp<Tn: Tensor> {
     _markers: PhantomData<Tn>,
 }
 
-impl<Tn: Tensor2> SumOp<Tn> {
+impl<Tn: Tensor> SumOp<Tn> {
     pub fn new() -> Box<Self> {
         Box::new(Self {
             _markers: PhantomData,
@@ -216,7 +216,7 @@ impl<Tn: Tensor2> SumOp<Tn> {
     }
 }
 
-impl<Tn: Tensor2> Op<Tn::T> for SumOp<Tn> {
+impl<Tn: Tensor> Op<Tn::T> for SumOp<Tn> {
     fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
         let input_basic = inputs.unary();
         let input = Tn::ref_from_basic(input_basic);
@@ -240,11 +240,11 @@ impl<Tn: Tensor2> Op<Tn::T> for SumOp<Tn> {
 }
 
 #[derive(Debug)]
-pub struct ElemMulOp<Tn: Tensor2> {
+pub struct ElemMulOp<Tn: Tensor> {
     _markers: PhantomData<Tn>,
 }
 
-impl<Tn: Tensor2> ElemMulOp<Tn> {
+impl<Tn: Tensor> ElemMulOp<Tn> {
     pub fn new() -> Box<Self> {
         Box::new(Self {
             _markers: PhantomData,
@@ -252,7 +252,7 @@ impl<Tn: Tensor2> ElemMulOp<Tn> {
     }
 }
 
-impl<Tn: Tensor2> Op<Tn::T> for ElemMulOp<Tn> {
+impl<Tn: Tensor> Op<Tn::T> for ElemMulOp<Tn> {
     fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
         let (a, b) = inputs.binary();
         let out = Tn::from_fn(|idx| a[idx.as_ref()] * b[idx.as_ref()]);
@@ -283,11 +283,11 @@ impl<Tn: Tensor2> Op<Tn::T> for ElemMulOp<Tn> {
 }
 
 #[derive(Debug)]
-pub struct ScalarMulOp<Tn: Tensor2> {
-    _markers: (PhantomData<Tn>, PhantomData<Scalar2<Tn::T>>),
+pub struct ScalarMulOp<Tn: Tensor> {
+    _markers: (PhantomData<Tn>, PhantomData<Scalar<Tn::T>>),
 }
 
-impl<Tn: Tensor2> ScalarMulOp<Tn> {
+impl<Tn: Tensor> ScalarMulOp<Tn> {
     pub fn new() -> Box<Self> {
         Box::new(Self {
             _markers: (PhantomData, PhantomData),
@@ -295,11 +295,11 @@ impl<Tn: Tensor2> ScalarMulOp<Tn> {
     }
 }
 
-impl<Tn: Tensor2> Op<Tn::T> for ScalarMulOp<Tn> {
+impl<Tn: Tensor> Op<Tn::T> for ScalarMulOp<Tn> {
     fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
         let (a_basic, b_basic) = inputs.binary();
         let a: Tn = Tn::from_basic(a_basic);
-        let b: &Scalar2<Tn::T> = Scalar2::ref_from_basic(b_basic);
+        let b: &Scalar<Tn::T> = Scalar::ref_from_basic(b_basic);
 
         Box::new(a * b.val())
     }
@@ -312,8 +312,8 @@ impl<Tn: Tensor2> Op<Tn::T> for ScalarMulOp<Tn> {
         } = args
         {
             let in_grad_1: Box<Tn> = Tn::from_basic_boxed(in_grad_basic_1);
-            let in_grad_2: Scalar2<Tn::T> = *Scalar2::from_basic_boxed(in_grad_basic_2);
-            let in_data_2: &Scalar2<Tn::T> = Scalar2::ref_from_basic(in_data_2_basic);
+            let in_grad_2: Scalar<Tn::T> = *Scalar::from_basic_boxed(in_grad_basic_2);
+            let in_data_2: &Scalar<Tn::T> = Scalar::ref_from_basic(in_data_2_basic);
 
             let mut in_grad_2_updated = in_grad_2;
             for (idx, _) in in_grad_1.iter() {
@@ -346,8 +346,8 @@ impl<T: Numeric, const M: usize, const N: usize, const P: usize> MatMulOp<T, M, 
 impl<T: Numeric, const M: usize, const N: usize, const P: usize> Op<T> for MatMulOp<T, M, N, P> {
     fn forward(&self, input: ForwardInput<T>) -> Box<dyn BasicTensor<T>> {
         let (a_basic, b_basic) = input.binary();
-        let a = Matrix2::<T, M, N>::ref_from_basic(a_basic);
-        let b = Matrix2::<T, N, P>::ref_from_basic(b_basic);
+        let a = Matrix::<T, M, N>::ref_from_basic(a_basic);
+        let b = Matrix::<T, N, P>::ref_from_basic(b_basic);
         let out = a * b;
         Box::new(out)
     }
@@ -359,13 +359,13 @@ impl<T: Numeric, const M: usize, const N: usize, const P: usize> Op<T> for MatMu
             ..
         } = args
         {
-            let a = Matrix2::<T, M, N>::ref_from_basic(a_basic);
-            let a_grad = *Matrix2::<T, M, N>::from_basic_boxed(a_grad_basic);
+            let a = Matrix::<T, M, N>::ref_from_basic(a_basic);
+            let a_grad = *Matrix::<T, M, N>::from_basic_boxed(a_grad_basic);
 
-            let b = Matrix2::<T, N, P>::ref_from_basic(b_basic);
-            let b_grad = *Matrix2::<T, N, P>::from_basic_boxed(b_grad_basic);
+            let b = Matrix::<T, N, P>::ref_from_basic(b_basic);
+            let b_grad = *Matrix::<T, N, P>::from_basic_boxed(b_grad_basic);
 
-            let out_grad = Matrix2::<T, M, P>::ref_from_basic(out_grad_basic);
+            let out_grad = Matrix::<T, M, P>::ref_from_basic(out_grad_basic);
 
             let a_diff = out_grad * b.view().transpose();
             let b_diff = a.view().transpose() * out_grad;

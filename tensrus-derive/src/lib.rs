@@ -10,13 +10,13 @@ use syn::{
     PathArguments, PathSegment, TraitBound, TypeParam, TypeParamBound,
 };
 
-#[proc_macro_derive(Tensor2, attributes(tensor_rank, tensor_shape))]
-pub fn tensor2_macro_derive(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(Tensor, attributes(tensor_rank, tensor_shape))]
+pub fn tensor_macro_derive(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
-    impl_tensor2_macro(&ast)
+    impl_tensor_macro(&ast)
 }
 
-fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
+fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let name = &ast.ident;
     let rank = parse_rank(ast);
     let shape = parse_shape(ast);
@@ -32,7 +32,7 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
     let (impl_generics_with_lifetime, _, _) = generics_with_lifetime.split_for_impl();
 
     let gen = quote! {
-        impl #impl_generics Tensor2 for #name #type_generics {
+        impl #impl_generics Tensor for #name #type_generics {
             type T = T;
             type Idx = [usize; #rank];
 
@@ -82,7 +82,7 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics crate::tensor2::BasicTensor<T> for #name #type_generics {
+        impl #impl_generics crate::tensor::BasicTensor<T> for #name #type_generics {
             fn as_any(&self) -> &dyn std::any::Any {
                 self
             }
@@ -91,15 +91,15 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
                 self
             }
 
-            fn clone_boxed(&self) -> Box<dyn crate::tensor2::BasicTensor<T>> {
+            fn clone_boxed(&self) -> Box<dyn crate::tensor::BasicTensor<T>> {
                 Box::new(self.clone())
             }
 
-            fn zeros_with_shape(&self) -> Box<dyn crate::tensor2::BasicTensor<T>> {
+            fn zeros_with_shape(&self) -> Box<dyn crate::tensor::BasicTensor<T>> {
                 Box::new(Self::zeros())
             }
 
-            fn ones_with_shape(&self) -> Box<dyn crate::tensor2::BasicTensor<T>> {
+            fn ones_with_shape(&self) -> Box<dyn crate::tensor::BasicTensor<T>> {
                 Box::new(Self::ones())
             }
 
@@ -108,7 +108,7 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
             }
 
             // Scales `self` by `scale` and adds to `other`
-            fn add(self: Box<Self>, other_basic: &dyn crate::tensor2::BasicTensor<T>, scale: T) -> Box<dyn crate::tensor2::BasicTensor<T>> {
+            fn add(self: Box<Self>, other_basic: &dyn crate::tensor::BasicTensor<T>, scale: T) -> Box<dyn crate::tensor::BasicTensor<T>> {
                 let other = Self::ref_from_basic(other_basic);
                 let out = (*self * scale) + other;
                 Box::new(out)
@@ -145,10 +145,10 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics std::ops::Mul<crate::scalar2::Scalar2<T>> for #name #type_generics {
+        impl #impl_generics std::ops::Mul<crate::scalar::Scalar<T>> for #name #type_generics {
             type Output = Self;
 
-            fn mul(self, other: crate::scalar2::Scalar2<T>) -> Self::Output {
+            fn mul(self, other: crate::scalar::Scalar<T>) -> Self::Output {
                 self * other.val()
             }
         }

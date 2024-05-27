@@ -8,19 +8,19 @@
 #[macro_use]
 extern crate tensrus_derive;
 
-pub mod generic_tensor2;
+pub mod generic_tensor;
 pub mod nn;
 pub mod numeric;
 pub mod op;
 pub mod render;
-pub mod scalar2;
+pub mod scalar;
 pub mod shape;
 mod type_assert;
 pub mod var;
-pub mod vector2;
+pub mod vector;
 
-pub mod matrix2;
-pub mod tensor2;
+pub mod matrix;
+pub mod tensor;
 
 mod storage;
 

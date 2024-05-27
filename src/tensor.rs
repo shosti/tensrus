@@ -10,7 +10,7 @@ use rand::Rng;
 use rand_distr::{Distribution, StandardNormal};
 
 use crate::numeric::Numeric;
-use crate::scalar2::Scalar2;
+use crate::scalar::Scalar;
 
 pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {
     fn as_any(&self) -> &dyn Any;
@@ -30,7 +30,7 @@ pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T
     fn add(self: Box<Self>, other: &dyn BasicTensor<T>, scale: T) -> Box<dyn BasicTensor<T>>;
 }
 
-pub trait Tensor2:
+pub trait Tensor:
     Clone
     + BasicTensor<Self::T>
     + for<'a> Add<&'a Self, Output = Self>
@@ -63,7 +63,7 @@ pub trait Tensor2:
     }
     fn rand(d: impl Distribution<Self::T>, rng: &mut impl Rng) -> Self {
         d.sample_iter(rng)
-            .take(<Self as Tensor2>::num_elems())
+            .take(<Self as Tensor>::num_elems())
             .collect()
     }
     fn randn(rng: &mut impl Rng) -> Self
@@ -83,7 +83,7 @@ pub trait Tensor2:
     }
 
     fn from_basic(from: &dyn BasicTensor<Self::T>) -> Self {
-        if from.len() != <Self as Tensor2>::num_elems() {
+        if from.len() != <Self as Tensor>::num_elems() {
             panic!("cannot create a Tensor from a BasicTensor unless the number of elements is identical");
         }
 
@@ -94,9 +94,9 @@ pub trait Tensor2:
         from.as_any_boxed().downcast().unwrap()
     }
 
-    fn sum(&self) -> Scalar2<Self::T> {
+    fn sum(&self) -> Scalar<Self::T> {
         let s: Self::T = self.iter().values().sum();
-        Scalar2::from(s)
+        Scalar::from(s)
     }
 
     // Operations
@@ -113,7 +113,7 @@ pub trait Tensor2:
 
 pub struct TensorIterator<'a, Tn>
 where
-    Tn: Tensor2,
+    Tn: Tensor,
 {
     t: &'a Tn,
     cur: Option<Tn::Idx>,
@@ -121,7 +121,7 @@ where
 
 impl<'a, Tn> TensorIterator<'a, Tn>
 where
-    Tn: Tensor2,
+    Tn: Tensor,
 {
     pub fn new(t: &'a Tn) -> Self {
         Self {
@@ -137,7 +137,7 @@ where
 
 impl<'a, Tn> Iterator for TensorIterator<'a, Tn>
 where
-    Tn: Tensor2,
+    Tn: Tensor,
 {
     type Item = (Tn::Idx, Tn::T);
 

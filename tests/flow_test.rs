@@ -5,9 +5,9 @@ extern crate tensrus;
 
 use std::fs::File;
 use std::process::Command;
-use tensrus::matrix2::Matrix2;
+use tensrus::matrix::Matrix;
 use tensrus::render::Graph;
-use tensrus::scalar2::Scalar2;
+use tensrus::scalar::Scalar;
 use tensrus::var::Var;
 
 #[test]
@@ -36,7 +36,7 @@ fn test_more_ops() {
     d = d.clone() + (Var::from(3.0) * d.clone() + (b.clone() - a.clone()).relu());
     let e = c.clone() - d.clone();
     let f = e.elem_pow(2.0);
-    let mut g: Var<Scalar2<f64>> = f.clone() / Var::from(2.0);
+    let mut g: Var<Scalar<f64>> = f.clone() / Var::from(2.0);
     g = g.clone() + (Var::from(10.0) / f.clone());
     g.backward().unwrap();
 
@@ -49,8 +49,8 @@ fn test_more_ops() {
 
 #[test]
 fn test_matmul() {
-    let a = Var::new(Matrix2::<f64, _, _>::from([[7, 12], [42, 3], [8, 5]]));
-    let b = Var::new(Matrix2::<f64, _, _>::from([[4, 17, 9], [11, 1, 15]]));
+    let a = Var::new(Matrix::<f64, _, _>::from([[7, 12], [42, 3], [8, 5]]));
+    let b = Var::new(Matrix::<f64, _, _>::from([[4, 17, 9], [11, 1, 15]]));
     let c = a.clone() * b.clone();
     let l = c.sum_elems();
     l.backward().unwrap();
@@ -58,15 +58,15 @@ fn test_matmul() {
     assert_eq!(l.data().val(), 2250.0);
     assert_eq!(
         a.grad().unwrap().clone(),
-        Matrix2::<f64, _, _>::from([[30, 27], [30, 27], [30, 27]])
+        Matrix::<f64, _, _>::from([[30, 27], [30, 27], [30, 27]])
     );
     assert_eq!(
         b.grad().unwrap().clone(),
-        Matrix2::<f64, _, _>::from([[57, 57, 57], [20, 20, 20]])
+        Matrix::<f64, _, _>::from([[57, 57, 57], [20, 20, 20]])
     );
 }
 
-fn render_graph(x: &Var<Scalar2<f64>>, id: String) {
+fn render_graph(x: &Var<Scalar<f64>>, id: String) {
     let g = Graph::new(x);
     let dotfile = format!("/tmp/{}.dot", id);
     let mut f = File::create(&dotfile).unwrap();
