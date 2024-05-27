@@ -21,7 +21,7 @@ impl Layout {
         self == Layout::Transposed
     }
 
-    pub fn to_blas(&self) -> u8 {
+    pub fn to_blas(self) -> u8 {
         match self {
             Layout::Normal => b'T',
             Layout::Transposed => b'N',
