@@ -4,8 +4,8 @@ use std::{
 };
 
 use num::{One, Zero};
-// use rand::Rng;
-// use rand_distr::{Distribution, StandardNormal};
+use rand::Rng;
+use rand_distr::{Distribution, StandardNormal};
 
 use crate::numeric::Numeric;
 
@@ -39,18 +39,17 @@ pub trait Tensor2:
     fn ones() -> Self {
         Self::repeat(Self::T::one())
     }
-    // fn rand(d: impl Distribution<Self::T>, rng: &mut impl Rng) -> Self {
-    //     d.sample_iter(rng)
-    //         .take(<Self as Tensor2>::num_elems())
-    //         .collect()
-    // }
-    // fn randn(rng: &mut impl Rng) -> Self
-    // where
-    //     Self: FromIterator<Self::T>,
-    //     StandardNormal: Distribution<Self::T>,
-    // {
-    //     Self::rand(StandardNormal, rng)
-    // }
+    fn rand(d: impl Distribution<Self::T>, rng: &mut impl Rng) -> Self {
+        d.sample_iter(rng)
+            .take(<Self as Tensor2>::num_elems())
+            .collect()
+    }
+    fn randn(rng: &mut impl Rng) -> Self
+    where
+        StandardNormal: Distribution<Self::T>,
+    {
+        Self::rand(StandardNormal, rng)
+    }
 
     fn iter(&self) -> TensorIterator<Self> {
         TensorIterator::new(self)
