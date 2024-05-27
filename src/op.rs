@@ -79,49 +79,6 @@ pub trait Op<T: Numeric>: Debug {
 }
 
 #[derive(Debug)]
-pub struct ElemMulOp<Tn: Tensor> {
-    _markers: PhantomData<Tn>,
-}
-
-impl<Tn: Tensor> ElemMulOp<Tn> {
-    pub fn new() -> Box<Self> {
-        Box::new(Self {
-            _markers: PhantomData,
-        })
-    }
-}
-
-impl<Tn: Tensor> Op<Tn::T> for ElemMulOp<Tn> {
-    fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
-        let (a, b) = inputs.binary();
-        let out = Tn::from_fn(|idx| a[idx.as_ref()] * b[idx.as_ref()]);
-
-        Box::new(out)
-    }
-    fn backward<'a>(&self, args: BackwardArgs<Tn::T>) -> BackwardOutput<Tn::T> {
-        if let BackwardArgs::Binary {
-            in_grad: (in_grad_basic_1, in_grad_basic_2),
-            in_data: (in_data_1, in_data_2),
-            out_grad,
-            ..
-        } = args
-        {
-            let in_grad_1: Box<Tn> = Tn::from_basic_boxed(in_grad_basic_1);
-            let in_grad_2: Box<Tn> = Tn::from_basic_boxed(in_grad_basic_2);
-
-            let in_grad_1_updated = in_grad_1
-                .map(|idx, in_grad| in_grad + in_data_2[idx.as_ref()] * out_grad[idx.as_ref()]);
-            let in_grad_2_updated = in_grad_2
-                .map(|idx, in_grad| in_grad + in_data_1[idx.as_ref()] * out_grad[idx.as_ref()]);
-
-            BackwardOutput::Binary(Box::new(in_grad_1_updated), Box::new(in_grad_2_updated))
-        } else {
-            unreachable!()
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct ScalarMulOp<Tn: Tensor> {
     _markers: (PhantomData<Tn>, PhantomData<Scalar<Tn::T>>),
 }
@@ -476,4 +433,17 @@ binary_op!(AddOp<Tn: Tensor> {
     forward: |in1: &Tn, in2: &Tn, _| in1.clone() + in2,
     backward_1: |in_grad: Tn, args: BinaryBackwardArgs<Tn, Tn, Tn, _>| in_grad.map(|idx, in_grad| in_grad + args.out_grad[idx]),
     backward_2: |in_grad: Tn, args: BinaryBackwardArgs<Tn, Tn, Tn, _>| in_grad.map(|idx, in_grad| in_grad + args.out_grad[idx]),
+});
+
+binary_op!(ElemMulOp<Tn: Tensor> {
+    args: (),
+    in_type_1: Tn,
+    in_type_2: Tn,
+    out_type: Tn,
+    numeric_type: Tn::T,
+    forward: |in1: &Tn, in2: &Tn, _| Tn::from_fn(|idx| in1[idx] * in2[idx]),
+    backward_1: (|in_grad: Tn, args: BinaryBackwardArgs<Tn, Tn, Tn, _>|
+                 in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
+    backward_2: (|in_grad: Tn, args: BinaryBackwardArgs<Tn, Tn, Tn, _>|
+                 in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
 });
