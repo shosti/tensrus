@@ -33,3 +33,30 @@ impl<T: Numeric, const N: usize, F: ToPrimitive> From<[F; N]> for Vector2<T, N> 
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_basics() {
+        let a: Vector2<f64, 5> = Vector2::from([1, 2, 3, 4, 5]);
+
+        assert_eq!(a[&[3]], 4.0);
+    }
+
+    #[test]
+    fn test_from_fn() {
+        let a: Vector2<_, 4> = Vector2::from_fn(|idx| idx[0] as f32 * 2.0);
+
+        assert_eq!(a, Vector2::from([0, 2, 4, 6]));
+    }
+
+    #[test]
+    fn test_dot_product() {
+        let a: Vector2<f64, _> = Vector2::from([1, 2, 3]);
+        let b: Vector2<f64, _> = Vector2::from([4, 5, 6]);
+
+        assert_eq!(a.dot(&b), 32.0);
+    }
+}
