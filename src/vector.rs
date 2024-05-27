@@ -1,4 +1,5 @@
 use crate::{
+    generic_tensor::GenericTensor,
     numeric::Numeric,
     shape::Shape,
     storage::{Layout, Storage},
@@ -30,6 +31,24 @@ impl<T: Numeric, const N: usize, F: ToPrimitive> From<[F; N]> for Vector<T, N> {
         Self {
             storage: vals,
             layout: Layout::default(),
+        }
+    }
+}
+
+impl<T: Numeric, const N: usize> From<GenericTensor<T, 1, { vector_shape(N) }>> for Vector<T, N> {
+    fn from(t: GenericTensor<T, 1, { vector_shape(N) }>) -> Self {
+        Self {
+            storage: t.storage,
+            layout: t.layout,
+        }
+    }
+}
+
+impl<T: Numeric, const N: usize> From<Vector<T, N>> for GenericTensor<T, 1, { vector_shape(N) }> {
+    fn from(t: Vector<T, N>) -> Self {
+        Self {
+            storage: t.storage,
+            layout: t.layout,
         }
     }
 }

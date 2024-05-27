@@ -11,8 +11,8 @@ use num::ToPrimitive;
 #[tensor_rank = "R"]
 #[tensor_shape = "S"]
 pub struct GenericTensor<T: Numeric, const R: usize, const S: Shape> {
-    storage: Storage<T>,
-    layout: Layout,
+    pub(crate) storage: Storage<T>,
+    pub layout: Layout,
 }
 
 impl<T: Numeric, const R: usize, const S: Shape, U: ToPrimitive> From<[U; num_elems(R, S)]>
