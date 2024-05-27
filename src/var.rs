@@ -1,11 +1,11 @@
-use crate::matrix::{matrix_shape, Matrix};
+use crate::matrix2::Matrix2;
 use crate::numeric::Numeric;
 use crate::op::{
     AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp, Op, ReLU, ScalarMulOp, SumOp,
 };
 use crate::render::{Edge, Graphable, Node};
-use crate::scalar::Scalar;
-use crate::tensor::{num_elems, BasicTensor, Tensor};
+use crate::scalar2::Scalar2;
+use crate::tensor2::{BasicTensor, Tensor2};
 use num::One;
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -20,7 +20,7 @@ pub type Id = u64;
 thread_local!(static NEXT_ID: RefCell<Id> = const { RefCell::new(1) });
 
 #[derive(Debug, Clone)]
-pub enum Var<Tn: Tensor> {
+pub enum Var<Tn: Tensor2> {
     Parameter(Rc<RefCell<Param<Tn::T>>>, PhantomData<Tn>),
     Output(Rc<RefCell<Output<Tn::T>>>, PhantomData<Tn>),
 }
@@ -64,7 +64,7 @@ enum Children {
     Binary(Id, Id),
 }
 
-impl<Tn: Tensor> Var<Tn> {
+impl<Tn: Tensor2> Var<Tn> {
     pub fn new(t: Tn) -> Self {
         let param = Param {
             id: Self::next_id(),
@@ -108,7 +108,7 @@ impl<Tn: Tensor> Var<Tn> {
         id
     }
 
-    fn new_from_unary<OutTn: Tensor<T = Tn::T>>(&self, op: Box<dyn Op<Tn::T>>) -> Var<OutTn> {
+    fn new_from_unary<OutTn: Tensor2<T = Tn::T>>(&self, op: Box<dyn Op<Tn::T>>) -> Var<OutTn> {
         let self_ref = VarRef::from(self);
         let all_children = self_ref.take_all_children();
         let children = Children::Unary(self_ref.id());
@@ -137,7 +137,7 @@ impl<Tn: Tensor> Var<Tn> {
         out_var
     }
 
-    fn new_from_binary<OutTn: Tensor<T = Tn::T>>(
+    fn new_from_binary<OutTn: Tensor2<T = Tn::T>>(
         &self,
         other: VarRef<Tn::T>,
         op: Box<dyn Op<Tn::T>>,
@@ -436,7 +436,7 @@ impl<T: Numeric> Output<T> {
     }
 }
 
-impl<Tn: Tensor> From<&Var<Tn>> for VarRef<Tn::T> {
+impl<Tn: Tensor2> From<&Var<Tn>> for VarRef<Tn::T> {
     fn from(v: &Var<Tn>) -> Self {
         match v {
             Var::Parameter(p, _) => Self::Parameter(p.clone()),
@@ -445,13 +445,13 @@ impl<Tn: Tensor> From<&Var<Tn>> for VarRef<Tn::T> {
     }
 }
 
-impl<T: Numeric> From<T> for Var<Scalar<T>> {
+impl<T: Numeric> From<T> for Var<Scalar2<T>> {
     fn from(v: T) -> Self {
-        Self::new(Scalar::from(v))
+        Self::new(Scalar2::from(v))
     }
 }
 
-impl<Tn: Tensor> Var<Tn> {
+impl<Tn: Tensor2> Var<Tn> {
     pub fn data(&self) -> Ref<Tn> {
         match self {
             Self::Parameter(p, _) => Ref::map(p.borrow(), |p| {
@@ -506,20 +506,20 @@ impl<Tn: Tensor> Var<Tn> {
         self.new_from_binary(other_ref, op)
     }
 
-    pub fn sum_elems(&self) -> Var<Scalar<Tn::T>> {
+    pub fn sum_elems(&self) -> Var<Scalar2<Tn::T>> {
         let op = SumOp::<Tn>::new();
 
         self.new_from_unary(op)
     }
 }
 
-impl<T: Numeric> Var<Scalar<T>> {
+impl<T: Numeric> Var<Scalar2<T>> {
     pub fn backward(&self) -> Result<(), BackwardError> {
         VarRef::from(self).backward()
     }
 }
 
-impl<Tn: Tensor> Add<Var<Tn>> for Var<Tn> {
+impl<Tn: Tensor2> Add<Var<Tn>> for Var<Tn> {
     type Output = Self;
 
     fn add(self, other: Var<Tn>) -> Self {
@@ -533,10 +533,10 @@ impl<Tn: Tensor> Add<Var<Tn>> for Var<Tn> {
     }
 }
 
-impl<Tn: Tensor> Mul<Var<Scalar<Tn::T>>> for Var<Tn> {
+impl<Tn: Tensor2> Mul<Var<Scalar2<Tn::T>>> for Var<Tn> {
     type Output = Self;
 
-    fn mul(self, other: Var<Scalar<Tn::T>>) -> Self {
+    fn mul(self, other: Var<Scalar2<Tn::T>>) -> Self {
         if self.id() == other.id() {
             return self.elem_pow(Tn::T::two());
         }
@@ -547,18 +547,12 @@ impl<Tn: Tensor> Mul<Var<Scalar<Tn::T>>> for Var<Tn> {
     }
 }
 
-impl<T: Numeric, const M: usize, const N: usize, const P: usize> Mul<Var<Matrix<T, N, P>>>
-    for Var<Matrix<T, M, N>>
-where
-    [(); num_elems(2, matrix_shape(M, N))]:,
-    [(); num_elems(2, matrix_shape(N, M))]:,
-    [(); num_elems(2, matrix_shape(N, P))]:,
-    [(); num_elems(2, matrix_shape(P, N))]:,
-    [(); num_elems(2, matrix_shape(M, P))]:,
+impl<T: Numeric, const M: usize, const N: usize, const P: usize> Mul<Var<Matrix2<T, N, P>>>
+    for Var<Matrix2<T, M, N>>
 {
-    type Output = Var<Matrix<T, M, P>>;
+    type Output = Var<Matrix2<T, M, P>>;
 
-    fn mul(self, other: Var<Matrix<T, N, P>>) -> Var<Matrix<T, M, P>> {
+    fn mul(self, other: Var<Matrix2<T, N, P>>) -> Var<Matrix2<T, M, P>> {
         if self.id() == other.id() {
             todo!()
         }
@@ -569,17 +563,17 @@ where
     }
 }
 
-impl<Tn: Tensor> Div<Var<Scalar<Tn::T>>> for Var<Tn> {
+impl<Tn: Tensor2> Div<Var<Scalar2<Tn::T>>> for Var<Tn> {
     type Output = Self;
 
-    fn div(self, other: Var<Scalar<Tn::T>>) -> Self {
+    fn div(self, other: Var<Scalar2<Tn::T>>) -> Self {
         let inv = other.elem_pow(-Tn::T::one());
 
         self * inv
     }
 }
 
-impl<Tn: Tensor> Neg for Var<Tn> {
+impl<Tn: Tensor2> Neg for Var<Tn> {
     type Output = Self;
 
     fn neg(self) -> Self {
@@ -587,7 +581,7 @@ impl<Tn: Tensor> Neg for Var<Tn> {
     }
 }
 
-impl<Tn: Tensor> Sub for Var<Tn> {
+impl<Tn: Tensor2> Sub for Var<Tn> {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
@@ -595,7 +589,7 @@ impl<Tn: Tensor> Sub for Var<Tn> {
     }
 }
 
-impl<Tn: Tensor> Sum for Var<Tn> {
+impl<Tn: Tensor2> Sum for Var<Tn> {
     fn sum<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,
@@ -605,7 +599,7 @@ impl<Tn: Tensor> Sum for Var<Tn> {
     }
 }
 
-impl<T: Numeric> Graphable for Var<Scalar<T>> {
+impl<T: Numeric> Graphable for Var<Scalar2<T>> {
     fn trace(&self) -> (HashSet<Node>, HashSet<Edge>) {
         let val: VarRef<T> = self.into();
         val.trace()
@@ -624,7 +618,7 @@ mod tests {
         let v = Var::new(m);
         let s = v.sum_elems();
 
-        assert_eq!(Scalar::from(1 + 2 + 3 + 4 + 5 + 6), *s.data());
+        assert_eq!(Scalar2::from(1 + 2 + 3 + 4 + 5 + 6), *s.data());
     }
 
     proptest! {

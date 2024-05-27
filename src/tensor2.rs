@@ -10,6 +10,7 @@ use rand::Rng;
 use rand_distr::{Distribution, StandardNormal};
 
 use crate::numeric::Numeric;
+use crate::scalar2::Scalar2;
 
 pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {
     fn as_any(&self) -> &dyn Any;
@@ -90,10 +91,10 @@ pub trait Tensor2:
         from.as_any_boxed().downcast().unwrap()
     }
 
-    // fn sum(&self) -> Scalar<Self::T> {
-    //     let s: Self::T = self.iter().values().sum();
-    //     Scalar::from(s)
-    // }
+    fn sum(&self) -> Scalar2<Self::T> {
+        let s: Self::T = self.iter().values().sum();
+        Scalar2::from(s)
+    }
 
     // Operations
     fn relu(self) -> Self {
