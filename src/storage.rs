@@ -1,9 +1,17 @@
+use std::default;
+
 use crate::{
     shape::{transpose_shape, Shape},
-    tensor2::Layout,
 };
 
 pub type Storage<T> = Box<[T]>;
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum Layout {
+    #[default]
+    Normal,
+    Transposed,
+}
 
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}

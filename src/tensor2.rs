@@ -9,19 +9,13 @@ use num::{One, Zero};
 
 use crate::numeric::Numeric;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Layout {
-    Normal,
-    Transposed,
-}
-
 pub trait Tensor2:
     Clone
     + for<'a> Add<&'a Self, Output = Self>
     + Mul<Self::T, Output = Self>
     + for<'a> Index<&'a Self::Idx, Output = Self::T>
     // + PartialEq
-    // + FromIterator<Self::T>
+    + FromIterator<Self::T>
     + 'static
 {
     type T: Numeric;

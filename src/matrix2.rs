@@ -3,8 +3,8 @@ use std::ops::Index;
 use crate::{
     numeric::Numeric,
     shape::Shape,
-    storage::{nth_idx, num_elems, storage_idx, Storage},
-    tensor2::{Layout, Tensor2},
+    storage::{nth_idx, num_elems, storage_idx, Layout, Storage},
+    tensor2::Tensor2,
 };
 
 const RANK: usize = 2;

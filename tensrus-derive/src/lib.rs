@@ -268,6 +268,26 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
                 self.map(|_, v| v * other)
             }
         }
+
+
+        impl #f_impl_generics std::iter::FromIterator<F> for #name #type_generics {
+            fn from_iter<I>(iter: I) -> Self
+            where
+                I: IntoIterator<Item = F>,
+            {
+                let vals: Vec<T> = iter
+                    .into_iter()
+                    .map(|v| T::from(v).unwrap())
+                    .chain(std::iter::repeat(T::zero()))
+                    .take(Self::num_elems())
+                    .collect();
+                Self {
+                    storage: vals.into(),
+                    layout: crate::storage::Layout::default(),
+                }
+            }
+        }
+
     };
     gen.into()
 }
