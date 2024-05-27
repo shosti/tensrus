@@ -7,12 +7,12 @@ pub const fn scalar_shape() -> Shape {
     [0; 5]
 }
 
-#[derive(Tensor, PartialEq, Debug)]
+#[derive(PartialEq, Debug)]
 pub struct Scalar<T: Numeric>(GenericTensor<T, 0, { scalar_shape() }>);
 
 impl<T: Numeric> Scalar<T> {
     pub fn val(&self) -> T {
-        self[&[]]
+        unreachable!()
     }
 }
 
