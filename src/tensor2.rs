@@ -1,4 +1,7 @@
-use std::ops::{Add, Index, Mul};
+use std::{
+    iter::Map,
+    ops::{Add, Index, Mul},
+};
 
 use num::{One, Zero};
 // use rand::Rng;
@@ -55,9 +58,9 @@ pub trait Tensor2:
     //     Self::rand(StandardNormal, rng)
     // }
 
-    // fn iter(&self) -> TensorIterator<Self> {
-    //     TensorIterator::new(self)
-    // }
+    fn iter(&self) -> TensorIterator<Self> {
+        TensorIterator::new(self)
+    }
 
     // fn ref_from_basic(from: &dyn BasicTensor<Self::T>) -> &Self {
     //     let any_ref = from.as_any();
@@ -90,5 +93,49 @@ pub trait Tensor2:
                 val
             }
         })
+    }
+}
+
+pub struct TensorIterator<'a, Tn>
+where
+    Tn: Tensor2,
+{
+    t: &'a Tn,
+    cur: Option<Tn::Idx>,
+}
+
+impl<'a, Tn> TensorIterator<'a, Tn>
+where
+    Tn: Tensor2,
+{
+    pub fn new(t: &'a Tn) -> Self {
+        Self {
+            t,
+            cur: Some(Tn::default_idx()),
+        }
+    }
+
+    pub fn values(self) -> Map<TensorIterator<'a, Tn>, impl FnMut((Tn::Idx, Tn::T)) -> Tn::T> {
+        self.map(|(_, v)| v)
+    }
+}
+
+impl<'a, Tn> Iterator for TensorIterator<'a, Tn>
+where
+    Tn: Tensor2,
+{
+    type Item = (Tn::Idx, Tn::T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &self.cur {
+            None => None,
+            Some(idx) => {
+                let cur_idx = *idx;
+                let item = (cur_idx, self.t[&cur_idx]);
+                self.cur = self.t.next_idx(&cur_idx);
+
+                Some(item)
+            }
+        }
     }
 }
