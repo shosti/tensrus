@@ -254,7 +254,7 @@ macro_rules! unary_op {
 
         impl< $( $generic : $subtype ),* > Op< $numty > for $name< $( $generic ),* > {
             fn forward(&self, inputs: ForwardInput< $numty >) -> Box<dyn BasicTensor< $numty >> {
-                let input = <$inty>::from_basic(inputs.unary());
+                let input = <$inty>::ref_from_basic(inputs.unary());
                 let out: $outty = ($forward)(input, self.args);
                 Box::new(out)
             }
@@ -386,7 +386,7 @@ unary_op!(ReLUOp<Tn: Tensor> {
     in_type: Tn,
     out_type: Tn,
     numeric_type: Tn::T,
-    forward: |input: Tn, _args: ()| input.relu(),
+    forward: |input: &Tn, _args: ()| input.clone().relu(),
     backward: (|in_grad: Tn, args: UnaryBackwardArgs<Tn, Tn, _>|
                in_grad.map(|idx, in_grad| {
                    let diff = if args.out_data[idx] > Tn::T::zero() {
@@ -404,7 +404,7 @@ unary_op!(ElemPowOp<Tn: Tensor> {
     in_type: Tn,
     out_type: Tn,
     numeric_type: Tn::T,
-    forward: |input: Tn, (n,): (Tn::T,)| Tn::from_fn(|idx| input[idx.as_ref()].powf(n)),
+    forward: |input: &Tn, (n,): (Tn::T,)| Tn::from_fn(|idx| input[idx.as_ref()].powf(n)),
     backward: (|in_grad: Tn, args: UnaryBackwardArgs<Tn, Tn, (Tn::T,)>|
                in_grad.map(|idx, in_grad| {
                    let out_grad_val = args.out_grad[idx];
@@ -420,7 +420,7 @@ unary_op!(SumOp<Tn: Tensor> {
     in_type: Tn,
     out_type: Scalar<Tn::T>,
     numeric_type: Tn::T,
-    forward: |input: Tn, _| input.sum(),
+    forward: |input: &Tn, _| input.sum(),
     backward: |in_grad: Tn, _| in_grad.map(|_, v| v + Tn::T::one()),
 });
 
