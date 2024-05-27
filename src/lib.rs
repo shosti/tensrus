@@ -15,6 +15,7 @@ pub mod numeric;
 pub mod op;
 pub mod render;
 pub mod scalar;
+pub mod scalar2;
 pub mod slice;
 pub mod tensor;
 mod type_assert;
