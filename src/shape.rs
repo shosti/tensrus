@@ -29,3 +29,18 @@ pub const fn transpose_shape(r: usize, s: Shape) -> Shape {
 
     out
 }
+
+// Returns the tensor shape when downranking by 1
+pub const fn subtensor_shape(r: usize, s: Shape) -> Shape {
+    if r == 0 {
+        panic!("cannot take subtensor of tensor of rank 0");
+    }
+    let mut out = [0; 6];
+    let mut i = r - 1;
+    while i > 0 {
+        out[i - 1] = s[i];
+        i -= 1;
+    }
+
+    out
+}
