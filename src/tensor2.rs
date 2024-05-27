@@ -16,6 +16,9 @@ pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T
     fn as_any(&self) -> &dyn Any;
     fn as_any_boxed(self: Box<Self>) -> Box<dyn Any>;
     fn len(&self) -> usize;
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     fn clone_boxed(&self) -> Box<dyn BasicTensor<T>>;
 
     // Returns a new tensor of zeros with the same shape as self
