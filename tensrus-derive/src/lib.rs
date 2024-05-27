@@ -288,6 +288,11 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
+        impl #impl_generics std::cmp::PartialEq for #name #type_generics {
+            fn eq(&self, other: &Self) -> bool {
+                self.iter().all(|(idx, val)| val == other[&idx])
+            }
+        }
     };
     gen.into()
 }
