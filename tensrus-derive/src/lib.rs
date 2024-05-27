@@ -299,7 +299,21 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
     gen.into()
 }
 
-fn parse_rank(ast: &DeriveInput) -> usize {
+enum RankParam {
+    Usize(usize),
+    Const(ConstParam),
+}
+
+impl ToTokens for RankParam {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        match self {
+            Self::Usize(r) => r.to_tokens(tokens),
+            Self::Const(r) => r.to_tokens(tokens),
+        }
+    }
+}
+
+fn parse_rank(ast: &DeriveInput) -> RankParam {
     let rank_attr = ast
         .attrs
         .iter()
@@ -307,20 +321,30 @@ fn parse_rank(ast: &DeriveInput) -> usize {
         .expect("tensor_rank attribute must be set");
     if let syn::Meta::NameValue(ref val) = rank_attr.meta {
         if let syn::Expr::Lit(ref lit) = val.value {
-            if let syn::Lit::Int(ref int) = lit.lit {
-                return int
-                    .base10_parse()
-                    .expect("unable to parse tensor_rank value");
-            }
+            return match lit.lit {
+                syn::Lit::Int(ref int) => {
+                    let val = int
+                        .base10_parse()
+                        .expect("unable to parse tensor_rank value");
+                    RankParam::Usize(val)
+                }
+                syn::Lit::Str(ref s) => {
+                    let val = s.value();
+                    RankParam::Const(ConstParam(val))
+                }
+                _ => {
+                    panic!("tensor_rank in unexpected format");
+                }
+            };
         }
     };
 
     panic!("tensor_rank attribute is the wrong format (should be #[tensor_rank = <integer>]");
 }
 
-struct ShapeParam(String);
+struct ConstParam(String);
 
-impl ToTokens for ShapeParam {
+impl ToTokens for ConstParam {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let expr_str = format!("{{ {} }}", self.0);
         let expr: syn::Expr = syn::parse_str(expr_str.as_str()).expect("Failed to parse code");
@@ -328,7 +352,7 @@ impl ToTokens for ShapeParam {
     }
 }
 
-fn parse_shape(ast: &DeriveInput) -> ShapeParam {
+fn parse_shape(ast: &DeriveInput) -> ConstParam {
     let shape_attr = ast
         .attrs
         .iter()
@@ -338,7 +362,7 @@ fn parse_shape(ast: &DeriveInput) -> ShapeParam {
     if let syn::Meta::NameValue(ref val) = shape_attr.meta {
         if let syn::Expr::Lit(ref lit) = val.value {
             if let syn::Lit::Str(ref s) = lit.lit {
-                return ShapeParam(s.value());
+                return ConstParam(s.value());
             }
         }
     };
