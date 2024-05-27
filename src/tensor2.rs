@@ -6,7 +6,7 @@ use num::{One, Zero};
 
 use crate::numeric::Numeric;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Layout {
     Normal,
     Transposed,

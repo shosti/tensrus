@@ -3,7 +3,7 @@ use std::ops::Index;
 use crate::{
     matrix::matrix_shape,
     numeric::Numeric,
-    storage::storage_idx,
+    storage::{nth_idx, storage_idx, Storage},
     tensor::{num_elems, Shape},
     tensor2::{Layout, Tensor2},
 };
@@ -12,7 +12,7 @@ const RANK: usize = 2;
 
 #[derive(Debug, Clone)]
 pub struct Matrix2<T: Numeric, const M: usize, const N: usize> {
-    storage: Box<[T]>,
+    storage: Storage<T>,
     layout: Layout,
 }
 
@@ -29,16 +29,16 @@ impl<T: Numeric, const M: usize, const N: usize> Tensor2 for Matrix2<T, M, N> {
     // Supplied methods
     fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self {
         let mut v = Vec::with_capacity(Self::num_elems());
-        for i in 0..M {
-            for j in 0..N {
-                let idx = [i, j];
-                v.push(f(&idx));
-            }
+        let layout = Layout::Normal;
+
+        for i in 0..Self::num_elems() {
+            let idx = nth_idx(i, Self::shape(), layout).unwrap();
+            v.push(f(&idx));
         }
 
         Self {
             storage: v.into(),
-            layout: Layout::Normal,
+            layout,
         }
     }
     fn map(mut self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
@@ -61,19 +61,12 @@ impl<T: Numeric, const M: usize, const N: usize> Tensor2 for Matrix2<T, M, N> {
         [0; RANK]
     }
     fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
-        let mut cur = *idx;
-        cur[RANK - 1] += 1;
-        for dim in (0..RANK).rev() {
-            if cur[dim] == Self::shape()[dim] {
-                if dim == 0 {
-                    return None;
-                }
-                cur[dim] = 0;
-                cur[dim - 1] += 1;
-            }
+        let i = storage_idx(idx, Self::shape(), self.layout).ok()?;
+        if i >= Self::num_elems() - 1 {
+            return None;
         }
 
-        Some(cur)
+        nth_idx(i + 1, Self::shape(), self.layout).ok()
     }
 }
 
@@ -85,7 +78,6 @@ impl<T: Numeric, const M: usize, const N: usize> Index<&[usize; RANK]> for Matri
         self.storage.index(i)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
