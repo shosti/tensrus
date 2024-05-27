@@ -14,8 +14,8 @@ pub const fn vector_shape(n: usize) -> Shape {
 #[tensor_rank = 1]
 #[tensor_shape = "vector_shape(N)"]
 pub struct Vector2<T: Numeric, const N: usize> {
-    storage: Storage<T>,
-    layout: Layout,
+    pub(crate) storage: Storage<T>,
+    pub layout: Layout,
 }
 
 impl<T: Numeric, const N: usize> Vector2<T, N> {

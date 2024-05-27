@@ -5,6 +5,7 @@ use crate::{
     shape::Shape,
     storage::{Layout, Storage},
     tensor2::Tensor2,
+    vector2::Vector2,
 };
 
 pub const fn matrix_shape(m: usize, n: usize) -> Shape {
@@ -15,8 +16,8 @@ pub const fn matrix_shape(m: usize, n: usize) -> Shape {
 #[tensor_rank = 2]
 #[tensor_shape = "matrix_shape(M, N)"]
 pub struct Matrix2<T: Numeric, const M: usize, const N: usize> {
-    storage: Storage<T>,
-    layout: Layout,
+    pub(crate) storage: Storage<T>,
+    pub layout: Layout,
 }
 
 impl<T: Numeric, const M: usize, const N: usize> Matrix2<T, M, N> {
@@ -68,6 +69,40 @@ fn matmul_impl<T: Numeric, const M: usize, const N: usize, const P: usize>(
     }
 
     out
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize> Mul<&'a Vector2<T, N>>
+    for &'a Matrix2<T, M, N>
+{
+    type Output = Vector2<T, M>;
+
+    fn mul(self, other: &Vector2<T, N>) -> Self::Output {
+        // BLAS always uses column-major format, so if we're "transposed" we're
+        // already in BLAS format, otherwise we have to transpose.
+        let mut out = Self::Output::zeros();
+        let trans = self.layout.transpose().to_blas();
+        let m = if self.layout.is_transposed() { M } else { N } as i32;
+        let n = if self.layout.is_transposed() { N } else { M } as i32;
+        let lda = m;
+
+        unsafe {
+            T::gemv(
+                trans,
+                m,
+                n,
+                T::one(),
+                &self.storage,
+                lda,
+                &other.storage,
+                1,
+                T::one(),
+                &mut out.storage,
+                1,
+            );
+        }
+
+        out
+    }
 }
 
 #[cfg(test)]
