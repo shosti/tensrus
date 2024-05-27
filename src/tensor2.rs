@@ -14,7 +14,7 @@ pub trait Tensor2:
     + for<'a> Add<&'a Self, Output = Self>
     + Mul<Self::T, Output = Self>
     + for<'a> Index<&'a Self::Idx, Output = Self::T>
-    + PartialEq
+    + Eq
     + FromIterator<Self::T>
     + 'static
 {

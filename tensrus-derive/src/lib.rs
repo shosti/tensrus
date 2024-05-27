@@ -293,6 +293,8 @@ fn impl_tensor2_macro(ast: &DeriveInput) -> TokenStream {
                 self.iter().all(|(idx, val)| val == other[&idx])
             }
         }
+
+        impl #impl_generics std::cmp::Eq for #name #type_generics {}
     };
     gen.into()
 }
