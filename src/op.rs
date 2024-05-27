@@ -79,50 +79,6 @@ pub trait Op<T: Numeric>: Debug {
 }
 
 #[derive(Debug)]
-pub struct ReLU<Tn: Tensor> {
-    _markers: PhantomData<Tn>,
-}
-
-impl<Tn: Tensor> ReLU<Tn> {
-    pub fn new() -> Box<Self> {
-        Box::new(Self {
-            _markers: PhantomData,
-        })
-    }
-}
-
-impl<Tn: Tensor> Op<Tn::T> for ReLU<Tn> {
-    fn forward(&self, inputs: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
-        let input = inputs.unary();
-        let out = Tn::from_basic(input).relu();
-        Box::new(out)
-    }
-    fn backward<'a>(&self, args: BackwardArgs<Tn::T>) -> BackwardOutput<Tn::T> {
-        if let BackwardArgs::Unary {
-            in_grad: in_grad_basic,
-            out_grad,
-            out_data,
-            ..
-        } = args
-        {
-            let in_grad: Box<Tn> = Tn::from_basic_boxed(in_grad_basic);
-            let updated_grad = in_grad.map(|idx, in_grad| {
-                let diff = if out_data[idx.as_ref()] > Tn::T::zero() {
-                    out_grad[idx.as_ref()]
-                } else {
-                    Tn::T::zero()
-                };
-
-                in_grad + diff
-            });
-            BackwardOutput::Unary(Box::new(updated_grad))
-        } else {
-            unreachable!()
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct AddOp<Tn: Tensor> {
     _markers: PhantomData<Tn>,
 }
@@ -431,3 +387,67 @@ impl<T: Numeric, const M: usize, const N: usize> Op<T> for MatVecMulOp<T, M, N> 
         }
     }
 }
+
+macro_rules! unary_op {
+    ($name:ident < $( $generic:ident : $subtype:ident ),* > {
+        in_type: $inty:ty, out_type: $outty:ty, numeric_type: $numty:ty, forward: $forward:expr , backward: $backward:expr ,
+    }) => {
+
+        #[derive(Debug)]
+        pub struct $name< $( $generic : $subtype ),* > {
+            _markers: ( $( std::marker::PhantomData< $generic > ,)* ),
+        }
+
+        impl< $( $generic : $subtype ),* > $name< $( $generic ),* > {
+            pub fn new() -> Box<Self> {
+                Box::new(Self {
+                    _markers: ( $(PhantomData::< $generic >,)* ),
+                })
+            }
+        }
+
+        impl< $( $generic : $subtype ),* > Op< $numty > for $name< $( $generic ),* > {
+            fn forward(&self, inputs: ForwardInput< $numty >) -> Box<dyn BasicTensor< $numty >> {
+                let input = <$inty>::from_basic(inputs.unary());
+                let out = ($forward)(input);
+                Box::new(out)
+            }
+            fn backward<'a>(&self, args: BackwardArgs< $numty >) -> BackwardOutput< $numty > {
+                if let BackwardArgs::Unary {
+                    in_grad: in_grad_basic,
+                    in_data: in_data_basic,
+                    out_grad: out_grad_basic,
+                    out_data: out_data_basic,
+                } = args
+                {
+                    let in_grad = *<$inty>::from_basic_boxed(in_grad_basic);
+                    let in_data = <$inty>::ref_from_basic(in_data_basic);
+                    let out_grad = <$outty>::ref_from_basic(out_grad_basic);
+                    let out_data = <$outty>::ref_from_basic(out_data_basic);
+
+                    let in_grad_updated = ($backward)(in_grad, in_data, out_grad, out_data);
+
+                    BackwardOutput::Unary(Box::new(in_grad_updated))
+                } else {
+                    unreachable!()
+                }
+            }
+        }
+    };
+}
+
+unary_op!(ReLUOp<Tn: Tensor> {
+    in_type: Tn,
+    out_type: Tn,
+    numeric_type: Tn::T,
+    forward: |input: Tn| input.relu(),
+    backward: (|in_grad: Tn, _in_data: &Tn, out_grad: &Tn, out_data: &Tn| in_grad.map(|idx, in_grad| {
+        let diff = if out_data[idx.as_ref()] > Tn::T::zero() {
+            out_grad[idx.as_ref()]
+        } else {
+            Tn::T::zero()
+        };
+
+        in_grad + diff
+    })),
+});

@@ -1,7 +1,7 @@
 use crate::matrix::Matrix;
 use crate::numeric::Numeric;
 use crate::op::{
-    AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp, MatVecMulOp, Op, ReLU,
+    AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp, MatVecMulOp, Op, ReLUOp,
     ScalarMulOp, SumOp,
 };
 use crate::render::{Edge, Graphable, Node};
@@ -487,7 +487,7 @@ impl<Tn: Tensor> Var<Tn> {
     }
 
     pub fn relu(&self) -> Self {
-        let op = ReLU::<Tn>::new();
+        let op = ReLUOp::<Tn>::new();
 
         self.new_from_unary(op)
     }
