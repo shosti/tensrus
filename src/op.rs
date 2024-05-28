@@ -78,57 +78,6 @@ pub trait Op<T: Numeric>: Debug {
     fn backward(&self, args: BackwardArgs<T>) -> BackwardOutput<T>;
 }
 
-#[derive(Debug)]
-pub struct MatVecMulOp<T: Numeric, const M: usize, const N: usize> {
-    _markers: (PhantomData<T>,),
-}
-
-impl<T: Numeric, const M: usize, const N: usize> MatVecMulOp<T, M, N> {
-    pub fn new() -> Box<Self> {
-        Box::new(Self {
-            _markers: (PhantomData,),
-        })
-    }
-}
-
-impl<T: Numeric, const M: usize, const N: usize> Op<T> for MatVecMulOp<T, M, N> {
-    fn forward(&self, input: ForwardInput<T>) -> Box<dyn BasicTensor<T>> {
-        let (a_basic, b_basic) = input.binary();
-        let a = Matrix::<T, M, N>::ref_from_basic(a_basic);
-        let x = Vector::<T, N>::ref_from_basic(b_basic);
-        let out = a * x;
-        Box::new(out)
-    }
-
-    fn backward(&self, args: BackwardArgs<T>) -> BackwardOutput<T> {
-        if let BackwardArgs::Binary {
-            in_grad: (a_grad_basic, b_grad_basic),
-            in_data: (a_basic, b_basic),
-            out_grad: out_grad_basic,
-            ..
-        } = args
-        {
-            let a = Matrix::<T, M, N>::ref_from_basic(a_basic);
-            let a_grad = *Matrix::<T, M, N>::from_basic_boxed(a_grad_basic);
-
-            let x = Vector::<T, N>::ref_from_basic(b_basic);
-            let x_grad = *Vector::<T, N>::from_basic_boxed(b_grad_basic);
-
-            let out_grad = Vector::<T, M>::ref_from_basic(out_grad_basic);
-
-            let a_diff = out_grad.as_col_vector() * x.as_row_vector();
-            let x_diff = a.view().transpose() * out_grad;
-
-            let a_grad_updated = a_grad + &a_diff;
-            let x_grad_updated = x_grad + &x_diff;
-
-            BackwardOutput::Binary(Box::new(a_grad_updated), Box::new(x_grad_updated))
-        } else {
-            unreachable!()
-        }
-    }
-}
-
 macro_rules! unary_op {
     ($name:ident < $( $generic:ident : $subtype:ident ),* > {
         args: ( $( $arg:ident : $argty:ty ),* ),
@@ -388,5 +337,25 @@ binary_op!(MatMulOp<T: Numeric> {
         let a = args.other_in_data;
         let diff = a.view().transpose() * args.out_grad;
         b_grad + &diff
+    },
+});
+
+binary_op!(MatVecMulOp<T: Numeric> {
+    args: (),
+    const_params: (M: usize, N: usize),
+    in_type_1: Matrix<T, M, N>,
+    in_type_2: Vector<T, N>,
+    out_type: Vector<T, M>,
+    numeric_type: T,
+    forward: |a: &Matrix<T, M, N>, x: &Vector<T, N>, _| a * x,
+    backward_1: |a_grad: Matrix<T, M, N>, args: BinaryBackwardArgs<Matrix<T, M, N>, Vector<T, N>, Vector<T, M>, _>| {
+        let x = args.other_in_data;
+        let diff = args.out_grad.as_col_vector() * x.as_row_vector();
+        a_grad + &diff
+    },
+    backward_2: |x_grad: Vector<T, N>, args: BinaryBackwardArgs<Vector<T, N>, Matrix<T, M, N>, Vector<T, M>, _>| {
+        let a = args.other_in_data;
+        let diff = a.view().transpose() * args.out_grad;
+        x_grad + &diff
     },
 });
