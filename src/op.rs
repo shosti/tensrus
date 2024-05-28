@@ -79,56 +79,6 @@ pub trait Op<T: Numeric>: Debug {
 }
 
 #[derive(Debug)]
-pub struct MatMulOp<T: Numeric, const M: usize, const N: usize, const P: usize> {
-    _markers: (PhantomData<T>,),
-}
-
-impl<T: Numeric, const M: usize, const N: usize, const P: usize> MatMulOp<T, M, N, P> {
-    pub fn new() -> Box<Self> {
-        Box::new(Self {
-            _markers: (PhantomData,),
-        })
-    }
-}
-
-impl<T: Numeric, const M: usize, const N: usize, const P: usize> Op<T> for MatMulOp<T, M, N, P> {
-    fn forward(&self, input: ForwardInput<T>) -> Box<dyn BasicTensor<T>> {
-        let (a_basic, b_basic) = input.binary();
-        let a = Matrix::<T, M, N>::ref_from_basic(a_basic);
-        let b = Matrix::<T, N, P>::ref_from_basic(b_basic);
-        let out = a * b;
-        Box::new(out)
-    }
-    fn backward(&self, args: BackwardArgs<T>) -> BackwardOutput<T> {
-        if let BackwardArgs::Binary {
-            in_grad: (a_grad_basic, b_grad_basic),
-            in_data: (a_basic, b_basic),
-            out_grad: out_grad_basic,
-            ..
-        } = args
-        {
-            let a = Matrix::<T, M, N>::ref_from_basic(a_basic);
-            let a_grad = *Matrix::<T, M, N>::from_basic_boxed(a_grad_basic);
-
-            let b = Matrix::<T, N, P>::ref_from_basic(b_basic);
-            let b_grad = *Matrix::<T, N, P>::from_basic_boxed(b_grad_basic);
-
-            let out_grad = Matrix::<T, M, P>::ref_from_basic(out_grad_basic);
-
-            let a_diff = out_grad * b.view().transpose();
-            let b_diff = a.view().transpose() * out_grad;
-
-            let a_grad_updated = a_grad + &a_diff;
-            let b_grad_updated = b_grad + &b_diff;
-
-            BackwardOutput::Binary(Box::new(a_grad_updated), Box::new(b_grad_updated))
-        } else {
-            unreachable!()
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct MatVecMulOp<T: Numeric, const M: usize, const N: usize> {
     _markers: (PhantomData<T>,),
 }
@@ -243,6 +193,7 @@ macro_rules! unary_op {
 macro_rules! binary_op {
     ($name:ident < $( $generic:ident : $subtype:ident ),* > {
         args: ( $( $arg:ident : $argty:ty ),* ),
+        const_params: ( $( $constparam:ident : $constparamty:ty ),* ),
         in_type_1: $inty1:ty,
         in_type_2: $inty2:ty,
         out_type: $outty:ty,
@@ -253,12 +204,12 @@ macro_rules! binary_op {
     }) => {
 
         #[derive(Debug)]
-        pub struct $name< $( $generic : $subtype ),* > {
+        pub struct $name< $( $generic : $subtype ),* $(, const $constparam : $constparamty )* > {
             _markers: ( $( std::marker::PhantomData< $generic > ,)* ),
             args: ( $( $argty ,)* ),
         }
 
-        impl< $( $generic : $subtype ),* > $name< $( $generic ),* > {
+        impl< $( $generic : $subtype ),* $(, const $constparam : $constparamty )* > $name< $( $generic ),* $(, $constparam )* > {
             pub fn new( $( $arg : $argty ),* ) -> Box<Self> {
                 Box::new(Self {
                     _markers: ( $(PhantomData::< $generic >,)* ),
@@ -267,7 +218,7 @@ macro_rules! binary_op {
             }
         }
 
-        impl< $( $generic : $subtype ),* > Op< $numty > for $name< $( $generic ),* > {
+        impl< $( $generic : $subtype ),* $(, const $constparam : $constparamty )* > Op< $numty > for $name< $( $generic ),* $(, $constparam )* > {
             fn forward(&self, inputs: ForwardInput< $numty >) -> Box<dyn BasicTensor< $numty >> {
                 let (input_1_basic, input_2_basic) = inputs.binary();
                 let input_1 = <$inty1>::ref_from_basic(input_1_basic);
@@ -289,8 +240,8 @@ macro_rules! binary_op {
                     let in_grad_2 = *<$inty2>::from_basic_boxed(in_grad_basic_2);
                     let in_data_1 = <$inty1>::ref_from_basic(in_data_basic_1);
                     let in_data_2 = <$inty2>::ref_from_basic(in_data_basic_2);
-                    let out_grad = <$inty1>::ref_from_basic(out_grad_basic);
-                    let out_data = <$inty1>::ref_from_basic(out_data_basic);
+                    let out_grad = <$outty>::ref_from_basic(out_grad_basic);
+                    let out_data = <$outty>::ref_from_basic(out_data_basic);
 
                     let args_1 = BinaryBackwardArgs {
                         _self_in_data: in_data_1,
@@ -378,6 +329,7 @@ unary_op!(SumOp<Tn: Tensor> {
 
 binary_op!(AddOp<Tn: Tensor> {
     args: (),
+    const_params: (),
     in_type_1: Tn,
     in_type_2: Tn,
     out_type: Tn,
@@ -389,6 +341,7 @@ binary_op!(AddOp<Tn: Tensor> {
 
 binary_op!(ElemMulOp<Tn: Tensor> {
     args: (),
+    const_params: (),
     in_type_1: Tn,
     in_type_2: Tn,
     out_type: Tn,
@@ -402,6 +355,7 @@ binary_op!(ElemMulOp<Tn: Tensor> {
 
 binary_op!(ScalarMulOp<Tn: Tensor> {
     args: (),
+    const_params: (),
     in_type_1: Tn,
     in_type_2: Scalar<Tn::T>,
     out_type: Tn,
@@ -415,4 +369,24 @@ binary_op!(ScalarMulOp<Tn: Tensor> {
         }
         in_grad
     }),
+});
+
+binary_op!(MatMulOp<T: Numeric> {
+    args: (),
+    const_params: (M: usize, N: usize, P: usize),
+    in_type_1: Matrix<T, M, N>,
+    in_type_2: Matrix<T, N, P>,
+    out_type: Matrix<T, M, P>,
+    numeric_type: T,
+    forward: |a: &Matrix<T, M, N>, b: &Matrix<T, N, P>, _| a * b,
+    backward_1: |a_grad: Matrix<T, M, N>, args: BinaryBackwardArgs<Matrix<T, M, N>, Matrix<T, N, P>, Matrix<T, M, P>, _>| {
+        let b = args.other_in_data;
+        let diff = args.out_grad * b.view().transpose();
+        a_grad + &diff
+    },
+    backward_2: |b_grad: Matrix<T, N, P>, args: BinaryBackwardArgs<Matrix<T, N, P>, Matrix<T, M, N>, Matrix<T, M, P>, _>| {
+        let a = args.other_in_data;
+        let diff = a.view().transpose() * args.out_grad;
+        b_grad + &diff
+    },
 });
