@@ -8,7 +8,7 @@ use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
 use crate::tensor::{BasicTensor, Tensor};
 use crate::vector::Vector;
-use num::One;
+use num::{One, ToPrimitive};
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
@@ -447,9 +447,23 @@ impl<Tn: Tensor> From<&Var<Tn>> for VarRef<Tn::T> {
     }
 }
 
-impl<T: Numeric> From<T> for Var<Scalar<T>> {
-    fn from(v: T) -> Self {
+impl<T: Numeric, U: ToPrimitive + Copy> From<U> for Var<Scalar<T>> {
+    fn from(v: U) -> Self {
         Self::new(Scalar::from(v))
+    }
+}
+
+impl<T: Numeric, const N: usize, U: ToPrimitive> From<[U; N]> for Var<Vector<T, N>> {
+    fn from(vals: [U; N]) -> Self {
+        Self::new(Vector::from(vals))
+    }
+}
+
+impl<T: Numeric, const M: usize, const N: usize, U: ToPrimitive> From<[[U; N]; M]>
+    for Var<Matrix<T, M, N>>
+{
+    fn from(vals: [[U; N]; M]) -> Self {
+        Self::new(Matrix::from(vals))
     }
 }
 
