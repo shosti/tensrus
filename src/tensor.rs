@@ -46,6 +46,7 @@ pub trait Tensor:
     // Required methods
     fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self;
     fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self;
+    fn set(self, idx: &Self::Idx, f: impl Fn(Self::T) -> Self::T) -> Self;
 
     fn num_elems() -> usize;
     fn default_idx() -> Self::Idx;

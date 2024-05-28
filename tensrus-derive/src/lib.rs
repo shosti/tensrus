@@ -69,6 +69,16 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 }
             }
 
+            fn set(mut self, idx: &Self::Idx, f: impl Fn(Self::T) -> Self::T) -> Self {
+                let i = crate::storage::storage_idx(idx, #shape, self.layout).expect("out of bounds");
+                self.storage[i] = f(self.storage[i]);
+
+                Self {
+                    storage: self.storage,
+                    layout: self.layout,
+                }
+            }
+
             fn default_idx() -> Self::Idx {
                 [0; #rank]
             }
