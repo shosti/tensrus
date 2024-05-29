@@ -330,13 +330,11 @@ binary_op!(MatMulOp<T: Numeric> {
     forward: |a: &Matrix<T, M, N>, b: &Matrix<T, N, P>, _| a * b,
     backward_1: |a_grad: Matrix<T, M, N>, args: BinaryBackwardArgs<Matrix<T, M, N>, Matrix<T, N, P>, Matrix<T, M, P>, _>| {
         let b = args.other_in_data;
-        let diff = args.out_grad * b.view().transpose();
-        a_grad + &diff
+        args.out_grad.matmul_view_into(b.view().transpose(), a_grad)
     },
     backward_2: |b_grad: Matrix<T, N, P>, args: BinaryBackwardArgs<Matrix<T, N, P>, Matrix<T, M, N>, Matrix<T, M, P>, _>| {
         let a = args.other_in_data;
-        let diff = a.view().transpose() * args.out_grad;
-        b_grad + &diff
+        a.view().transpose().matmul_into(args.out_grad, b_grad)
     },
 });
 
@@ -350,12 +348,10 @@ binary_op!(MatVecMulOp<T: Numeric> {
     forward: |a: &Matrix<T, M, N>, x: &Vector<T, N>, _| a * x,
     backward_1: |a_grad: Matrix<T, M, N>, args: BinaryBackwardArgs<Matrix<T, M, N>, Vector<T, N>, Vector<T, M>, _>| {
         let x = args.other_in_data;
-        let diff = args.out_grad.as_col_vector() * x.as_row_vector();
-        a_grad + &diff
+        args.out_grad.as_col_vector().matmul_view_into(x.as_row_vector(), a_grad)
     },
     backward_2: |x_grad: Vector<T, N>, args: BinaryBackwardArgs<Vector<T, N>, Matrix<T, M, N>, Vector<T, M>, _>| {
         let a = args.other_in_data;
-        let diff = a.view().transpose() * args.out_grad;
-        x_grad + &diff
+        a.view().transpose().matvecmul_into(args.out_grad, x_grad)
     },
 });

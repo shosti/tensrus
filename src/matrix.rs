@@ -1,7 +1,3 @@
-use std::ops::Mul;
-
-use num::ToPrimitive;
-
 use crate::{
     generic_tensor::GenericTensor,
     numeric::Numeric,
@@ -11,6 +7,8 @@ use crate::{
     type_assert::{Assert, IsTrue},
     vector::Vector,
 };
+use num::ToPrimitive;
+use std::ops::Mul;
 
 pub const fn matrix_shape(m: usize, n: usize) -> Shape {
     [m, n, 0, 0, 0, 0]
@@ -53,6 +51,46 @@ impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N> {
             storage: self.storage,
             layout: self.layout.transpose(),
         }
+    }
+
+    /// Multiplies self * other and adds the result to out, returning out
+    pub fn matmul_into<const P: usize>(
+        &self,
+        other: &Matrix<T, N, P>,
+        out: Matrix<T, M, P>,
+    ) -> Matrix<T, M, P> {
+        matmul_with_initial_impl::<T, M, N, P>(
+            &self.storage,
+            self.layout,
+            &other.storage,
+            other.layout,
+            out,
+        )
+    }
+
+    /// Multiplies self * other and adds the result to out, returning out
+    pub fn matmul_view_into<const P: usize>(
+        &self,
+        other: MatrixView<T, N, P>,
+        out: Matrix<T, M, P>,
+    ) -> Matrix<T, M, P> {
+        matmul_with_initial_impl::<T, M, N, P>(
+            &self.storage,
+            self.layout,
+            other.storage,
+            other.layout,
+            out,
+        )
+    }
+
+    /// Multiplies self * x and adds the result to out, returning out
+    pub fn matvecmul_into(&self, x: &Vector<T, N>, out: Vector<T, M>) -> Vector<T, M> {
+        matvecmul_with_initial_impl::<T, M, N>(
+            &self.storage,
+            self.layout,
+            &x.storage,
+            out,
+        )
     }
 }
 
@@ -111,6 +149,44 @@ impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
             layout: self.layout,
         }
     }
+
+    pub fn matmul_into<const P: usize>(
+        self,
+        other: &Matrix<T, N, P>,
+        out: Matrix<T, M, P>,
+    ) -> Matrix<T, M, P> {
+        matmul_with_initial_impl::<T, M, N, P>(
+            self.storage,
+            self.layout,
+            &other.storage,
+            other.layout,
+            out,
+        )
+    }
+
+    pub fn matmul_view_into<const P: usize>(
+        self,
+        other: MatrixView<T, N, P>,
+        out: Matrix<T, M, P>,
+    ) -> Matrix<T, M, P> {
+        matmul_with_initial_impl::<T, M, N, P>(
+            self.storage,
+            self.layout,
+            other.storage,
+            other.layout,
+            out,
+        )
+    }
+
+    /// Multiplies self * x and adds the result to out, returning out
+    pub fn matvecmul_into(&self, x: &Vector<T, N>, out: Vector<T, M>) -> Vector<T, M> {
+        matvecmul_with_initial_impl::<T, M, N>(
+            self.storage,
+            self.layout,
+            &x.storage,
+            out,
+        )
+    }
 }
 
 impl<'a, T: Numeric, const M: usize, const N: usize> Clone for MatrixView<'a, T, M, N> {
@@ -128,10 +204,35 @@ fn matmul_impl<T: Numeric, const M: usize, const N: usize, const P: usize>(
     b_storage: &[T],
     b_transpose: Layout,
 ) -> Matrix<T, M, P> {
-    let mut out = Matrix::zeros();
-    // BLAS's output format is always column-major which is "transposed"
-    // from our perspective
-    out.layout = Layout::Transposed;
+    matmul_with_initial_impl::<T, M, N, P>(
+        a_storage,
+        a_transpose,
+        b_storage,
+        b_transpose,
+        Matrix::zeros(),
+    )
+}
+
+fn matmul_with_initial_impl<T: Numeric, const M: usize, const N: usize, const P: usize>(
+    a_storage: &[T],
+    a_transpose: Layout,
+    b_storage: &[T],
+    b_transpose: Layout,
+    mut out: Matrix<T, M, P>,
+) -> Matrix<T, M, P> {
+    // We need the out format to be column-major; if it isn't, take (B^T * A*T)^T
+    if !out.layout.is_transposed() {
+        let out_t = matmul_with_initial_impl::<T, P, N, M>(
+            b_storage,
+            b_transpose.transpose(),
+            a_storage,
+            a_transpose.transpose(),
+            out.transpose(),
+        );
+        return out_t.transpose();
+    }
+
+    debug_assert!(out.layout.is_transposed());
 
     unsafe {
         T::gemm(
@@ -159,9 +260,19 @@ fn matvecmul_impl<T: Numeric, const M: usize, const N: usize>(
     a_transpose: Layout,
     x_storage: &[T],
 ) -> Vector<T, M> {
+    matvecmul_with_initial_impl::<T, M, N>(a_storage, a_transpose, x_storage, Vector::zeros())
+}
+
+fn matvecmul_with_initial_impl<T: Numeric, const M: usize, const N: usize>(
+    a_storage: &[T],
+    a_transpose: Layout,
+    x_storage: &[T],
+    mut out: Vector<T, M>,
+) -> Vector<T, M> {
+    debug_assert!(!out.layout.is_transposed());
+
     // BLAS always uses column-major format, so if we're "transposed" we're
     // already in BLAS format, otherwise we have to transpose.
-    let mut out = Vector::zeros();
     let trans = a_transpose.to_blas();
     let m = if a_transpose.is_transposed() { M } else { N } as i32;
     let n = if a_transpose.is_transposed() { N } else { M } as i32;
