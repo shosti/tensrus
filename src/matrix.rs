@@ -14,7 +14,7 @@ pub const fn matrix_shape(m: usize, n: usize) -> Shape {
     [m, n, 0, 0, 0, 0]
 }
 
-#[derive(Tensor, Debug, Clone)]
+#[derive(Tensor, Clone)]
 #[tensor_rank = 2]
 #[tensor_shape = "matrix_shape(M, N)"]
 pub struct Matrix<T: Numeric, const M: usize, const N: usize> {
@@ -85,12 +85,7 @@ impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N> {
 
     /// Multiplies self * x and adds the result to out, returning out
     pub fn matvecmul_into(&self, x: &Vector<T, N>, out: Vector<T, M>) -> Vector<T, M> {
-        matvecmul_with_initial_impl::<T, M, N>(
-            &self.storage,
-            self.layout,
-            &x.storage,
-            out,
-        )
+        matvecmul_with_initial_impl::<T, M, N>(&self.storage, self.layout, &x.storage, out)
     }
 }
 
@@ -180,12 +175,7 @@ impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
 
     /// Multiplies self * x and adds the result to out, returning out
     pub fn matvecmul_into(&self, x: &Vector<T, N>, out: Vector<T, M>) -> Vector<T, M> {
-        matvecmul_with_initial_impl::<T, M, N>(
-            self.storage,
-            self.layout,
-            &x.storage,
-            out,
-        )
+        matvecmul_with_initial_impl::<T, M, N>(self.storage, self.layout, &x.storage, out)
     }
 }
 
@@ -364,6 +354,22 @@ impl<T: Numeric, const M: usize, const N: usize> From<Matrix<T, M, N>>
             storage: t.storage,
             layout: t.layout,
         }
+    }
+}
+
+impl<T: Numeric, const M: usize, const N: usize> std::fmt::Debug for Matrix<T, M, N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "Matrix<{}, {}> [\n", M, N)?;
+        for i in 0..M {
+            write!(f, "\t")?;
+            for j in 0..N {
+                write!(f, "{},\t", self[&[i, j]])?;
+            }
+            write!(f, "\n")?;
+        }
+        write!(f, "]\n")?;
+
+        Ok(())
     }
 }
 
