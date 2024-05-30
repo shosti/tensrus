@@ -1,27 +1,20 @@
 use rand::Rng;
 use rand_distr::Distribution;
 
-use crate::{numeric::Numeric, vector::Vector};
+use crate::{numeric::Numeric, vector::NormalizedVector};
 
 #[derive(Debug)]
-pub struct Multinomial<T: Numeric, const N: usize> {
-    v: Vector<T, N>,
+pub struct Multinomial<'a, T: Numeric, const N: usize> {
+    v: &'a NormalizedVector<T, N>,
 }
 
-impl<T: Numeric, const N: usize> From<Vector<T, N>> for Multinomial<T, N> {
-    fn from(v: Vector<T, N>) -> Self {
-        Self { v: v.normalize() }
+impl<'a, T: Numeric, const N: usize> From<&'a NormalizedVector<T, N>> for Multinomial<'a, T, N> {
+    fn from(v: &'a NormalizedVector<T, N>) -> Self {
+        Self { v }
     }
 }
 
-impl<T: Numeric, const N: usize> From<[T; N]> for Multinomial<T, N> {
-    fn from(vals: [T; N]) -> Self {
-        let v: Vector<T, N> = vals.into();
-        Self { v: v.normalize() }
-    }
-}
-
-impl<T: Numeric, const N: usize> Distribution<usize> for Multinomial<T, N> {
+impl<'a, T: Numeric, const N: usize> Distribution<usize> for Multinomial<'a, T, N> {
     fn sample<R>(&self, rng: &mut R) -> usize
     where
         R: Rng + ?Sized,
@@ -44,28 +37,33 @@ impl<T: Numeric, const N: usize> Distribution<usize> for Multinomial<T, N> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::vector::Vector;
     use rand::thread_rng;
 
     #[test]
     fn test_sample() {
         let mut rng = thread_rng();
 
-        let all_zeros: Multinomial<f64, _> = Vector::from([1.0, 0.0, 0.0]).into();
+        let all_zeros_v: NormalizedVector<f64, _> = Vector::from([1.0, 0.0, 0.0]).normalize();
+        let all_zeros = Multinomial::from(&all_zeros_v);
         for _ in 0..10 {
             assert_eq!(all_zeros.sample(&mut rng), 0);
         }
 
-        let all_ones: Multinomial<f64, _> = Vector::from([0.0, 1.0, 0.0]).into();
+        let all_ones_v: NormalizedVector<f64, _> = Vector::from([0.0, 1.0, 0.0]).normalize();
+        let all_ones = Multinomial::from(&all_ones_v);
         for _ in 0..10 {
             assert_eq!(all_ones.sample(&mut rng), 1);
         }
 
-        let all_twos: Multinomial<f64, _> = Vector::from([0.0, 0.0, 1.0]).into();
+        let all_twos_v: NormalizedVector<f64, _> = Vector::from([0.0, 0.0, 1.0]).normalize();
+        let all_twos = Multinomial::from(&all_twos_v);
         for _ in 0..10 {
             assert_eq!(all_twos.sample(&mut rng), 2);
         }
 
-        let one_or_two: Multinomial<f64, _> = Vector::from([0.0, 1.0, 1.0]).into();
+        let one_or_two_v: NormalizedVector<f64, _> = Vector::from([0.0, 1.0, 1.0]).normalize();
+        let one_or_two = Multinomial::from(&one_or_two_v);
         for _ in 0..10 {
             let s = one_or_two.sample(&mut rng);
             assert!(s == 1 || s == 2);

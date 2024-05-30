@@ -1,5 +1,10 @@
 use crate::{
-    distribution::Multinomial, generic_tensor::GenericTensor, matrix::MatrixView, numeric::Numeric, shape::Shape, storage::{Layout, Storage}, tensor::Tensor
+    generic_tensor::GenericTensor,
+    matrix::MatrixView,
+    numeric::Numeric,
+    shape::Shape,
+    storage::{Layout, Storage},
+    tensor::Tensor,
 };
 use num::ToPrimitive;
 
@@ -24,17 +29,20 @@ impl<T: Numeric, const N: usize> Vector<T, N> {
         unsafe { T::dot(N as i32, &self.storage, 1, &other.storage, 1) }
     }
 
-    // Normalizes vector so that entries sum to 0
-    pub fn normalize(self) -> Self {
+    pub fn normalize(self) -> NormalizedVector<T, N> {
         let s = self.sum().val();
-        if s == T::zero() {
-            return self.map(|_, _| T::one() / T::from(N).unwrap());
+        if s == T::one() {
+            NormalizedVector { v: self }
+        } else if s == T::zero() {
+            let val = T::one() / T::from(N).unwrap();
+            NormalizedVector {
+                v: self.map(|_, _| val),
+            }
+        } else {
+            NormalizedVector {
+                v: self.map(|_, n| n / s),
+            }
         }
-        self.map(|_, n| n / s)
-    }
-
-    pub fn to_multinomial(self) -> Multinomial<T, N> {
-        self.into()
     }
 
     pub fn as_col_vector(&self) -> ColumnVector<T, N> {
@@ -79,6 +87,31 @@ impl<T: Numeric, const N: usize> From<Vector<T, N>> for GenericTensor<T, 1, { ve
     }
 }
 
+#[derive(Debug)]
+pub struct NormalizedVector<T: Numeric, const N: usize> {
+    v: Vector<T, N>,
+}
+
+impl<T: Numeric, const N: usize> NormalizedVector<T, N> {
+    pub fn as_vector(&self) -> &Vector<T, N> {
+        &self.v
+    }
+}
+
+impl<T: Numeric, const N: usize> std::ops::Index<&[usize; 1]> for NormalizedVector<T, N> {
+    type Output = T;
+
+    fn index(&self, index: &[usize; 1]) -> &Self::Output {
+        self.v.index(index)
+    }
+}
+
+impl<T: Numeric, const N: usize> From<NormalizedVector<T, N>> for Vector<T, N> {
+    fn from(v: NormalizedVector<T, N>) -> Self {
+        v.v
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,7 +148,7 @@ mod tests {
                 let x_n = x.normalize();
 
                 const TOLERANCE: f64 = 0.00001;
-                assert!((x_n.sum().val() - 1.0).abs() < TOLERANCE);
+                assert!((x_n.as_vector().sum().val() - 1.0).abs() < TOLERANCE);
             }
         }
     });
