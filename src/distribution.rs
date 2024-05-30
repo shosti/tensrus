@@ -30,7 +30,7 @@ impl<'a, T: Numeric, const N: usize> Distribution<usize> for Multinomial<'a, T, 
             so_far += cur;
         }
 
-        return N - 1;
+        N - 1
     }
 }
 

@@ -359,15 +359,15 @@ impl<T: Numeric, const M: usize, const N: usize> From<Matrix<T, M, N>>
 
 impl<T: Numeric, const M: usize, const N: usize> std::fmt::Debug for Matrix<T, M, N> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "Matrix<{}, {}> [\n", M, N)?;
+        writeln!(f, "Matrix<{}, {}> [", M, N)?;
         for i in 0..M {
             write!(f, "\t")?;
             for j in 0..N {
                 write!(f, "{},\t", self[&[i, j]])?;
             }
-            write!(f, "\n")?;
+            writeln!(f)?;
         }
-        write!(f, "]\n")?;
+        writeln!(f, "]")?;
 
         Ok(())
     }
