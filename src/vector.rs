@@ -1,10 +1,5 @@
 use crate::{
-    generic_tensor::GenericTensor,
-    matrix::MatrixView,
-    numeric::Numeric,
-    shape::Shape,
-    storage::{Layout, Storage},
-    tensor::Tensor,
+    distribution::Multinomial, generic_tensor::GenericTensor, matrix::MatrixView, numeric::Numeric, shape::Shape, storage::{Layout, Storage}, tensor::Tensor
 };
 use num::ToPrimitive;
 
@@ -27,6 +22,19 @@ type ColumnVector<'a, T, const N: usize> = MatrixView<'a, T, N, 1>;
 impl<T: Numeric, const N: usize> Vector<T, N> {
     pub fn dot(&self, other: &Self) -> T {
         unsafe { T::dot(N as i32, &self.storage, 1, &other.storage, 1) }
+    }
+
+    // Normalizes vector so that entries sum to 0
+    pub fn normalize(self) -> Self {
+        let s = self.sum().val();
+        if s == T::zero() {
+            return self.map(|_, _| T::one() / T::from(N).unwrap());
+        }
+        self.map(|_, n| n / s)
+    }
+
+    pub fn to_multinomial(self) -> Multinomial<T, N> {
+        self.into()
     }
 
     pub fn as_col_vector(&self) -> ColumnVector<T, N> {
@@ -74,6 +82,8 @@ impl<T: Numeric, const N: usize> From<Vector<T, N>> for GenericTensor<T, 1, { ve
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
+    use seq_macro::seq;
 
     #[test]
     fn test_basics() {
@@ -96,4 +106,17 @@ mod tests {
 
         assert_eq!(a.dot(&b), 32.0);
     }
+
+    seq!(N in 1..10 {
+        proptest! {
+            #[test]
+            fn test_normalize_~N(v in prop::collection::vec(any::<f64>(), N)) {
+                let x: Vector<f64, N> = v.into_iter().collect();
+                let x_n = x.normalize();
+
+                const TOLERANCE: f64 = 0.00001;
+                assert!((x_n.sum().val() - 1.0).abs() < TOLERANCE);
+            }
+        }
+    });
 }
