@@ -14,6 +14,13 @@ impl<T: Numeric, const N: usize> From<Vector<T, N>> for Multinomial<T, N> {
     }
 }
 
+impl<T: Numeric, const N: usize> From<[T; N]> for Multinomial<T, N> {
+    fn from(vals: [T; N]) -> Self {
+        let v: Vector<T, N> = vals.into();
+        Self { v: v.normalize() }
+    }
+}
+
 impl<T: Numeric, const N: usize> Distribution<usize> for Multinomial<T, N> {
     fn sample<R>(&self, rng: &mut R) -> usize
     where

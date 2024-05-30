@@ -1,3 +1,6 @@
+#![feature(generic_arg_infer)]
+use rand::distributions::Distribution;
+use rand::SeedableRng;
 use std::io::BufRead;
 use tensrus::matrix::Matrix;
 use tensrus::tensor::Tensor;
@@ -7,7 +10,22 @@ const BOUNDARY: char = '.';
 fn main() {
     let names = read_names();
     let bigrams = get_bigrams(&names);
-    println!("BIGRAMS: {:#?}", bigrams);
+
+    let mut rng = rand::rngs::StdRng::seed_from_u64(42);
+    let mut idx = 0;
+    for _ in 0..20 {
+        loop {
+            let d = bigrams.row(idx).unwrap().to_multinomial();
+            idx = d.sample(&mut rng);
+            if idx == 0 {
+                print!("\n");
+                break;
+            }
+
+            let c = itos(idx);
+            print!("{}", c);
+        }
+    }
 }
 
 fn stoi(c: char) -> usize {
@@ -19,6 +37,14 @@ fn stoi(c: char) -> usize {
             panic!()
         }
         i
+    }
+}
+
+fn itos(i: usize) -> char {
+    if i == 0 {
+        BOUNDARY
+    } else {
+        (i as u8 - 1 + ('a' as u8)) as char
     }
 }
 
