@@ -1,33 +1,29 @@
 #![feature(generic_arg_infer)]
 use rand::distributions::Distribution;
-use rand::SeedableRng;
 use std::io::BufRead;
 use tensrus::matrix::Matrix;
 use tensrus::tensor::Tensor;
-use tensrus::distribution::Multinomial;
 
 const BOUNDARY: char = '.';
 
 fn main() {
     let names = read_names();
-    let bigrams = get_bigrams(&names).normalize_rows();
-
-    let mut rng = rand::rngs::StdRng::seed_from_u64(42);
-    let mut idx = 0;
-    for _ in 0..20 {
-        loop {
-            let v = bigrams.row(idx).unwrap().normalize();
-            let d = Multinomial::from(&v);
-            idx = d.sample(&mut rng);
-            if idx == 0 {
-                print!("\n");
-                break;
-            }
-
-            let c = itos(idx);
-            print!("{}", c);
+    let prob_matrix = get_bigrams(&names).normalize_rows();
+    let mut log_likelihood = 0.0;
+    let mut n = 0;
+    for name in &names {
+        let mut cur = BOUNDARY;
+        let mut chars = name.chars().chain(vec![BOUNDARY].into_iter()).peekable();
+        while let Some(next) = chars.peek() {
+            let prob = prob_matrix[&[stoi(cur), stoi(*next)]];
+            let logprob = prob.ln();
+            log_likelihood += logprob;
+            n += 1;
+            cur = chars.next().unwrap();
         }
     }
+    let nll = -log_likelihood;
+    println!("{:.4}", nll / n as f32);
 }
 
 fn stoi(c: char) -> usize {
