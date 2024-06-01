@@ -251,6 +251,18 @@ unary_op!(ReLUOp<Tn: Tensor> {
                })),
 });
 
+unary_op!(ElemLnOp<Tn: Tensor> {
+    args: (),
+    in_type: Tn,
+    out_type: Tn,
+    numeric_type: Tn::T,
+    forward: |input: &Tn, _args: ()| input.clone().map(|_, x| x.ln()),
+    backward: (|in_grad: Tn, args: UnaryBackwardArgs<Tn, Tn, _>|
+               in_grad.map(|idx, in_grad| {
+                   in_grad + (Tn::T::one() / args.in_data[idx])
+               })),
+});
+
 unary_op!(ElemPowOp<Tn: Tensor> {
     args: (n: Tn::T),
     in_type: Tn,

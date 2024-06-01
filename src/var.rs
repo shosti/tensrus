@@ -1,8 +1,8 @@
 use crate::matrix::Matrix;
 use crate::numeric::Numeric;
 use crate::op::{
-    AddOp, BackwardArgs, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp, MatVecMulOp, Op, ReLUOp,
-    ScalarMulOp, SumOp,
+    AddOp, BackwardArgs, ElemLnOp, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp, MatVecMulOp, Op,
+    ReLUOp, ScalarMulOp, SumOp,
 };
 use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
@@ -512,6 +512,12 @@ impl<Tn: Tensor> Var<Tn> {
         self.new_from_unary(op)
     }
 
+    pub fn elem_ln(&self) -> Self {
+        let op = ElemLnOp::<Tn>::new();
+
+        self.new_from_unary(op)
+    }
+
     pub fn elem_mul(&self, other: Var<Tn>) -> Self {
         if self.id() == other.id() {
             return self.elem_pow(Tn::T::two());
@@ -683,5 +689,19 @@ mod tests {
             Matrix::<f64, _, _>::from([[7.0, 8.0], [7.0, 8.0], [7.0, 8.0]])
         );
         assert_eq!(*x.grad().unwrap(), Vector::<f64, _>::from([9.0, 12.0]));
+    }
+
+    #[test]
+    fn test_log() {
+        let x: Var<Vector<f64, _>> = [1, 2, 3, 4, 5].into();
+        let y = x.elem_ln().sum_elems();
+        y.backward().unwrap();
+
+        const TOLERANCE: f64 = 1e-3;
+        assert!((y.data().val() - 4.7875).abs() < TOLERANCE);
+        assert_eq!(
+            *x.grad().unwrap(),
+            Vector::<f64, _>::from([1.0, 1.0 / 2.0, 1.0 / 3.0, 1.0 / 4.0, 1.0 / 5.0])
+        );
     }
 }
