@@ -36,6 +36,14 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             type T = T;
             type Idx = [usize; #rank];
 
+            fn rank() -> usize {
+                #rank
+            }
+
+            fn shape() -> crate::shape::Shape {
+                #shape
+            }
+
             fn num_elems() -> usize {
                 crate::storage::num_elems(#rank, #shape)
             }

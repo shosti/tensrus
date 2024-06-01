@@ -11,6 +11,7 @@ use rand_distr::{Distribution, StandardNormal};
 
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
+use crate::shape::Shape;
 
 pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {
     fn as_any(&self) -> &dyn Any;
@@ -44,6 +45,9 @@ pub trait Tensor:
     type Idx: AsRef<[usize]> + Copy + 'static;
 
     // Required methods
+    fn rank() -> usize;
+    fn shape() -> Shape;
+
     fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self;
     fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self;
     fn set(self, idx: &Self::Idx, f: impl Fn(Self::T) -> Self::T) -> Self;

@@ -4,18 +4,20 @@ use rand::SeedableRng;
 use std::io::BufRead;
 use tensrus::matrix::Matrix;
 use tensrus::tensor::Tensor;
+use tensrus::distribution::Multinomial;
 
 const BOUNDARY: char = '.';
 
 fn main() {
     let names = read_names();
-    let bigrams = get_bigrams(&names);
+    let bigrams = get_bigrams(&names).normalize_rows();
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(42);
     let mut idx = 0;
     for _ in 0..20 {
         loop {
-            let d = bigrams.row(idx).unwrap().to_multinomial();
+            let v = bigrams.row(idx).unwrap().normalize();
+            let d = Multinomial::from(&v);
             idx = d.sample(&mut rng);
             if idx == 0 {
                 print!("\n");

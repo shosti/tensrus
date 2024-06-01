@@ -2,7 +2,7 @@ use crate::{
     generic_tensor::GenericTensor,
     numeric::Numeric,
     shape::Shape,
-    storage::{num_elems, IndexError, Layout, Storage},
+    storage::{num_elems, storage_idx, IndexError, Layout, Storage},
     tensor::Tensor,
     type_assert::{Assert, IsTrue},
     vector::Vector,
@@ -37,6 +37,22 @@ impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N> {
         }
 
         Ok(Vector::from_fn(|[i]| self[&[*i, j]]))
+    }
+
+    // This isn't terribly efficient, maybe think of a better way at some point?
+    pub fn map_rows(mut self, f: impl Fn(Vector<T, N>) -> Vector<T, N>) -> Self {
+        for i in 0..M {
+            let v = f(Vector::from_fn(|[j]| self[&[i, *j]]));
+            for j in 0..N {
+                let idx = storage_idx(&[i, j], Self::shape(), self.layout).unwrap();
+                self.storage[idx] = v[&[j]];
+            }
+        }
+        self
+    }
+
+    pub fn normalize_rows(self) -> Self {
+        self.map_rows(|v| v.normalize().into())
     }
 
     pub fn view(&self) -> MatrixView<T, M, N> {
