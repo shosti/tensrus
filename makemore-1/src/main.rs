@@ -1,5 +1,4 @@
 #![feature(generic_arg_infer)]
-use rand::distributions::Distribution;
 use std::io::BufRead;
 use tensrus::matrix::Matrix;
 use tensrus::tensor::Tensor;
@@ -8,10 +7,10 @@ const BOUNDARY: char = '.';
 
 fn main() {
     let names = read_names();
-    let prob_matrix = get_bigrams(&names).normalize_rows();
+    let prob_matrix = get_bigrams(&names).map(|_, n| n + 1.0).normalize_rows();
     let mut log_likelihood = 0.0;
     let mut n = 0;
-    for name in &names {
+    for name in &["andrejq".to_string()] {
         let mut cur = BOUNDARY;
         let mut chars = name.chars().chain(vec![BOUNDARY].into_iter()).peekable();
         while let Some(next) = chars.peek() {
@@ -38,13 +37,13 @@ fn stoi(c: char) -> usize {
     }
 }
 
-fn itos(i: usize) -> char {
-    if i == 0 {
-        BOUNDARY
-    } else {
-        (i as u8 - 1 + ('a' as u8)) as char
-    }
-}
+// fn itos(i: usize) -> char {
+//     if i == 0 {
+//         BOUNDARY
+//     } else {
+//         (i as u8 - 1 + ('a' as u8)) as char
+//     }
+// }
 
 fn read_names() -> Vec<String> {
     let file = std::fs::File::open("./data/names.txt").unwrap();
