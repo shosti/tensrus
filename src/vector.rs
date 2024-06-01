@@ -6,7 +6,7 @@ use crate::{
     storage::{Layout, Storage},
     tensor::Tensor,
 };
-use num::ToPrimitive;
+use num::{Integer, ToPrimitive};
 
 pub const fn vector_shape(n: usize) -> Shape {
     [n, 0, 0, 0, 0, 0]
@@ -24,7 +24,30 @@ pub struct Vector<T: Numeric, const N: usize> {
 type RowVector<'a, T, const N: usize> = MatrixView<'a, T, 1, N>;
 type ColumnVector<'a, T, const N: usize> = MatrixView<'a, T, N, 1>;
 
+#[derive(Debug, PartialEq)]
+pub enum EncodingError {
+    InvalidOneHotInput,
+}
+
 impl<T: Numeric, const N: usize> Vector<T, N> {
+    pub fn one_hot<U>(n: U) -> Result<Self, EncodingError>
+    where
+        U: Integer + ToPrimitive,
+    {
+        let i = n.to_usize().ok_or(EncodingError::InvalidOneHotInput)?;
+        if i >= N {
+            return Err(EncodingError::InvalidOneHotInput);
+        }
+
+        Ok(Self::from_fn(|idx| {
+            if idx[0] == i {
+                T::one()
+            } else {
+                T::zero()
+            }
+        }))
+    }
+
     pub fn dot(&self, other: &Self) -> T {
         unsafe { T::dot(N as i32, &self.storage, 1, &other.storage, 1) }
     }
@@ -138,6 +161,22 @@ mod tests {
         let b: Vector<f64, _> = Vector::from([4, 5, 6]);
 
         assert_eq!(a.dot(&b), 32.0);
+    }
+
+    #[test]
+    fn test_one_hot() {
+        assert_eq!(
+            Vector::<f64, 5>::one_hot(3).unwrap(),
+            Vector::<f64, _>::from([0, 0, 0, 1, 0]),
+        );
+        assert_eq!(
+            Vector::<f64, 5>::one_hot(-3),
+            Err(EncodingError::InvalidOneHotInput),
+        );
+        assert_eq!(
+            Vector::<f64, 5>::one_hot(7),
+            Err(EncodingError::InvalidOneHotInput),
+        );
     }
 
     seq!(N in 1..10 {
