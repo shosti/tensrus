@@ -149,6 +149,7 @@ impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<&'a Mat
     }
 }
 
+#[derive(Debug)]
 pub struct MatrixView<'a, T: Numeric, const M: usize, const N: usize> {
     pub(crate) storage: &'a [T],
     pub layout: Layout,

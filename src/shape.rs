@@ -45,3 +45,35 @@ pub const fn subtensor_shape(r: usize, s: Shape) -> Shape {
 
     out
 }
+
+// Returns the tensor shape when reducing along dimension `dim`
+pub const fn reduced_shape(r: usize, s: Shape, dim: usize) -> Shape {
+    assert!(
+        dim < r,
+        "cannot reduce along a dimension greater than the original rank"
+    );
+    let mut out = [0; MAX_DIMS];
+    let mut i = 0;
+    while i < r {
+        if i == dim {
+            out[i] = 1;
+        } else {
+            out[i] = s[i];
+        }
+        i += 1;
+    }
+
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_reduced_shape() {
+        assert_eq!(reduced_shape(3, [2, 3, 4, 0, 0, 0], 0), [1, 3, 4, 0, 0, 0]);
+        assert_eq!(reduced_shape(3, [2, 3, 4, 0, 0, 0], 1), [2, 1, 4, 0, 0, 0]);
+        assert_eq!(reduced_shape(3, [2, 3, 4, 0, 0, 0], 2), [2, 3, 1, 0, 0, 0]);
+    }
+}

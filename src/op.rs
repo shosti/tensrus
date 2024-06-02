@@ -78,6 +78,31 @@ pub trait Op<T: Numeric>: Debug {
     fn backward(&self, args: BackwardArgs<T>) -> BackwardOutput<T>;
 }
 
+// #[derive(Debug)]
+// pub struct ReduceOp<Src, Dest, ROp>
+// where
+//     Src: Tensor,
+//     Dest: BroadcastTo<Src>,
+//     ROp: Op<Src::T>,
+// {
+//     _markers: PhantomData<(Src, Dest)>,
+//     op: ROp,
+// }
+
+// impl<Src, Dest, ROp> Op<Src::T> for ReduceOp<Src, Dest, ROp>
+// where
+//     Src: Tensor,
+//     Dest: BroadcastTo<Src>,
+//     ROp: Op<Src::T>,
+// {
+//     fn forward(&self, input: ForwardInput<Src::T>) -> Box<dyn BasicTensor<Src::T>> {
+//         todo!()
+//     }
+//     fn backward(&self, args: BackwardArgs<Src::T>) -> BackwardOutput<Src::T> {
+//         todo!()
+//     }
+// }
+
 macro_rules! unary_op {
     ($name:ident < $( $generic:ident : $subtype:ident ),* > {
         args: ( $( $arg:ident : $argty:ty ),* ),

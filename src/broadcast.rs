@@ -42,9 +42,29 @@ pub const fn broadcast_normalize(s: Shape, r_src: usize, r_dest: usize) -> Shape
     ret
 }
 
-pub trait BroadcastTo<Tn: Tensor> {
+pub trait BroadcastTo<Tn: Tensor>: std::fmt::Debug {
     fn broadcast(self) -> Tn;
 }
+
+// pub const fn reduce_shape(r: usize, s: Shape, dim: usize) -> Shape {
+//     [0; 6]
+// }
+
+// pub trait ReduceTo<
+//     const R: usize,
+//     const S: Shape,
+//     Dest: Tensor,
+// >: Tensor
+// {
+//     fn reduce<const DIM: usize>(
+//         self,
+//         _f: impl Fn(
+//             GenericTensor<Self::T, { R - 1 }, { reduce_shape(R, S, DIM) }>,
+//         ) -> GenericTensor<Self::T, { R - 1 }, { reduce_shape(R, S, DIM) }>,
+//     ) -> Dest {
+//         todo!()
+//     }
+// }
 
 #[cfg(test)]
 pub mod tests {
