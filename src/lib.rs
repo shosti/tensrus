@@ -8,6 +8,8 @@
 #[macro_use]
 extern crate tensrus_derive;
 
+pub mod broadcast;
+pub mod distribution;
 pub mod generic_tensor;
 pub mod nn;
 pub mod numeric;
@@ -18,8 +20,6 @@ pub mod shape;
 mod type_assert;
 pub mod var;
 pub mod vector;
-pub mod distribution;
-pub mod broadcast;
 
 pub mod matrix;
 pub mod tensor;

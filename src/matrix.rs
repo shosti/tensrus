@@ -120,6 +120,17 @@ where
     }
 }
 
+impl<'a, T: Numeric, const M: usize, const N: usize> From<MatrixView<'a, T, M, N>>
+    for Matrix<T, M, N>
+{
+    fn from(src: MatrixView<'a, T, M, N>) -> Self {
+        Self {
+            storage: src.storage.into(),
+            layout: src.layout,
+        }
+    }
+}
+
 impl<T: Numeric, const M: usize, const N: usize, F: ToPrimitive> From<[F; M * N]>
     for Matrix<T, M, N>
 {

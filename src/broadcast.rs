@@ -1,14 +1,16 @@
-use crate::{shape::{self, Shape}, tensor::Tensor};
+use crate::{
+    shape::{self, Shape},
+    tensor::Tensor,
+};
 
-pub const fn broadcast_compat(r1: usize, s1: Shape, r2: usize, s2: Shape) -> bool {
-    let r_new = max(r1, r2);
+pub const fn broadcast_compat(r_src: usize, s_src: Shape, r_dest: usize, s_dest: Shape) -> bool {
+    assert!(r_dest >= r_src, "cannot broadcast to lower dimension");
 
-    let s1_n = broadcast_normalize(s1, r1, r_new);
-    let s2_n = broadcast_normalize(s2, r2, r_new);
+    let s_src_n = broadcast_normalize(s_src, r_src, r_dest);
 
     let mut i = 0;
-    while i < r_new {
-        if s1_n[i] != 1 && s2_n[i] != 1 && s1_n[i] != s2_n[i] {
+    while i < r_dest {
+        if s_src_n[i] != 1 && s_src_n[i] != s_dest[i] {
             return false;
         }
         i += 1;
@@ -17,22 +19,14 @@ pub const fn broadcast_compat(r1: usize, s1: Shape, r2: usize, s2: Shape) -> boo
     true
 }
 
-const fn max(a: usize, b: usize) -> usize {
-    if a >= b {
-        a
-    } else {
-        b
-    }
-}
-
-pub const fn broadcast_normalize(s: Shape, r_orig: usize, r_new: usize) -> Shape {
-    assert!(r_new >= r_orig, "cannot broadcast to a lower dimension");
+pub const fn broadcast_normalize(s: Shape, r_src: usize, r_dest: usize) -> Shape {
+    assert!(r_dest >= r_src, "cannot broadcast to a lower dimension");
     assert!(
-        r_orig <= shape::MAX_DIMS && r_new <= shape::MAX_DIMS,
+        r_src <= shape::MAX_DIMS && r_dest <= shape::MAX_DIMS,
         "cannot broadcast to a dimension higher than the max"
     );
 
-    let r_diff = r_new - r_orig;
+    let r_diff = r_dest - r_src;
     let mut ret = [0; shape::MAX_DIMS];
 
     let mut i = 0;
@@ -40,7 +34,7 @@ pub const fn broadcast_normalize(s: Shape, r_orig: usize, r_new: usize) -> Shape
         ret[i] = 1;
         i += 1;
     }
-    while i < r_new {
+    while i < r_dest {
         ret[i] = s[i - r_diff];
         i += 1;
     }
@@ -54,8 +48,6 @@ pub trait BroadcastTo<Tn: Tensor> {
 
 #[cfg(test)]
 pub mod tests {
-    use proptest::prelude::*;
-
     use super::*;
 
     #[test]
@@ -76,24 +68,10 @@ pub mod tests {
         let s = [1000, 256, 256, 256, 0, 0];
         let r = 4;
 
-        assert!(broadcast_compat(r, s, 4, [1000, 256, 256, 256, 0, 0]));
-        assert!(broadcast_compat(r, s, 4, [1000, 1, 256, 256, 0, 0]));
-        assert!(broadcast_compat(r, s, 2, [256, 1, 0, 0, 0, 0]));
-        assert!(!broadcast_compat(r, s, 3, [1000, 256, 256, 0, 0, 0]));
-    }
-
-    proptest! {
-        #[test]
-        fn test_broadcast_compat_commutative(
-            r1 in 0..=6,
-            r2 in 0..=6,
-            s1 in prop::array::uniform6(any::<usize>()),
-            s2 in prop::array::uniform6(any::<usize>())
-        ) {
-            assert_eq!(
-                broadcast_compat(r1 as usize, s1, r2 as usize, s2),
-                broadcast_compat(r2 as usize, s2, r1 as usize, s1),
-            );
-        }
+        assert!(broadcast_compat(4, [1000, 256, 1, 256, 0, 0], r, s));
+        assert!(broadcast_compat(4, [1000, 1, 256, 256, 0, 0], r, s));
+        assert!(broadcast_compat(2, [256, 1, 0, 0, 0, 0], r, s));
+        assert!(!broadcast_compat(3, [1000, 256, 256, 0, 0, 0], r, s));
+        assert!(!broadcast_compat(r, s, 4, [1000, 256, 1, 256, 0, 0]));
     }
 }

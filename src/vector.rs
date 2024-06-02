@@ -1,5 +1,11 @@
 use crate::{
-    broadcast::BroadcastTo, generic_tensor::GenericTensor, matrix::MatrixView, numeric::Numeric, shape::Shape, storage::{Layout, Storage}, tensor::Tensor
+    broadcast::BroadcastTo,
+    generic_tensor::GenericTensor,
+    matrix::{Matrix, MatrixView},
+    numeric::Numeric,
+    shape::Shape,
+    storage::{Layout, Storage},
+    tensor::Tensor,
 };
 use num::{Integer, ToPrimitive};
 
@@ -130,8 +136,24 @@ impl<T: Numeric, const N: usize> From<NormalizedVector<T, N>> for Vector<T, N> {
     }
 }
 
+impl<T: Numeric, const N: usize, const M: usize> BroadcastTo<Matrix<T, M, N>> for Vector<T, N> {
+    fn broadcast(self) -> Matrix<T, M, N> {
+        Matrix::from_fn(|&[_, j]| self[&[j]])
+    }
+}
+
+impl<T: Numeric, const N: usize, const M: usize> BroadcastTo<Matrix<T, M, N>>
+    for ColumnVector<'_, T, M>
+{
+    fn broadcast(self) -> Matrix<T, M, N> {
+        Matrix::from_fn(|&[i, _]| self.storage[i])
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::matrix::Matrix;
+
     use super::*;
     use proptest::prelude::*;
     use seq_macro::seq;
@@ -172,6 +194,17 @@ mod tests {
             Vector::<f64, 5>::one_hot(7),
             Err(EncodingError::InvalidOneHotInput),
         );
+    }
+
+    #[test]
+    fn test_broadcast() {
+        let x: Vector<f64, _> = [1, 2, 3].into();
+        let m1: Matrix<f64, 2, 3> = x.clone().broadcast();
+        assert_eq!(m1, Matrix::<f64, _, _>::from([[1, 2, 3], [1, 2, 3]]));
+
+        let x_col = x.as_col_vector();
+        let m2: Matrix<f64, 3, 2> = x_col.broadcast();
+        assert_eq!(m2, Matrix::<f64, _, _>::from([[1, 1], [2, 2], [3, 3]]));
     }
 
     seq!(N in 1..10 {

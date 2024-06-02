@@ -1,4 +1,5 @@
 use crate::{
+    broadcast::{broadcast_compat, BroadcastTo},
     numeric::Numeric,
     shape::{subtensor_shape, transpose_shape, Shape},
     storage::{num_elems, storage_idx, IndexError, Layout, Storage},
@@ -66,6 +67,28 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
     }
 }
 
+impl<
+        T: Numeric,
+        const R_SRC: usize,
+        const S_SRC: Shape,
+        const R_DEST: usize,
+        const S_DEST: Shape,
+    > BroadcastTo<GenericTensor<T, R_DEST, S_DEST>> for GenericTensor<T, R_SRC, S_SRC>
+where
+    Assert<{ broadcast_compat(R_SRC, S_SRC, R_DEST, S_DEST) }>: IsTrue,
+{
+    fn broadcast(self) -> GenericTensor<T, R_DEST, S_DEST> {
+        todo!()
+        // let r_diff = R_DEST - R_SRC;
+        // GenericTensor::from_fn(|idx| {
+        //     let mut idx_src = [0; R_SRC];
+        //     for dim in 0..R_SRC {
+        //     }
+        //     self[&idx_src]
+        // })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::shape;
@@ -89,7 +112,10 @@ mod tests {
         let iter = xs.iter().cycle().copied();
 
         let t1: GenericTensor<f64, 0, { [0; shape::MAX_DIMS] }> = iter.clone().collect();
-        assert_eq!(t1, GenericTensor::<f64, 0, { [0; shape::MAX_DIMS] }>::from([1.0]));
+        assert_eq!(
+            t1,
+            GenericTensor::<f64, 0, { [0; shape::MAX_DIMS] }>::from([1.0])
+        );
 
         let t2: GenericTensor<f64, 2, { [4, 2, 0, 0, 0, 0] }> = iter.clone().collect();
         assert_eq!(
@@ -192,7 +218,8 @@ mod tests {
         assert_eq!(t1, t1_expected);
 
         let t0 = t1.subtensor(1).unwrap();
-        let t0_expected: GenericTensor<f64, 0, { [0; shape::MAX_DIMS] }> = GenericTensor::from([18]);
+        let t0_expected: GenericTensor<f64, 0, { [0; shape::MAX_DIMS] }> =
+            GenericTensor::from([18]);
         assert_eq!(t0, t0_expected);
     }
 
