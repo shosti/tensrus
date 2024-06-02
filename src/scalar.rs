@@ -1,13 +1,10 @@
 use crate::{
-    numeric::Numeric,
-    shape::Shape,
-    storage::{Layout, Storage},
-    tensor::Tensor,
+    broadcast::BroadcastTo, numeric::Numeric, shape::{self, Shape}, storage::{Layout, Storage}, tensor::Tensor
 };
 use num::ToPrimitive;
 
 pub const fn scalar_shape() -> Shape {
-    [0; 6]
+    [0; shape::MAX_DIMS]
 }
 
 #[derive(Tensor, Debug, Clone)]
@@ -34,6 +31,13 @@ where
             storage: vals.into(),
             layout: Layout::default(),
         }
+    }
+}
+
+impl<T: Numeric, Tn: Tensor<T = T>> BroadcastTo<Tn> for Scalar<T>
+{
+    fn broadcast(self) -> Tn {
+        Tn::repeat(self.val())
     }
 }
 

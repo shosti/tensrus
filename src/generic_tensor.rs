@@ -68,12 +68,14 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
 
 #[cfg(test)]
 mod tests {
+    use crate::shape;
+
     use super::*;
 
     #[test]
     fn test_equal() {
-        let a: GenericTensor<f64, 0, { [0; 6] }> = GenericTensor::from([1]);
-        let b: GenericTensor<f64, 0, { [0; 6] }> = GenericTensor::from([2]);
+        let a: GenericTensor<f64, 0, { [0; shape::MAX_DIMS] }> = GenericTensor::from([1]);
+        let b: GenericTensor<f64, 0, { [0; shape::MAX_DIMS] }> = GenericTensor::from([2]);
         assert_ne!(a, b);
 
         let x: GenericTensor<f64, 2, { [2; 6] }> = GenericTensor::from([1, 2, 3, 4]);
@@ -86,8 +88,8 @@ mod tests {
         let xs: [i64; 3] = [1, 2, 3];
         let iter = xs.iter().cycle().copied();
 
-        let t1: GenericTensor<f64, 0, { [0; 6] }> = iter.clone().collect();
-        assert_eq!(t1, GenericTensor::<f64, 0, { [0; 6] }>::from([1.0]));
+        let t1: GenericTensor<f64, 0, { [0; shape::MAX_DIMS] }> = iter.clone().collect();
+        assert_eq!(t1, GenericTensor::<f64, 0, { [0; shape::MAX_DIMS] }>::from([1.0]));
 
         let t2: GenericTensor<f64, 2, { [4, 2, 0, 0, 0, 0] }> = iter.clone().collect();
         assert_eq!(
@@ -190,7 +192,7 @@ mod tests {
         assert_eq!(t1, t1_expected);
 
         let t0 = t1.subtensor(1).unwrap();
-        let t0_expected: GenericTensor<f64, 0, { [0; 6] }> = GenericTensor::from([18]);
+        let t0_expected: GenericTensor<f64, 0, { [0; shape::MAX_DIMS] }> = GenericTensor::from([18]);
         assert_eq!(t0, t0_expected);
     }
 

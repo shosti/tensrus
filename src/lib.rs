@@ -19,6 +19,7 @@ mod type_assert;
 pub mod var;
 pub mod vector;
 pub mod distribution;
+pub mod broadcast;
 
 pub mod matrix;
 pub mod tensor;

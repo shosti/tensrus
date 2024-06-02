@@ -1,10 +1,5 @@
 use crate::{
-    generic_tensor::GenericTensor,
-    matrix::MatrixView,
-    numeric::Numeric,
-    shape::Shape,
-    storage::{Layout, Storage},
-    tensor::Tensor,
+    broadcast::BroadcastTo, generic_tensor::GenericTensor, matrix::MatrixView, numeric::Numeric, shape::Shape, storage::{Layout, Storage}, tensor::Tensor
 };
 use num::{Integer, ToPrimitive};
 

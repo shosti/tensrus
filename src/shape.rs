@@ -1,7 +1,8 @@
-pub type Shape = [usize; 6];
+pub const MAX_DIMS: usize = 6;
+pub type Shape = [usize; MAX_DIMS];
 
 pub const fn stride(r: usize, s: Shape) -> Shape {
-    let mut res = [0; 6];
+    let mut res = [0; MAX_DIMS];
     let mut dim = 0;
 
     while dim < r {
@@ -20,7 +21,7 @@ pub const fn stride(r: usize, s: Shape) -> Shape {
 }
 
 pub const fn transpose_shape(r: usize, s: Shape) -> Shape {
-    let mut out = [0; 6];
+    let mut out = [0; MAX_DIMS];
     let mut i = 0;
     while i < r {
         out[i] = s[r - i - 1];
@@ -35,7 +36,7 @@ pub const fn subtensor_shape(r: usize, s: Shape) -> Shape {
     if r == 0 {
         panic!("cannot take subtensor of tensor of rank 0");
     }
-    let mut out = [0; 6];
+    let mut out = [0; MAX_DIMS];
     let mut i = r - 1;
     while i > 0 {
         out[i - 1] = s[i];
