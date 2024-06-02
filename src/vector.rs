@@ -1,5 +1,5 @@
 use crate::{
-    broadcast::BroadcastTo,
+    broadcast::{BroadcastTo, Reducible},
     generic_tensor::GenericTensor,
     matrix::{Matrix, MatrixView},
     numeric::Numeric,
@@ -149,6 +149,8 @@ impl<T: Numeric, const N: usize, const M: usize> BroadcastTo<Matrix<T, M, N>>
         Matrix::from_fn(|&[i, _]| self.storage[i])
     }
 }
+
+impl<T: Numeric, const N: usize> Reducible<T, 1, { vector_shape(N) }> for Vector<T, N> {}
 
 #[cfg(test)]
 mod tests {

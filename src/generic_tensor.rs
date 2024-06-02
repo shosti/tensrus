@@ -1,5 +1,5 @@
 use crate::{
-    broadcast::{broadcast_compat, BroadcastTo},
+    broadcast::{broadcast_compat, BroadcastTo, Reducible},
     numeric::Numeric,
     shape::{reduced_shape, subtensor_shape, transpose_shape, Shape},
     storage::{num_elems, storage_idx, IndexError, Layout, Storage},
@@ -105,6 +105,8 @@ where
         // })
     }
 }
+
+impl<T: Numeric, const R: usize, const S: Shape> Reducible<T, R, S> for GenericTensor<T, R, S> {}
 
 #[cfg(test)]
 mod tests {

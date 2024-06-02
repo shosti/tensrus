@@ -1,7 +1,10 @@
 use crate::{
-    shape::{self, Shape},
+    generic_tensor::GenericTensor,
+    numeric::Numeric,
+    shape::{self, reduced_shape, Shape},
     tensor::Tensor,
 };
+use std::fmt::Debug;
 
 pub const fn broadcast_compat(r_src: usize, s_src: Shape, r_dest: usize, s_dest: Shape) -> bool {
     assert!(r_dest >= r_src, "cannot broadcast to lower dimension");
@@ -42,8 +45,21 @@ pub const fn broadcast_normalize(s: Shape, r_src: usize, r_dest: usize) -> Shape
     ret
 }
 
-pub trait BroadcastTo<Tn: Tensor>: std::fmt::Debug {
+pub trait BroadcastTo<Tn: Tensor>: Debug {
     fn broadcast(self) -> Tn;
+}
+
+pub trait Reducible<T: Numeric, const R: usize, const S: Shape>:
+    Into<GenericTensor<T, R, S>>
+{
+    fn reduce_dim<const DIM: usize>(
+        self,
+        f: impl Fn(T, T) -> T + 'static,
+    ) -> GenericTensor<T, R, { reduced_shape(R, S, DIM) }> {
+        let g: GenericTensor<T, R, S> = self.into();
+        let res = g.reduce_dim(f);
+        res.into()
+    }
 }
 
 // pub const fn reduce_shape(r: usize, s: Shape, dim: usize) -> Shape {
