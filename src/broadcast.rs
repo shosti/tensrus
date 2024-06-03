@@ -1,7 +1,7 @@
 use crate::{
     generic_tensor::GenericTensor,
     numeric::Numeric,
-    shape::{self, reduced_shape, Shape, MAX_DIMS},
+    shape::{self, reduced_shape, Shape},
     storage::Layout,
     tensor::Tensor,
     tensor_view::TensorView,
@@ -49,18 +49,25 @@ pub const fn broadcast_normalize(s: Shape, r_src: usize, r_dest: usize) -> Shape
 }
 
 #[derive(Debug)]
-pub struct Broadcast<'a, T: Numeric, const R: usize, const S: Shape> {
+pub struct Broadcast<
+    'a,
+    T: Numeric,
+    const R_SRC: usize,
+    const S_SRC: Shape,
+    const R: usize,
+    const S: Shape,
+> {
     pub(crate) storage: &'a [T],
     pub layout: Layout,
-    r_src: usize,
-    s_src: Shape,
 }
 
-impl<'a, T: Numeric, const R: usize, const S: Shape> Broadcast<'a, T, R, S> {
-    fn idx_translate(&self, idx: &[usize]) -> Shape {
-        let s_normalized = broadcast_normalize(self.s_src, self.r_src, R);
+impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, const S: Shape>
+    Broadcast<'a, T, R_SRC, S_SRC, R, S>
+{
+    fn idx_translate(&self, idx: &[usize; R]) -> [usize; R_SRC] {
+        let s_normalized = broadcast_normalize(S_SRC, R_SRC, R);
 
-        let mut src_idx = [0; MAX_DIMS];
+        let mut src_idx = [0; R_SRC];
         let mut dim = 0;
         for i in 0..R {
             if s_normalized[i] == 1 && S[i] != 1 {
@@ -74,21 +81,23 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> Broadcast<'a, T, R, S> {
     }
 }
 
-impl<'a, T: Numeric, const R: usize, const S: Shape> Index<&[usize; R]> for Broadcast<'a, T, R, S> {
+impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, const S: Shape>
+    Index<&[usize; R]> for Broadcast<'a, T, R_SRC, S_SRC, R, S>
+{
     type Output = T;
 
     fn index(&self, idx: &[usize; R]) -> &Self::Output {
         let idx_t = self.idx_translate(idx);
-        let i =
-            crate::storage::storage_idx(&idx_t, self.s_src, self.layout).expect("out of bounds");
+        let i = crate::storage::storage_idx::<R_SRC>(&idx_t, S_SRC, self.layout)
+            .expect("out of bounds");
         self.storage.index(i)
     }
 }
 
-impl<'a, T: Numeric, const R: usize, const S: Shape> From<Broadcast<'a, T, R, S>>
-    for GenericTensor<T, R, S>
+impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, const S: Shape>
+    From<Broadcast<'a, T, R_SRC, S_SRC, R, S>> for GenericTensor<T, R, S>
 {
-    fn from(b: Broadcast<'a, T, R, S>) -> Self {
+    fn from(b: Broadcast<'a, T, R_SRC, S_SRC, R, S>) -> Self {
         GenericTensor::from_fn(|idx| b[idx])
     }
 }
@@ -97,7 +106,9 @@ pub trait Broadcastable<T: Numeric, const R: usize, const S: Shape>
 where
     for<'a> TensorView<'a, T, R, S>: From<&'a Self>,
 {
-    fn broadcast<const R_DEST: usize, const S_DEST: Shape>(&self) -> Broadcast<T, R_DEST, S_DEST>
+    fn broadcast<const R_DEST: usize, const S_DEST: Shape>(
+        &self,
+    ) -> Broadcast<T, R, S, R_DEST, S_DEST>
     where
         Assert<{ broadcast_compat(R, S, R_DEST, S_DEST) }>: IsTrue,
     {
@@ -105,12 +116,12 @@ where
         Broadcast {
             storage: view.storage,
             layout: view.layout,
-            r_src: R,
-            s_src: S,
         }
     }
 
-    fn from_broadcast(b: Broadcast<T, R, S>) -> Self
+    fn from_broadcast<const R_SRC: usize, const S_SRC: Shape>(
+        b: Broadcast<T, R_SRC, S_SRC, R, S>,
+    ) -> Self
     where
         Self: From<GenericTensor<T, R, S>>,
     {
