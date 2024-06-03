@@ -31,6 +31,11 @@ pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T
     fn add(self: Box<Self>, other: &dyn BasicTensor<T>, scale: T) -> Box<dyn BasicTensor<T>>;
 }
 
+pub trait ShapedTensor<T, const R: usize, const S: Shape>:
+    for<'a> Index<&'a [usize; R], Output = T> + Eq + 'static
+{
+}
+
 pub trait Tensor:
     Clone
     + BasicTensor<Self::T>

@@ -100,6 +100,8 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
+        impl #impl_generics crate::tensor::ShapedTensor<T, #rank, #shape> for #name #type_generics {}
+
         impl #impl_generics crate::tensor::BasicTensor<T> for #name #type_generics {
             fn as_any(&self) -> &dyn std::any::Any {
                 self
