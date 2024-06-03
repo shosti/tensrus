@@ -32,7 +32,7 @@ pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T
 }
 
 pub trait ShapedTensor<T, const R: usize, const S: Shape>:
-    for<'a> Index<&'a [usize; R], Output = T> + Eq + 'static
+    for<'a> Index<&'a [usize; R], Output = T>
 {
 }
 

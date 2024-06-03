@@ -3,7 +3,7 @@ use crate::{
     numeric::Numeric,
     shape::{self, reduced_shape, Shape},
     storage::Layout,
-    tensor::Tensor,
+    tensor::{ShapedTensor, Tensor},
     tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
 };
@@ -92,6 +92,11 @@ impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, con
             .expect("out of bounds");
         self.storage.index(i)
     }
+}
+
+impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, const S: Shape>
+    ShapedTensor<T, R, S> for Broadcast<'a, T, R_SRC, S_SRC, R, S>
+{
 }
 
 impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, const S: Shape>

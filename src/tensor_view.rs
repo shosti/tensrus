@@ -6,7 +6,7 @@ use crate::{
     numeric::Numeric,
     shape::{reduced_shape, Shape},
     storage::{storage_idx, Layout},
-    tensor::Tensor,
+    tensor::{ShapedTensor, Tensor},
     type_assert::{Assert, IsTrue},
 };
 
@@ -54,6 +54,11 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> TensorView<'a, T, R, S> {
             self[&src_idx]
         })
     }
+}
+
+impl<'a, T: Numeric, const R: usize, const S: Shape> ShapedTensor<T, R, S>
+    for TensorView<'a, T, R, S>
+{
 }
 
 impl<'a, T: Numeric, const R: usize, const S: Shape> Index<&[usize; R]>

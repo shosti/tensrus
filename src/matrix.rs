@@ -4,13 +4,13 @@ use crate::{
     numeric::Numeric,
     shape::Shape,
     storage::{num_elems, storage_idx, IndexError, Layout, Storage},
-    tensor::Tensor,
+    tensor::{ShapedTensor, Tensor},
     tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
     vector::Vector,
 };
 use num::ToPrimitive;
-use std::ops::Mul;
+use std::ops::{Index, Mul};
 
 pub const fn matrix_shape(m: usize, n: usize) -> Shape {
     [m, n, 0, 0, 0, 0]
@@ -221,6 +221,23 @@ impl<'a, 'b, T: Numeric, const M: usize, const N: usize> From<&'a MatrixView<'b,
 }
 
 impl<'a, T: Numeric, const M: usize, const N: usize> Broadcastable<T, 2, { matrix_shape(M, N) }>
+    for MatrixView<'a, T, M, N>
+{
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize> Index<&[usize; 2]>
+    for MatrixView<'a, T, M, N>
+{
+    type Output = T;
+
+    fn index(&self, idx: &[usize; 2]) -> &Self::Output {
+        let i = crate::storage::storage_idx(idx, matrix_shape(M, N), self.layout)
+            .expect("out of bounds");
+        self.storage.index(i)
+    }
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize> ShapedTensor<T, 2, { matrix_shape(M, N) }>
     for MatrixView<'a, T, M, N>
 {
 }
