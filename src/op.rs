@@ -1,7 +1,10 @@
 use crate::{
+    broadcast::Reducible,
+    generic_tensor::GenericTensor,
     matrix::Matrix,
     numeric::Numeric,
     scalar::Scalar,
+    shape::{reduced_shape, Shape},
     tensor::{BasicTensor, Tensor},
     vector::Vector,
 };
@@ -78,24 +81,27 @@ pub trait Op<T: Numeric>: Debug {
     fn backward(&self, args: BackwardArgs<T>) -> BackwardOutput<T>;
 }
 
-// #[derive(Debug)]
-// pub struct ReduceOp<Src, Dest, ROp>
-// where
-//     Src: Tensor,
-//     Dest: BroadcastTo<Src>,
-//     ROp: Op<Src::T>,
-// {
-//     _markers: PhantomData<(Src, Dest)>,
-//     op: ROp,
-// }
+#[derive(Debug)]
+pub struct ReduceOp<Src, Dest, ROp, const R: usize, const S: Shape, const DIM: usize>
+where
+    Src: Reducible<Src::T, R, S> + Tensor,
+    Dest: Tensor<T = Src::T> + From<GenericTensor<Src::T, R, { reduced_shape(R, S, DIM) }>>,
+    ROp: Op<Src::T>,
+{
+    _markers: PhantomData<(Src, Dest)>,
+    op: ROp,
+}
 
-// impl<Src, Dest, ROp> Op<Src::T> for ReduceOp<Src, Dest, ROp>
+// impl<Src, Dest, ROp, const R: usize, const S: Shape, const DIM: usize> Op<Dest::T>
+//     for ReduceOp<Src, Dest, ROp, R, S, DIM>
 // where
-//     Src: Tensor,
-//     Dest: BroadcastTo<Src>,
+//     Src: Reducible<Src::T, R, S> + Tensor + Debug,
+//     Dest: Tensor<T = Src::T> + From<GenericTensor<Src::T, R, { reduced_shape(R, S, DIM) }>>,
 //     ROp: Op<Src::T>,
 // {
 //     fn forward(&self, input: ForwardInput<Src::T>) -> Box<dyn BasicTensor<Src::T>> {
+//         let in_typed = Src::ref_from_basic(input.unary());
+//         let reduced: Dest = in_typed.reduce_dim::<DIM>(|x, y| todo!()).into();
 //         todo!()
 //     }
 //     fn backward(&self, args: BackwardArgs<Src::T>) -> BackwardOutput<Src::T> {
