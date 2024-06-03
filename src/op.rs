@@ -6,6 +6,7 @@ use crate::{
     scalar::Scalar,
     shape::{reduced_shape, Shape},
     tensor::{BasicTensor, Tensor},
+    tensor_view::TensorView,
     vector::Vector,
 };
 use num::{traits::real::Real, One, Zero};
@@ -81,15 +82,40 @@ pub trait Op<T: Numeric>: Debug {
     fn backward(&self, args: BackwardArgs<T>) -> BackwardOutput<T>;
 }
 
+#[derive(Debug)]
+pub struct DimSumOp<Src: Tensor, Dest: Tensor<T = Src::T>, const R: usize, const S: Shape, const DIM: usize>
+where
+{
+    _markers: PhantomData<(Src, Dest)>,
+}
+
+impl<Src: Tensor, Dest: Tensor, const R: usize, const S: Shape, const DIM: usize>
+    DimSumOp<Src, Dest, R, S, DIM>
+where
+    Src: Tensor + Reducible<Src::T, R, S>,
+    for<'a> TensorView<'a, Src::T, R, S>: From<&'a Src>,
+    Dest: Tensor<T = Src::T> + From<GenericTensor<Src::T, R, { reduced_shape(R, S, DIM) }>>,
+{
+    fn forward(&self, args: ForwardInput<Src::T>) -> Box<dyn BasicTensor<Src::T>> {
+        let input = args.unary();
+        let in_typed = Src::ref_from_basic(input);
+        let reduced: Dest = in_typed.reduce_dim::<DIM>(|x, y| x + y).into();
+        Box::new(reduced)
+    }
+
+    fn backward(&self, _args: BackwardArgs<Src::T>) -> BackwardOutput<Src::T> {
+        todo!()
+    }
+}
+
 // #[derive(Debug)]
-// pub struct ReduceOp<Src, Dest, ROp, const R: usize, const S: Shape, const DIM: usize>
+// pub struct ReduceOp<'a, Src, Dest, const R: usize, const S: Shape, const DIM: usize>
 // where
-//     Src: Reducible<Src::T, R, S> + Tensor,
+//     TensorView<'a, Src::T, R, S>: From<Src>,
+//     Src: Reducible<'a, Src::T, R, S> + Tensor,
 //     Dest: Tensor<T = Src::T> + From<GenericTensor<Src::T, R, { reduced_shape(R, S, DIM) }>>,
-//     ROp: Op<Src::T>,
 // {
-//     _markers: PhantomData<(Src, Dest)>,
-//     op: ROp,
+//     _markers: PhantomData<&'a (Src, Dest)>,
 // }
 
 // impl<Src, Dest, ROp, const R: usize, const S: Shape, const DIM: usize> Op<Dest::T>

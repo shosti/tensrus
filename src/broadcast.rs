@@ -50,12 +50,12 @@ pub trait BroadcastTo<Tn: Tensor>: Debug {
     fn broadcast(self) -> Tn;
 }
 
-pub trait Reducible<'a, T: Numeric, const R: usize, const S: Shape>: Sized
+pub trait Reducible<T: Numeric, const R: usize, const S: Shape>
 where
-    TensorView<'a, T, R, S>: From<Self>,
+    for<'a> TensorView<'a, T, R, S>: From<&'a Self>,
 {
     fn reduce_dim<const DIM: usize>(
-        self,
+        &self,
         f: impl Fn(T, T) -> T + 'static,
     ) -> GenericTensor<T, R, { reduced_shape(R, S, DIM) }> {
         let view: TensorView<T, R, S> = self.into();
