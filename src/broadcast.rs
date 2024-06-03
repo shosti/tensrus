@@ -1,11 +1,13 @@
 use crate::{
     generic_tensor::GenericTensor,
     numeric::Numeric,
-    shape::{self, reduced_shape, Shape},
+    shape::{self, reduced_shape, Shape, MAX_DIMS},
+    storage::Layout,
     tensor::Tensor,
-    tensor_view::TensorView, type_assert::{Assert, IsTrue},
+    tensor_view::TensorView,
+    type_assert::{Assert, IsTrue},
 };
-use std::fmt::Debug;
+use std::{fmt::Debug, marker::PhantomData, ops::Index};
 
 pub const fn broadcast_compat(r_src: usize, s_src: Shape, r_dest: usize, s_dest: Shape) -> bool {
     assert!(r_dest >= r_src, "cannot broadcast to lower dimension");
@@ -46,17 +48,63 @@ pub const fn broadcast_normalize(s: Shape, r_src: usize, r_dest: usize) -> Shape
     ret
 }
 
+pub struct Broadcast<'a, Tn: Tensor> {
+    _marker: PhantomData<Tn>,
+    pub(crate) storage: &'a [Tn::T],
+    pub layout: Layout,
+    r_src: usize,
+    s_src: Shape,
+}
+
+impl<'a, Tn: Tensor> Broadcast<'a, Tn> {
+    fn idx_translate(&self, idx: &Tn::Idx) -> Shape {
+        let r_dest = Tn::rank();
+        let s_dest = Tn::shape();
+        let s_normalized = broadcast_normalize(self.s_src, self.r_src, r_dest);
+
+        let mut src_idx = [0; MAX_DIMS];
+        let mut dim = 0;
+        for i in 0..r_dest {
+            if s_normalized[i] == 1 && s_dest[i] != 1 {
+                continue;
+            }
+            src_idx[dim] = idx.as_ref()[i];
+            dim += 1;
+        }
+
+        src_idx
+    }
+}
+
+impl<'a, Tn: Tensor> Index<Tn::Idx> for Broadcast<'a, Tn> {
+    type Output = Tn::T;
+
+    fn index(&self, idx: Tn::Idx) -> &Self::Output {
+        let idx_t = self.idx_translate(&idx);
+        let i =
+            crate::storage::storage_idx(&idx_t, self.s_src, self.layout).expect("out of bounds");
+        self.storage.index(i)
+    }
+}
+
 pub trait Broadcastable<T: Numeric, const R: usize, const S: Shape>
 where
     for<'a> TensorView<'a, T, R, S>: From<&'a Self>,
 {
     fn broadcast<const R_DEST: usize, const S_DEST: Shape>(
         &self,
-    ) -> GenericTensor<T, R_DEST, S_DEST>
+    ) -> Broadcast<GenericTensor<T, R_DEST, S_DEST>>
     where
         Assert<{ broadcast_compat(R, S, R_DEST, S_DEST) }>: IsTrue,
     {
-        TensorView::from(self).broadcast::<R_DEST, S_DEST>()
+        let view = TensorView::from(self);
+        Broadcast {
+            storage: view.storage,
+            layout: view.layout,
+            r_src: R,
+            s_src: S,
+            _marker: PhantomData,
+        }
     }
 }
 
@@ -71,27 +119,15 @@ where
         let view: TensorView<T, R, S> = self.into();
         view.reduce_dim(f)
     }
+
+    fn dim_sum<const DIM: usize>(&self) -> GenericTensor<T, R, { reduced_shape(R, S, DIM) }> {
+        self.reduce_dim(|x, y| x + y)
+    }
+
+    fn dim_mul<const DIM: usize>(&self) -> GenericTensor<T, R, { reduced_shape(R, S, DIM) }> {
+        self.reduce_dim(|x, y| x * y)
+    }
 }
-
-// pub const fn reduce_shape(r: usize, s: Shape, dim: usize) -> Shape {
-//     [0; 6]
-// }
-
-// pub trait ReduceTo<
-//     const R: usize,
-//     const S: Shape,
-//     Dest: Tensor,
-// >: Tensor
-// {
-//     fn reduce<const DIM: usize>(
-//         self,
-//         _f: impl Fn(
-//             GenericTensor<Self::T, { R - 1 }, { reduce_shape(R, S, DIM) }>,
-//         ) -> GenericTensor<Self::T, { R - 1 }, { reduce_shape(R, S, DIM) }>,
-//     ) -> Dest {
-//         todo!()
-//     }
-// }
 
 #[cfg(test)]
 pub mod tests {
