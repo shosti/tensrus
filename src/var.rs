@@ -719,4 +719,16 @@ mod tests {
             Vector::<f64, _>::from([1.0, 1.0 / 2.0, 1.0 / 3.0, 1.0 / 4.0, 1.0 / 5.0])
         );
     }
+
+    #[test]
+    fn test_dim_sum() {
+        let x: Var<Matrix<f64, _, _>> = [[1, 2, 3], [4, 5, 6]].into();
+        let y: Var<Matrix<f64, 2, 1>> = x.dim_sum::<_, _, _, 1>();
+        let z = y.sum_elems();
+        z.backward().unwrap();
+        assert_eq!(
+            *x.grad().unwrap(),
+            Matrix::<f64, _, _>::from([[1, 1, 1], [1, 1, 1]])
+        );
+    }
 }

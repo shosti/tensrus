@@ -119,27 +119,14 @@ where
 
     fn backward(&self, args: BackwardArgs<Src::T>) -> BackwardOutput<Src::T> {
         if let BackwardArgs::Unary {
-            in_grad: _in_grad_basic,
-            in_data: _in_data_basic,
-            out_grad: _out_grad_basic,
-            out_data: _out_data_basic,
+            in_grad: in_grad_basic,
+            ..
         } = args
         {
-            todo!()
-            // let in_grad = *<$inty>::from_basic_boxed(in_grad_basic);
-            // let in_data = <$inty>::ref_from_basic(in_data_basic);
-            // let out_grad = <$outty>::ref_from_basic(out_grad_basic);
-            // let out_data = <$outty>::ref_from_basic(out_data_basic);
-            // let args = UnaryBackwardArgs::<$inty, $outty, ( $( $argty ,)* )> {
-            //     in_data,
-            //     out_grad,
-            //     out_data,
-            //     args: &self.args,
-            // };
+            let in_grad = *Src::from_basic_boxed(in_grad_basic);
+            let in_grad_updated = in_grad.map(|_, x| x + Src::T::one());
 
-            // let in_grad_updated: $inty = ($backward)(in_grad, args);
-
-            // BackwardOutput::Unary(Box::new(in_grad_updated))
+            BackwardOutput::Unary(Box::new(in_grad_updated))
         } else {
             unreachable!()
         }
