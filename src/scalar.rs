@@ -1,5 +1,4 @@
 use crate::{
-    broadcast::BroadcastTo,
     numeric::Numeric,
     shape::{self, Shape},
     storage::{Layout, Storage},
@@ -35,12 +34,6 @@ where
             storage: vals.into(),
             layout: Layout::default(),
         }
-    }
-}
-
-impl<T: Numeric, Tn: Tensor<T = T>> BroadcastTo<Tn> for Scalar<T> {
-    fn broadcast(self) -> Tn {
-        Tn::repeat(self.val())
     }
 }
 

@@ -1,11 +1,13 @@
 use std::ops::Index;
 
 use crate::{
+    broadcast::{broadcast_compat, broadcast_normalize},
     generic_tensor::GenericTensor,
     numeric::Numeric,
     shape::{reduced_shape, Shape},
     storage::{storage_idx, Layout},
     tensor::Tensor,
+    type_assert::{Assert, IsTrue},
 };
 
 pub struct TensorView<'a, T: Numeric, const R: usize, const S: Shape> {
@@ -30,6 +32,28 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> TensorView<'a, T, R, S> {
             res
         })
     }
+
+    pub fn broadcast<const R_DEST: usize, const S_DEST: Shape>(
+        self,
+    ) -> GenericTensor<T, R_DEST, S_DEST>
+    where
+        Assert<{ broadcast_compat(R, S, R_DEST, S_DEST) }>: IsTrue,
+    {
+        let s_normalized = broadcast_normalize(S, R, R_DEST);
+        GenericTensor::from_fn(|idx| {
+            let mut src_idx = [0; R];
+            let mut dim = 0;
+            for i in 0..R_DEST {
+                if s_normalized[i] == 1 && S_DEST[i] != 1 {
+                    continue;
+                }
+                src_idx[dim] = idx[i];
+                dim += 1;
+            }
+
+            self[&src_idx]
+        })
+    }
 }
 
 impl<'a, T: Numeric, const R: usize, const S: Shape> Index<&[usize; R]>
@@ -46,6 +70,7 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> Index<&[usize; R]>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{matrix::Matrix, shape::MAX_DIMS, vector::Vector};
 
     #[test]
     fn test_reduce_dim() {
@@ -59,6 +84,25 @@ mod tests {
         assert_eq!(
             t3,
             GenericTensor::<f64, 2, { [2, 1, 0, 0, 0, 0] }>::from([6, 15])
+        );
+    }
+
+    #[test]
+    fn test_broadcast() {
+        let v = Vector::<f64, _>::from([1, 2, 3]);
+        let m: Matrix<_, 3, 3> = TensorView::from(&v).broadcast().into();
+        assert_eq!(
+            m,
+            Matrix::<f64, _, _>::from([[1, 2, 3], [1, 2, 3], [1, 2, 3]])
+        );
+
+        let t: GenericTensor<_, 3, { [3; MAX_DIMS] }> = TensorView::from(&v).broadcast();
+        assert_eq!(
+            t,
+            [1, 2, 3]
+                .into_iter()
+                .cycle()
+                .collect::<GenericTensor<f64, 3, { [3; MAX_DIMS] }>>()
         );
     }
 }

@@ -1,5 +1,4 @@
 use crate::{
-    broadcast::{broadcast_compat, BroadcastTo},
     numeric::Numeric,
     shape::{subtensor_shape, transpose_shape, Shape},
     storage::{num_elems, storage_idx, IndexError, Layout, Storage},
@@ -72,28 +71,6 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
                 self.storage[storage_idx(&self_idx, S, self.layout).unwrap()]
             });
         Ok(out)
-    }
-}
-
-impl<
-        T: Numeric,
-        const R_SRC: usize,
-        const S_SRC: Shape,
-        const R_DEST: usize,
-        const S_DEST: Shape,
-    > BroadcastTo<GenericTensor<T, R_DEST, S_DEST>> for GenericTensor<T, R_SRC, S_SRC>
-where
-    Assert<{ broadcast_compat(R_SRC, S_SRC, R_DEST, S_DEST) }>: IsTrue,
-{
-    fn broadcast(self) -> GenericTensor<T, R_DEST, S_DEST> {
-        todo!()
-        // let r_diff = R_DEST - R_SRC;
-        // GenericTensor::from_fn(|idx| {
-        //     let mut idx_src = [0; R_SRC];
-        //     for dim in 0..R_SRC {
-        //     }
-        //     self[&idx_src]
-        // })
     }
 }
 

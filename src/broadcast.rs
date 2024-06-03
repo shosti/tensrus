@@ -3,7 +3,7 @@ use crate::{
     numeric::Numeric,
     shape::{self, reduced_shape, Shape},
     tensor::Tensor,
-    tensor_view::TensorView,
+    tensor_view::TensorView, type_assert::{Assert, IsTrue},
 };
 use std::fmt::Debug;
 
@@ -46,8 +46,18 @@ pub const fn broadcast_normalize(s: Shape, r_src: usize, r_dest: usize) -> Shape
     ret
 }
 
-pub trait BroadcastTo<Tn: Tensor>: Debug {
-    fn broadcast(self) -> Tn;
+pub trait Broadcastable<T: Numeric, const R: usize, const S: Shape>
+where
+    for<'a> TensorView<'a, T, R, S>: From<&'a Self>,
+{
+    fn broadcast<const R_DEST: usize, const S_DEST: Shape>(
+        &self,
+    ) -> GenericTensor<T, R_DEST, S_DEST>
+    where
+        Assert<{ broadcast_compat(R, S, R_DEST, S_DEST) }>: IsTrue,
+    {
+        TensorView::from(self).broadcast::<R_DEST, S_DEST>()
+    }
 }
 
 pub trait Reducible<T: Numeric, const R: usize, const S: Shape>

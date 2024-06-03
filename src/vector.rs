@@ -1,5 +1,4 @@
 use crate::{
-    broadcast::BroadcastTo,
     generic_tensor::GenericTensor,
     matrix::{Matrix, MatrixView},
     numeric::Numeric,
@@ -133,20 +132,6 @@ impl<T: Numeric, const N: usize> std::ops::Index<&[usize; 1]> for NormalizedVect
 impl<T: Numeric, const N: usize> From<NormalizedVector<T, N>> for Vector<T, N> {
     fn from(v: NormalizedVector<T, N>) -> Self {
         v.v
-    }
-}
-
-impl<T: Numeric, const N: usize, const M: usize> BroadcastTo<Matrix<T, M, N>> for Vector<T, N> {
-    fn broadcast(self) -> Matrix<T, M, N> {
-        Matrix::from_fn(|&[_, j]| self[&[j]])
-    }
-}
-
-impl<T: Numeric, const N: usize, const M: usize> BroadcastTo<Matrix<T, M, N>>
-    for ColumnVector<'_, T, M>
-{
-    fn broadcast(self) -> Matrix<T, M, N> {
-        Matrix::from_fn(|&[i, _]| self.storage[i])
     }
 }
 

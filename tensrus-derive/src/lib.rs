@@ -167,6 +167,9 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         impl #impl_generics crate::broadcast::Reducible<T, #rank, #shape> for #name #type_generics {
         }
 
+        impl #impl_generics crate::broadcast::Broadcastable<T, #rank, #shape> for #name #type_generics {
+        }
+
         impl #impl_generics_with_lifetime std::ops::Add<&'a Self> for #name #type_generics {
             type Output = Self;
 
