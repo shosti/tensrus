@@ -83,9 +83,13 @@ pub trait Op<T: Numeric>: Debug {
 }
 
 #[derive(Debug)]
-pub struct DimSumOp<Src: Tensor, Dest: Tensor<T = Src::T>, const R: usize, const S: Shape, const DIM: usize>
-where
-{
+pub struct DimSumOp<
+    Src: Tensor,
+    Dest: Tensor<T = Src::T>,
+    const R: usize,
+    const S: Shape,
+    const DIM: usize,
+> {
     _markers: PhantomData<(Src, Dest)>,
 }
 
@@ -103,37 +107,34 @@ where
         Box::new(reduced)
     }
 
-    fn backward(&self, _args: BackwardArgs<Src::T>) -> BackwardOutput<Src::T> {
-        todo!()
+    fn backward(&self, args: BackwardArgs<Src::T>) -> BackwardOutput<Src::T> {
+        if let BackwardArgs::Unary {
+            in_grad: in_grad_basic,
+            in_data: in_data_basic,
+            out_grad: out_grad_basic,
+            out_data: out_data_basic,
+        } = args
+        {
+            todo!()
+            // let in_grad = *<$inty>::from_basic_boxed(in_grad_basic);
+            // let in_data = <$inty>::ref_from_basic(in_data_basic);
+            // let out_grad = <$outty>::ref_from_basic(out_grad_basic);
+            // let out_data = <$outty>::ref_from_basic(out_data_basic);
+            // let args = UnaryBackwardArgs::<$inty, $outty, ( $( $argty ,)* )> {
+            //     in_data,
+            //     out_grad,
+            //     out_data,
+            //     args: &self.args,
+            // };
+
+            // let in_grad_updated: $inty = ($backward)(in_grad, args);
+
+            // BackwardOutput::Unary(Box::new(in_grad_updated))
+        } else {
+            unreachable!()
+        }
     }
 }
-
-// #[derive(Debug)]
-// pub struct ReduceOp<'a, Src, Dest, const R: usize, const S: Shape, const DIM: usize>
-// where
-//     TensorView<'a, Src::T, R, S>: From<Src>,
-//     Src: Reducible<'a, Src::T, R, S> + Tensor,
-//     Dest: Tensor<T = Src::T> + From<GenericTensor<Src::T, R, { reduced_shape(R, S, DIM) }>>,
-// {
-//     _markers: PhantomData<&'a (Src, Dest)>,
-// }
-
-// impl<Src, Dest, ROp, const R: usize, const S: Shape, const DIM: usize> Op<Dest::T>
-//     for ReduceOp<Src, Dest, ROp, R, S, DIM>
-// where
-//     Src: Reducible<Src::T, R, S> + Tensor + Debug,
-//     Dest: Tensor<T = Src::T> + From<GenericTensor<Src::T, R, { reduced_shape(R, S, DIM) }>>,
-//     ROp: Op<Src::T>,
-// {
-//     fn forward(&self, input: ForwardInput<Src::T>) -> Box<dyn BasicTensor<Src::T>> {
-//         let in_typed = Src::ref_from_basic(input.unary());
-//         let reduced: Dest = in_typed.reduce_dim::<DIM>(|x, y| todo!()).into();
-//         todo!()
-//     }
-//     fn backward(&self, args: BackwardArgs<Src::T>) -> BackwardOutput<Src::T> {
-//         todo!()
-//     }
-// }
 
 macro_rules! unary_op {
     ($name:ident < $( $generic:ident : $subtype:ident ),* > {
