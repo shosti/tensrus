@@ -93,8 +93,18 @@ pub struct DimSumOp<
     _markers: PhantomData<(Src, Dest)>,
 }
 
-impl<Src: Tensor, Dest: Tensor, const R: usize, const S: Shape, const DIM: usize>
+impl<Src: Tensor, Dest: Tensor<T = Src::T>, const R: usize, const S: Shape, const DIM: usize>
     DimSumOp<Src, Dest, R, S, DIM>
+{
+    pub fn new() -> Box<Self> {
+        Box::new(Self {
+            _markers: PhantomData,
+        })
+    }
+}
+
+impl<Src: Tensor, Dest: Tensor, const R: usize, const S: Shape, const DIM: usize> Op<Src::T>
+    for DimSumOp<Src, Dest, R, S, DIM>
 where
     Src: Tensor + Reducible<Src::T, R, S>,
     for<'a> TensorView<'a, Src::T, R, S>: From<&'a Src>,
@@ -109,10 +119,10 @@ where
 
     fn backward(&self, args: BackwardArgs<Src::T>) -> BackwardOutput<Src::T> {
         if let BackwardArgs::Unary {
-            in_grad: in_grad_basic,
-            in_data: in_data_basic,
-            out_grad: out_grad_basic,
-            out_data: out_data_basic,
+            in_grad: _in_grad_basic,
+            in_data: _in_data_basic,
+            out_grad: _out_grad_basic,
+            out_data: _out_data_basic,
         } = args
         {
             todo!()

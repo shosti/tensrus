@@ -1,9 +1,11 @@
 use crate::{
+    broadcast::Broadcastable,
     generic_tensor::GenericTensor,
     numeric::Numeric,
     shape::Shape,
     storage::{num_elems, storage_idx, IndexError, Layout, Storage},
     tensor::Tensor,
+    tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
     vector::Vector,
 };
@@ -205,6 +207,22 @@ impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
     pub fn matvecmul_into(&self, x: &Vector<T, N>, out: Vector<T, M>) -> Vector<T, M> {
         matvecmul_with_initial_impl::<T, M, N>(self.storage, self.layout, &x.storage, out)
     }
+}
+
+impl<'a, 'b, T: Numeric, const M: usize, const N: usize> From<&'a MatrixView<'b, T, M, N>>
+    for TensorView<'a, T, 2, { matrix_shape(M, N) }>
+{
+    fn from(v: &'a MatrixView<'b, T, M, N>) -> Self {
+        Self {
+            storage: v.storage,
+            layout: v.layout,
+        }
+    }
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize> Broadcastable<T, 2, { matrix_shape(M, N) }>
+    for MatrixView<'a, T, M, N>
+{
 }
 
 impl<'a, T: Numeric, const M: usize, const N: usize> Clone for MatrixView<'a, T, M, N> {
