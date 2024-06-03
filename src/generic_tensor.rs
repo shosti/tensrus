@@ -1,9 +1,10 @@
 use crate::{
-    broadcast::{broadcast_compat, BroadcastTo, Reducible},
+    broadcast::{broadcast_compat, BroadcastTo},
     numeric::Numeric,
-    shape::{reduced_shape, subtensor_shape, transpose_shape, Shape},
+    shape::{subtensor_shape, transpose_shape, Shape},
     storage::{num_elems, storage_idx, IndexError, Layout, Storage},
     tensor::Tensor,
+    tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
 };
 use num::ToPrimitive;
@@ -49,21 +50,11 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
         }
     }
 
-    pub fn reduce_dim<const DIM: usize>(
-        &self,
-        f: impl Fn(T, T) -> T + 'static,
-    ) -> GenericTensor<T, R, { reduced_shape(R, S, DIM) }> {
-        GenericTensor::from_fn(|idx| {
-            let mut src_idx = *idx;
-            debug_assert!(src_idx[DIM] == 0);
-
-            let mut res = self[&src_idx];
-            for i in 1..S[DIM] {
-                src_idx[DIM] = i;
-                res = f(res, self[&src_idx]);
-            }
-            res
-        })
+    pub fn view(&self) -> TensorView<T, R, S> {
+        TensorView {
+            storage: &self.storage,
+            layout: self.layout,
+        }
     }
 
     pub fn subtensor(
@@ -105,8 +96,6 @@ where
         // })
     }
 }
-
-impl<T: Numeric, const R: usize, const S: Shape> Reducible<T, R, S> for GenericTensor<T, R, S> {}
 
 #[cfg(test)]
 mod tests {
@@ -267,20 +256,5 @@ mod tests {
 
         assert_eq!(t[&[1, 0]], t2[&[0, 2]]);
         assert_eq!(t[&[2, 1]], t3[&[5]]);
-    }
-
-    #[test]
-    fn test_reduce_dim() {
-        let t = GenericTensor::<f64, 2, { [2, 3, 0, 0, 0, 0] }>::from([1, 2, 3, 4, 5, 6]);
-        let t2 = t.reduce_dim::<0>(|x, y| x + y);
-        assert_eq!(
-            t2,
-            GenericTensor::<f64, 2, { [1, 3, 0, 0, 0, 0] }>::from([5, 7, 9])
-        );
-        let t3 = t.reduce_dim::<1>(|x, y| x + y);
-        assert_eq!(
-            t3,
-            GenericTensor::<f64, 2, { [2, 1, 0, 0, 0, 0] }>::from([6, 15])
-        );
     }
 }

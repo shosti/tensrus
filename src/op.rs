@@ -81,16 +81,16 @@ pub trait Op<T: Numeric>: Debug {
     fn backward(&self, args: BackwardArgs<T>) -> BackwardOutput<T>;
 }
 
-#[derive(Debug)]
-pub struct ReduceOp<Src, Dest, ROp, const R: usize, const S: Shape, const DIM: usize>
-where
-    Src: Reducible<Src::T, R, S> + Tensor,
-    Dest: Tensor<T = Src::T> + From<GenericTensor<Src::T, R, { reduced_shape(R, S, DIM) }>>,
-    ROp: Op<Src::T>,
-{
-    _markers: PhantomData<(Src, Dest)>,
-    op: ROp,
-}
+// #[derive(Debug)]
+// pub struct ReduceOp<Src, Dest, ROp, const R: usize, const S: Shape, const DIM: usize>
+// where
+//     Src: Reducible<Src::T, R, S> + Tensor,
+//     Dest: Tensor<T = Src::T> + From<GenericTensor<Src::T, R, { reduced_shape(R, S, DIM) }>>,
+//     ROp: Op<Src::T>,
+// {
+//     _markers: PhantomData<(Src, Dest)>,
+//     op: ROp,
+// }
 
 // impl<Src, Dest, ROp, const R: usize, const S: Shape, const DIM: usize> Op<Dest::T>
 //     for ReduceOp<Src, Dest, ROp, R, S, DIM>

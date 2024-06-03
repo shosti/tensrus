@@ -3,6 +3,7 @@ use crate::{
     numeric::Numeric,
     shape::{self, reduced_shape, Shape},
     tensor::Tensor,
+    tensor_view::TensorView,
 };
 use std::fmt::Debug;
 
@@ -49,16 +50,16 @@ pub trait BroadcastTo<Tn: Tensor>: Debug {
     fn broadcast(self) -> Tn;
 }
 
-pub trait Reducible<T: Numeric, const R: usize, const S: Shape>:
-    Into<GenericTensor<T, R, S>>
+pub trait Reducible<'a, T: Numeric, const R: usize, const S: Shape>: Sized
+where
+    TensorView<'a, T, R, S>: From<Self>,
 {
     fn reduce_dim<const DIM: usize>(
         self,
         f: impl Fn(T, T) -> T + 'static,
     ) -> GenericTensor<T, R, { reduced_shape(R, S, DIM) }> {
-        let g: GenericTensor<T, R, S> = self.into();
-        let res = g.reduce_dim(f);
-        res.into()
+        let view: TensorView<T, R, S> = self.into();
+        view.reduce_dim(f)
     }
 }
 

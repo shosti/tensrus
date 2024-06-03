@@ -155,6 +155,18 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
+        impl #impl_generics_with_lifetime From<&'a #name #type_generics> for crate::tensor_view::TensorView<'a, T, #rank, #shape> {
+            fn from(t: &'a #name #type_generics) -> Self {
+                Self {
+                    storage: &t.storage,
+                    layout: t.layout,
+                }
+            }
+        }
+
+        impl #impl_generics_with_lifetime crate::broadcast::Reducible<'a, T, #rank, #shape> for &'a #name #type_generics {
+        }
+
         impl #impl_generics_with_lifetime std::ops::Add<&'a Self> for #name #type_generics {
             type Output = Self;
 
