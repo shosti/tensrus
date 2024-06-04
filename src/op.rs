@@ -148,17 +148,17 @@ where
     for<'a> TensorView<'a, Rhs::T, { Rhs::R }, { Rhs::S }>: From<&'a Rhs>,
     Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
 {
-    fn forward(&self, args: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
-        let (a_untyped, b_untyped) = args.binary();
-        let a = Tn::ref_from_basic(a_untyped);
-        let b_orig = Rhs::ref_from_basic(b_untyped);
-        let b = b_orig.broadcast::<{ Tn::R }, { Tn::S }>();
+    fn forward(&self, _args: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
+        // let (a_untyped, b_untyped) = args.binary();
+        // let a = Tn::ref_from_basic(a_untyped);
+        // let b_orig = Rhs::ref_from_basic(b_untyped);
+        // let b = b_orig.broadcast::<{ Tn::R }, { Tn::S }>();
         todo!()
         // let out = a.map(|idx, x| x * b[&idx]);
         // Box::new(out)
     }
 
-    fn backward(&self, args: BackwardArgs<Tn::T>) -> BackwardOutput<Tn::T> {
+    fn backward(&self, _args: BackwardArgs<Tn::T>) -> BackwardOutput<Tn::T> {
         todo!()
     }
 }
