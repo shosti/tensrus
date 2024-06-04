@@ -95,8 +95,11 @@ impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, con
 }
 
 impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, const S: Shape>
-    ShapedTensor<T, R, S> for Broadcast<'a, T, R_SRC, S_SRC, R, S>
+    ShapedTensor for Broadcast<'a, T, R_SRC, S_SRC, R, S>
 {
+    type T = T;
+    const R: usize = R;
+    const S: Shape = S;
 }
 
 impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, const S: Shape>

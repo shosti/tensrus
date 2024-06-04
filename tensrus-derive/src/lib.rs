@@ -100,7 +100,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics crate::tensor::ShapedTensor<T, #rank, #shape> for #name #type_generics {}
+        // impl #impl_generics crate::tensor::ShapedTensor<T, #rank, #shape> for #name #type_generics {}
 
         impl #impl_generics crate::tensor::BasicTensor<T> for #name #type_generics {
             fn as_any(&self) -> &dyn std::any::Any {
@@ -180,13 +180,13 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics_with_lifetime std::ops::Add<&'a dyn crate::tensor::ShapedTensor<T, #rank, #shape>> for #name #type_generics {
-            type Output = Self;
+        // impl #impl_generics_with_lifetime std::ops::Add<&'a dyn crate::tensor::ShapedTensor<T, #rank, #shape>> for #name #type_generics {
+        //     type Output = Self;
 
-            fn add(self, other: &dyn crate::tensor::ShapedTensor<T, #rank, #shape>) -> Self {
-                self.map(|idx, v| v + other[idx])
-            }
-        }
+        //     fn add(self, other: &dyn crate::tensor::ShapedTensor<T, #rank, #shape>) -> Self {
+        //         self.map(|idx, v| v + other[idx])
+        //     }
+        // }
 
         impl #impl_generics std::ops::Mul<crate::scalar::Scalar<T>> for #name #type_generics {
             type Output = Self;
