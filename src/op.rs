@@ -1,5 +1,5 @@
 use crate::{
-    broadcast::Reducible,
+    broadcast::{broadcast_compat, Broadcastable, Reducible},
     generic_tensor::GenericTensor,
     matrix::Matrix,
     numeric::Numeric,
@@ -7,6 +7,7 @@ use crate::{
     shape::reduced_shape,
     tensor::{BasicTensor, ShapedTensor, Tensor},
     tensor_view::TensorView,
+    type_assert::{Assert, IsTrue},
     vector::Vector,
 };
 use num::{traits::real::Real, One, Zero};
@@ -124,6 +125,41 @@ where
         } else {
             unreachable!()
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct BCastMulOp<Tn, Rhs> {
+    _markers: PhantomData<(Tn, Rhs)>,
+}
+
+impl<Tn, Rhs> BCastMulOp<Tn, Rhs> {
+    pub fn new() -> Box<Self> {
+        Box::new(Self {
+            _markers: PhantomData,
+        })
+    }
+}
+
+impl<Tn, Rhs> Op<Tn::T> for BCastMulOp<Tn, Rhs>
+where
+    Tn: Tensor + ShapedTensor,
+    Rhs: Tensor<T = Tn::T> + ShapedTensor + Broadcastable<Rhs::T, { Rhs::R }, { Rhs::S }>,
+    for<'a> TensorView<'a, Rhs::T, { Rhs::R }, { Rhs::S }>: From<&'a Rhs>,
+    Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
+{
+    fn forward(&self, args: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
+        let (a_untyped, b_untyped) = args.binary();
+        let a = Tn::ref_from_basic(a_untyped);
+        let b_orig = Rhs::ref_from_basic(b_untyped);
+        let b = b_orig.broadcast::<{ Tn::R }, { Tn::S }>();
+        todo!()
+        // let out = a.map(|idx, x| x * b[&idx]);
+        // Box::new(out)
+    }
+
+    fn backward(&self, args: BackwardArgs<Tn::T>) -> BackwardOutput<Tn::T> {
+        todo!()
     }
 }
 
