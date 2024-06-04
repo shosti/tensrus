@@ -29,6 +29,11 @@ impl Layout {
     }
 }
 
+pub(crate) trait TensorStorage<T> {
+    fn storage(&self) -> &[T];
+    fn layout(&self) -> Layout;
+}
+
 #[derive(Debug, PartialEq)]
 pub struct IndexError {}
 

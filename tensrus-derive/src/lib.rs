@@ -169,6 +169,16 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
+        impl #impl_generics crate::storage::TensorStorage<T> for #name #type_generics {
+            fn storage(&self) -> &[T] {
+                &self.storage
+            }
+
+            fn layout(&self) -> crate::storage::Layout {
+                self.layout
+            }
+        }
+
         impl #impl_generics crate::broadcast::Reducible<T, #rank, #shape> for #name #type_generics {
         }
 
