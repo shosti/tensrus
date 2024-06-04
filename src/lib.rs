@@ -4,6 +4,7 @@
 #![feature(trait_upcasting)]
 #![feature(const_trait_impl)]
 #![feature(concat_idents)]
+#![feature(associated_const_equality)]
 #![allow(incomplete_features)]
 #[macro_use]
 extern crate tensrus_derive;

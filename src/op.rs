@@ -83,56 +83,56 @@ pub trait Op<T: Numeric>: Debug {
     fn backward(&self, args: BackwardArgs<T>) -> BackwardOutput<T>;
 }
 
-#[derive(Debug)]
-pub struct DimSumOp<
-    Src: Tensor,
-    Dest: Tensor<T = Src::T>,
-    const R: usize,
-    const S: Shape,
-    const DIM: usize,
-> {
-    _markers: PhantomData<(Src, Dest)>,
-}
+// #[derive(Debug)]
+// pub struct DimSumOp<
+//     Src: Tensor,
+//     Dest: Tensor<T = Src::T>,
+//     const R: usize,
+//     const S: Shape,
+//     const DIM: usize,
+// > {
+//     _markers: PhantomData<(Src, Dest)>,
+// }
 
-impl<Src: Tensor, Dest: Tensor<T = Src::T>, const R: usize, const S: Shape, const DIM: usize>
-    DimSumOp<Src, Dest, R, S, DIM>
-{
-    pub fn new() -> Box<Self> {
-        Box::new(Self {
-            _markers: PhantomData,
-        })
-    }
-}
+// impl<Src: Tensor, Dest: Tensor<T = Src::T>, const R: usize, const S: Shape, const DIM: usize>
+//     DimSumOp<Src, Dest, R, S, DIM>
+// {
+//     pub fn new() -> Box<Self> {
+//         Box::new(Self {
+//             _markers: PhantomData,
+//         })
+//     }
+// }
 
-impl<Src: Tensor, Dest: Tensor, const R: usize, const S: Shape, const DIM: usize> Op<Src::T>
-    for DimSumOp<Src, Dest, R, S, DIM>
-where
-    Src: Tensor + Reducible<Src::T, R, S>,
-    for<'a> TensorView<'a, Src::T, R, S>: From<&'a Src>,
-    Dest: Tensor<T = Src::T> + From<GenericTensor<Src::T, R, { reduced_shape(R, S, DIM) }>>,
-{
-    fn forward(&self, args: ForwardInput<Src::T>) -> Box<dyn BasicTensor<Src::T>> {
-        let input = args.unary();
-        let in_typed = Src::ref_from_basic(input);
-        let reduced: Dest = in_typed.reduce_dim::<DIM>(|x, y| x + y).into();
-        Box::new(reduced)
-    }
+// impl<Src: Tensor, Dest: Tensor, const R: usize, const S: Shape, const DIM: usize> Op<Src::T>
+//     for DimSumOp<Src, Dest, R, S, DIM>
+// where
+//     Src: Tensor + Reducible<Src::T, R, S>,
+//     for<'a> TensorView<'a, Src::T, R, S>: From<&'a Src>,
+//     Dest: Tensor<T = Src::T> + From<GenericTensor<Src::T, R, { reduced_shape(R, S, DIM) }>>,
+// {
+//     fn forward(&self, args: ForwardInput<Src::T>) -> Box<dyn BasicTensor<Src::T>> {
+//         let input = args.unary();
+//         let in_typed = Src::ref_from_basic(input);
+//         let reduced: Dest = in_typed.reduce_dim::<DIM>(|x, y| x + y).into();
+//         Box::new(reduced)
+//     }
 
-    fn backward(&self, args: BackwardArgs<Src::T>) -> BackwardOutput<Src::T> {
-        if let BackwardArgs::Unary {
-            in_grad: in_grad_basic,
-            ..
-        } = args
-        {
-            let in_grad = *Src::from_basic_boxed(in_grad_basic);
-            let in_grad_updated = in_grad.map(|_, x| x + Src::T::one());
+//     fn backward(&self, args: BackwardArgs<Src::T>) -> BackwardOutput<Src::T> {
+//         if let BackwardArgs::Unary {
+//             in_grad: in_grad_basic,
+//             ..
+//         } = args
+//         {
+//             let in_grad = *Src::from_basic_boxed(in_grad_basic);
+//             let in_grad_updated = in_grad.map(|_, x| x + Src::T::one());
 
-            BackwardOutput::Unary(Box::new(in_grad_updated))
-        } else {
-            unreachable!()
-        }
-    }
-}
+//             BackwardOutput::Unary(Box::new(in_grad_updated))
+//         } else {
+//             unreachable!()
+//         }
+//     }
+// }
 
 macro_rules! unary_op {
     ($name:ident < $( $generic:ident : $subtype:ident ),* > {

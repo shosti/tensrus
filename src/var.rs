@@ -3,8 +3,8 @@ use crate::generic_tensor::GenericTensor;
 use crate::matrix::Matrix;
 use crate::numeric::Numeric;
 use crate::op::{
-    AddOp, BackwardArgs, DimSumOp, ElemLnOp, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp,
-    MatVecMulOp, Op, ReLUOp, ScalarMulOp, SumOp,
+    AddOp, BackwardArgs, ElemLnOp, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp, MatVecMulOp, Op,
+    ReLUOp, ScalarMulOp, SumOp,
 };
 use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
@@ -538,16 +538,16 @@ impl<Tn: Tensor> Var<Tn> {
         self.new_from_unary(op)
     }
 
-    pub fn dim_sum<Dest, const R: usize, const S: Shape, const DIM: usize>(&self) -> Var<Dest>
-    where
-        Tn: Reducible<Tn::T, R, S>,
-        for<'a> TensorView<'a, Tn::T, R, S>: From<&'a Tn>,
-        Dest: Tensor<T = Tn::T> + From<GenericTensor<Tn::T, R, { reduced_shape(R, S, DIM) }>>,
-    {
-        let op = DimSumOp::<Tn, Dest, R, S, DIM>::new();
+    // pub fn dim_sum<Dest, const R: usize, const S: Shape, const DIM: usize>(&self) -> Var<Dest>
+    // where
+    //     Tn: Reducible<Tn::T, R, S>,
+    //     for<'a> TensorView<'a, Tn::T, R, S>: From<&'a Tn>,
+    //     Dest: Tensor<T = Tn::T> + From<GenericTensor<Tn::T, R, { reduced_shape(R, S, DIM) }>>,
+    // {
+    //     let op = DimSumOp::<Tn, Dest, R, S, DIM>::new();
 
-        self.new_from_unary(op)
-    }
+    //     self.new_from_unary(op)
+    // }
 }
 
 impl<T: Numeric> Var<Scalar<T>> {

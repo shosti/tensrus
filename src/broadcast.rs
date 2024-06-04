@@ -110,7 +110,8 @@ impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, con
     }
 }
 
-pub trait Broadcastable<T: Numeric, const R: usize, const S: Shape>
+pub trait Broadcastable<T: Numeric, const R: usize, const S: Shape>:
+    ShapedTensor<T = T, R = { R }, S = { S }>
 where
     for<'a> TensorView<'a, T, R, S>: From<&'a Self>,
 {
