@@ -1,4 +1,6 @@
 use crate::{
+    generic_tensor::GenericTensor,
+    shape::reduced_shape,
     storage::Layout,
     tensor::{ShapedTensor, Tensor},
 };
@@ -20,27 +22,28 @@ impl<'a, Tn: Tensor> View<'a, Tn> {
     }
 }
 
-// impl<'a, Tn: Tensor> View<'a, Tn>
-// where
-//     Tn: ShapedTensor,
-// {
-//     pub fn reduce_dim<const DIM: usize>(
-//         self,
-//         f: impl Fn(T, T) -> T + 'static,
-//     ) -> GenericTensor<T, { Tn::R }, { reduced_shape({ Tn::R }, { Tn::S }, DIM) }> {
-//         GenericTensor::from_fn(|idx| {
-//             let mut src_idx = *idx;
-//             debug_assert!(src_idx[DIM] == 0);
+impl<'a, Tn: Tensor> View<'a, Tn>
+where
+    Tn: ShapedTensor,
+    Tn::Idx: for<'b> From<&'b [usize]>,
+{
+    pub fn reduce_dim<const DIM: usize>(
+        self,
+        f: impl Fn(Tn::T, Tn::T) -> Tn::T + 'static,
+    ) -> GenericTensor<Tn::T, { Tn::R }, { reduced_shape(Tn::R, Tn::S, DIM) }> {
+        GenericTensor::from_fn(|idx| {
+            let mut src_idx = *idx;
+            debug_assert!(src_idx[DIM] == 0);
 
-//             let mut res = self[&src_idx];
-//             for i in 1..S[DIM] {
-//                 src_idx[DIM] = i;
-//                 res = f(res, self[&src_idx]);
-//             }
-//             res
-//         })
-//     }
-// }
+            let mut res = self[&src_idx[..].into()];
+            for i in 1..Tn::S[DIM] {
+                src_idx[DIM] = i;
+                res = f(res, self[&src_idx[..].into()]);
+            }
+            res
+        })
+    }
+}
 
 impl<'a, 'b, Tn: Tensor> Index<&'b Tn::Idx> for View<'a, Tn> {
     type Output = Tn::T;
