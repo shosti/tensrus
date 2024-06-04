@@ -1,4 +1,4 @@
-use crate::shape::{transpose_shape, Shape};
+use crate::shape::{transpose_shape, Shape, MAX_DIMS};
 
 pub type Storage<T> = Box<[T]>;
 
@@ -29,7 +29,7 @@ impl Layout {
     }
 }
 
-pub(crate) trait TensorStorage<T> {
+pub trait TensorStorage<T> {
     fn storage(&self) -> &[T];
     fn layout(&self) -> Layout;
 }
@@ -54,7 +54,16 @@ pub(crate) fn storage_idx<const R: usize>(
     shape: Shape,
     layout: Layout,
 ) -> Result<usize, IndexError> {
-    if R == 0 {
+    storage_idx_gen(R, idx, shape, layout)
+}
+
+pub(crate) fn storage_idx_gen(
+    r: usize,
+    idx: &[usize],
+    shape: Shape,
+    layout: Layout,
+) -> Result<usize, IndexError> {
+    if r == 0 {
         return Ok(0);
     }
     for (dim, &cur) in idx.iter().enumerate() {
@@ -64,13 +73,14 @@ pub(crate) fn storage_idx<const R: usize>(
     }
 
     match layout {
-        Layout::Normal => Ok(calc_storage_idx(idx, R, shape)),
+        Layout::Normal => Ok(calc_storage_idx(idx, r, shape)),
         Layout::Transposed => {
-            let orig_shape = transpose_shape(R, shape);
-            let mut orig_idx = *idx;
-            orig_idx.reverse();
+            let orig_shape = transpose_shape(r, shape);
+            let mut orig_idx = [0; MAX_DIMS];
+            orig_idx[..r].copy_from_slice(idx);
+            orig_idx[..r].reverse();
 
-            Ok(calc_storage_idx(&orig_idx, R, orig_shape))
+            Ok(calc_storage_idx(&orig_idx, r, orig_shape))
         }
     }
 }
