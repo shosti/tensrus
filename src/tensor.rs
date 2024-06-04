@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use std::{
     any::Any,
     iter::Map,
-    ops::{Add, Index, Mul},
+    ops::{Index, Mul},
 };
 
 use num::{One, Zero};
@@ -40,7 +40,6 @@ pub trait ShapedTensor {
 pub trait Tensor:
     Clone
     + BasicTensor<Self::T>
-    + for<'a> Add<&'a Self, Output = Self>
     + Mul<Self::T, Output = Self>
     + for<'a> Index<&'a Self::Idx, Output = Self::T>
     + Eq

@@ -556,7 +556,10 @@ impl<T: Numeric> Var<Scalar<T>> {
     }
 }
 
-impl<Tn: Tensor> Add<Var<Tn>> for Var<Tn> {
+impl<Tn: Tensor> Add<Var<Tn>> for Var<Tn>
+where
+    Tn: for<'a> Add<&'a Tn, Output = Tn>,
+{
     type Output = Self;
 
     fn add(self, other: Var<Tn>) -> Self {
@@ -632,7 +635,10 @@ impl<Tn: Tensor> Neg for Var<Tn> {
     }
 }
 
-impl<Tn: Tensor> Sub for Var<Tn> {
+impl<Tn: Tensor> Sub for Var<Tn>
+where
+    Tn: for<'a> Add<&'a Tn, Output = Tn>,
+{
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
@@ -640,7 +646,10 @@ impl<Tn: Tensor> Sub for Var<Tn> {
     }
 }
 
-impl<Tn: Tensor> Sum for Var<Tn> {
+impl<Tn: Tensor> Sum for Var<Tn>
+where
+    Tn: for<'a> Add<&'a Tn, Output = Tn>,
+{
     fn sum<I>(iter: I) -> Self
     where
         I: Iterator<Item = Self>,

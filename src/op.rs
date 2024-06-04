@@ -12,6 +12,7 @@ use crate::{
 use num::{traits::real::Real, One, Zero};
 use std::fmt::Debug;
 use std::marker::PhantomData;
+use std::ops::Add;
 
 #[derive(Debug)]
 pub enum ForwardInput<'a, T: Numeric> {
@@ -197,6 +198,7 @@ macro_rules! unary_op {
 macro_rules! binary_op {
     ($name:ident < $( $generic:ident : $subtype:ident ),* > {
         args: ( $( $arg:ident : $argty:ty ),* ),
+        where_clauses: ( $( $whereclauses:tt )* ),
         const_params: ( $( $constparam:ident : $constparamty:ty ),* ),
         in_type_1: $inty1:ty,
         in_type_2: $inty2:ty,
@@ -222,7 +224,10 @@ macro_rules! binary_op {
             }
         }
 
-        impl< $( $generic : $subtype ),* $(, const $constparam : $constparamty )* > Op< $numty > for $name< $( $generic ),* $(, $constparam )* > {
+        impl< $( $generic : $subtype ),* $(, const $constparam : $constparamty )* > Op< $numty > for $name< $( $generic ),* $(, $constparam )* >
+            where [(); 0]:,
+            $( $whereclauses )*
+        {
             fn forward(&self, inputs: ForwardInput< $numty >) -> Box<dyn BasicTensor< $numty >> {
                 let (input_1_basic, input_2_basic) = inputs.binary();
                 let input_1 = <$inty1>::ref_from_basic(input_1_basic);
@@ -345,6 +350,7 @@ unary_op!(SumOp<Tn: Tensor> {
 
 binary_op!(AddOp<Tn: Tensor> {
     args: (),
+    where_clauses: ( Tn: for<'a> Add<&'a Tn, Output = Tn> ),
     const_params: (),
     in_type_1: Tn,
     in_type_2: Tn,
@@ -357,6 +363,7 @@ binary_op!(AddOp<Tn: Tensor> {
 
 binary_op!(ElemMulOp<Tn: Tensor> {
     args: (),
+    where_clauses: (),
     const_params: (),
     in_type_1: Tn,
     in_type_2: Tn,
@@ -371,6 +378,7 @@ binary_op!(ElemMulOp<Tn: Tensor> {
 
 binary_op!(ScalarMulOp<Tn: Tensor> {
     args: (),
+    where_clauses: (),
     const_params: (),
     in_type_1: Tn,
     in_type_2: Scalar<Tn::T>,
@@ -389,6 +397,7 @@ binary_op!(ScalarMulOp<Tn: Tensor> {
 
 binary_op!(MatMulOp<T: Numeric> {
     args: (),
+    where_clauses: (),
     const_params: (M: usize, N: usize, P: usize),
     in_type_1: Matrix<T, M, N>,
     in_type_2: Matrix<T, N, P>,
@@ -407,6 +416,7 @@ binary_op!(MatMulOp<T: Numeric> {
 
 binary_op!(MatVecMulOp<T: Numeric> {
     args: (),
+    where_clauses: (),
     const_params: (M: usize, N: usize),
     in_type_1: Matrix<T, M, N>,
     in_type_2: Vector<T, N>,
