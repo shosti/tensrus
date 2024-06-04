@@ -58,7 +58,6 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> TensorView<'a, T, R, S> {
 
 impl<'a, T: Numeric, const R: usize, const S: Shape> ShapedTensor for TensorView<'a, T, R, S>
 {
-    type T = T;
     const R: usize = R;
     const S: Shape = S;
 }

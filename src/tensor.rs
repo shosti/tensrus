@@ -12,7 +12,6 @@ use rand_distr::{Distribution, StandardNormal};
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::shape::Shape;
-use crate::tensor_view::TensorView;
 
 pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {
     fn as_any(&self) -> &dyn Any;
@@ -33,7 +32,6 @@ pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T
 }
 
 pub trait ShapedTensor {
-    type T;
     const R: usize;
     const S: Shape;
 }

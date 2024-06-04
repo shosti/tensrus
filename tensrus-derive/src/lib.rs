@@ -101,7 +101,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         }
 
         impl #impl_generics crate::tensor::ShapedTensor for #name #type_generics {
-            type T = T;
             const R: usize = #rank;
             const S: Shape = #shape;
         }

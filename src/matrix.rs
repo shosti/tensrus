@@ -238,7 +238,6 @@ impl<'a, T: Numeric, const M: usize, const N: usize> Index<&[usize; 2]>
 }
 
 impl<'a, T: Numeric, const M: usize, const N: usize> ShapedTensor for MatrixView<'a, T, M, N> {
-    type T = T;
     const R: usize = 2;
     const S: Shape = { matrix_shape(M, N) };
 }
