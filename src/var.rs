@@ -185,6 +185,24 @@ impl<Tn: Tensor> Var<Tn> {
     }
 }
 
+impl<Tn: Tensor> Var<Tn>
+where
+    Tn: ShapedTensor,
+{
+    pub fn dim_sum<Dest, const DIM: usize>(&self) -> Var<Dest>
+    where
+        Tn: Reducible<Tn::T, { Tn::R }, { Tn::S }>,
+        for<'a> TensorView<'a, Tn::T, { Tn::R }, { Tn::S }>: From<&'a Tn>,
+        Dest: Tensor<T = Tn::T>
+            + ShapedTensor<R = { Tn::R }, S = { reduced_shape(Tn::R, Tn::S, DIM) }>
+            + From<GenericTensor<Tn::T, { Tn::R }, { reduced_shape(Tn::R, Tn::S, DIM) }>>,
+    {
+        let op = DimSumOp::<Tn, Dest, DIM>::new();
+
+        self.new_from_unary(op)
+    }
+}
+
 impl<T: Numeric> VarRef<T> {
     fn id(&self) -> Id {
         match self {
@@ -534,19 +552,6 @@ impl<Tn: Tensor> Var<Tn> {
 
     pub fn sum_elems(&self) -> Var<Scalar<Tn::T>> {
         let op = SumOp::<Tn>::new();
-
-        self.new_from_unary(op)
-    }
-
-    pub fn dim_sum<Dest, const DIM: usize>(&self) -> Var<Dest>
-    where
-        Tn: ShapedTensor + Reducible<Tn::T, { Tn::R }, { Tn::S }>,
-        for<'a> TensorView<'a, Tn::T, { Tn::R }, { Tn::S }>: From<&'a Tn>,
-        Dest: Tensor<T = Tn::T>
-            + ShapedTensor<R = { Tn::R }, S = { reduced_shape(Tn::R, Tn::S, DIM) }>
-            + From<GenericTensor<Tn::T, { Tn::R }, { reduced_shape(Tn::R, Tn::S, DIM) }>>,
-    {
-        let op = DimSumOp::<Tn, Dest, DIM>::new();
 
         self.new_from_unary(op)
     }
