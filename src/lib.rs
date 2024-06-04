@@ -12,21 +12,20 @@ extern crate tensrus_derive;
 pub mod broadcast;
 pub mod distribution;
 pub mod generic_tensor;
+pub mod matrix;
 pub mod nn;
 pub mod numeric;
 pub mod op;
 pub mod render;
 pub mod scalar;
 pub mod shape;
+pub mod storage;
+pub mod tensor;
 pub mod tensor_view;
-mod type_assert;
+pub mod type_assert;
 pub mod var;
 pub mod vector;
-
-pub mod matrix;
-pub mod tensor;
-
-mod storage;
+pub mod view;
 
 // use nn::{Module, MLP};
 // use render::Graph;
