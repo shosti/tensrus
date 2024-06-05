@@ -139,7 +139,7 @@ impl<T: Numeric, const N: usize> From<NormalizedVector<T, N>> for Vector<T, N> {
 mod tests {
     use super::*;
     use crate::matrix::Matrix;
-    use crate::view::Broadcastable;
+    use crate::broadcast::Broadcastable;
     use proptest::prelude::*;
     use seq_macro::seq;
 

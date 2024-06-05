@@ -2,12 +2,12 @@ use crate::{
     generic_tensor::GenericTensor,
     numeric::Numeric,
     shape::{self, reduced_shape, Shape},
-    storage::Layout,
+    storage::TensorStorage,
     tensor::{ShapedTensor, Tensor},
     tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
+    view::View,
 };
-use std::ops::Index;
 
 pub const fn broadcast_compat(r_src: usize, s_src: Shape, r_dest: usize, s_dest: Shape) -> bool {
     assert!(r_dest >= r_src, "cannot broadcast to lower dimension");
@@ -48,92 +48,30 @@ pub const fn broadcast_normalize(s: Shape, r_src: usize, r_dest: usize) -> Shape
     ret
 }
 
-#[derive(Debug)]
-pub struct Broadcast<
-    'a,
-    T: Numeric,
-    const R_SRC: usize,
-    const S_SRC: Shape,
-    const R: usize,
-    const S: Shape,
-> {
-    pub(crate) storage: &'a [T],
-    pub layout: Layout,
-}
+pub trait Broadcastable<T>: ShapedTensor + TensorStorage<T> {
+    fn broadcast<Dest>(&self) -> View<Dest>
+    where
+        Dest: Tensor<T = T> + ShapedTensor,
+        Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
+    {
+        let layout = self.layout();
+        let t = Box::new(move |dest_idx: Dest::Idx| {
+            let idx: &[usize] = dest_idx.as_ref();
+            let s_normalized = broadcast_normalize(Self::S, Self::R, Dest::R);
 
-impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, const S: Shape>
-    Broadcast<'a, T, R_SRC, S_SRC, R, S>
-{
-    fn idx_translate(&self, idx: &[usize; R]) -> [usize; R_SRC] {
-        let s_normalized = broadcast_normalize(S_SRC, R_SRC, R);
-
-        let mut src_idx = [0; R_SRC];
-        let mut dim = 0;
-        for i in 0..R {
-            if s_normalized[i] == 1 && S[i] != 1 {
-                continue;
+            let mut src_idx = [0; Self::R];
+            let mut dim = 0;
+            for i in 0..Dest::R {
+                if s_normalized[i] == 1 && Dest::S[i] != 1 {
+                    continue;
+                }
+                src_idx[dim] = idx[i];
+                dim += 1;
             }
-            src_idx[dim] = idx[i];
-            dim += 1;
-        }
 
-        src_idx
-    }
-}
-
-impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, const S: Shape>
-    Index<&[usize; R]> for Broadcast<'a, T, R_SRC, S_SRC, R, S>
-{
-    type Output = T;
-
-    fn index(&self, idx: &[usize; R]) -> &Self::Output {
-        let idx_t = self.idx_translate(idx);
-        let i = crate::storage::storage_idx::<R_SRC>(&idx_t, S_SRC, self.layout)
-            .expect("out of bounds");
-        self.storage.index(i)
-    }
-}
-
-impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, const S: Shape>
-    ShapedTensor for Broadcast<'a, T, R_SRC, S_SRC, R, S>
-{
-    const R: usize = R;
-    const S: Shape = S;
-}
-
-impl<'a, T: Numeric, const R_SRC: usize, const S_SRC: Shape, const R: usize, const S: Shape>
-    From<Broadcast<'a, T, R_SRC, S_SRC, R, S>> for GenericTensor<T, R, S>
-{
-    fn from(b: Broadcast<'a, T, R_SRC, S_SRC, R, S>) -> Self {
-        GenericTensor::from_fn(|idx| b[idx])
-    }
-}
-
-pub trait Broadcastable<T: Numeric, const R: usize, const S: Shape>
-where
-    for<'a> TensorView<'a, T, R, S>: From<&'a Self>,
-{
-    fn broadcast<const R_DEST: usize, const S_DEST: Shape>(
-        &self,
-    ) -> Broadcast<T, R, S, R_DEST, S_DEST>
-    where
-        Assert<{ broadcast_compat(R, S, R_DEST, S_DEST) }>: IsTrue,
-    {
-        let view = TensorView::from(self);
-        Broadcast {
-            storage: view.storage,
-            layout: view.layout,
-        }
-    }
-
-    fn from_broadcast<const R_SRC: usize, const S_SRC: Shape>(
-        b: Broadcast<T, R_SRC, S_SRC, R, S>,
-    ) -> Self
-    where
-        Self: From<GenericTensor<T, R, S>>,
-    {
-        let t: GenericTensor<T, R, S> = b.into();
-        t.into()
+            crate::storage::storage_idx_gen(Self::R, &src_idx, Self::S, layout).unwrap()
+        });
+        View::with_translation(self.storage(), layout, t)
     }
 }
 
@@ -160,6 +98,8 @@ where
 
 #[cfg(test)]
 pub mod tests {
+    use crate::{matrix::Matrix, shape::MAX_DIMS, vector::Vector};
+
     use super::*;
 
     #[test]
@@ -185,5 +125,24 @@ pub mod tests {
         assert!(broadcast_compat(2, [256, 1, 0, 0, 0, 0], r, s));
         assert!(!broadcast_compat(3, [1000, 256, 256, 0, 0, 0], r, s));
         assert!(!broadcast_compat(r, s, 4, [1000, 256, 1, 256, 0, 0]));
+    }
+
+    #[test]
+    fn test_broadcast() {
+        let v = Vector::<f64, _>::from([1, 2, 3]);
+        let m: Matrix<_, 3, 3> = v.broadcast().into();
+        assert_eq!(
+            m,
+            Matrix::<f64, _, _>::from([[1, 2, 3], [1, 2, 3], [1, 2, 3]])
+        );
+
+        let t: GenericTensor<_, 3, { [3; MAX_DIMS] }> = v.broadcast().into();
+        assert_eq!(
+            t,
+            [1, 2, 3]
+                .into_iter()
+                .cycle()
+                .collect::<GenericTensor<f64, 3, { [3; MAX_DIMS] }>>()
+        );
     }
 }

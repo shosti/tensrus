@@ -1,10 +1,8 @@
 use crate::{
-    broadcast::{broadcast_compat, broadcast_normalize},
     generic_tensor::GenericTensor,
     shape::reduced_shape,
     storage::{Layout, TensorStorage},
     tensor::{ShapedTensor, Tensor},
-    type_assert::{Assert, IsTrue},
 };
 use std::ops::Index;
 
@@ -12,6 +10,20 @@ pub struct View<'a, Tn: Tensor> {
     storage: &'a [Tn::T],
     layout: Layout,
     idx_translate: Option<Box<dyn Fn(Tn::Idx) -> usize>>,
+}
+
+impl<'a, Tn: Tensor> View<'a, Tn> {
+    pub fn with_translation(
+        storage: &'a [Tn::T],
+        layout: Layout,
+        t: Box<dyn Fn(Tn::Idx) -> usize>,
+    ) -> Self {
+        Self {
+            storage,
+            layout,
+            idx_translate: Some(t),
+        }
+    }
 }
 
 impl<'a, Tn: Tensor> View<'a, Tn>
@@ -66,41 +78,8 @@ where
     }
 }
 
-pub trait Broadcastable<T>: ShapedTensor + TensorStorage<T> {
-    fn broadcast<Dest>(&self) -> View<Dest>
-    where
-        Dest: Tensor<T = T> + ShapedTensor,
-        Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
-    {
-        let layout = self.layout();
-        let t = Box::new(move |dest_idx: Dest::Idx| {
-            let idx: &[usize] = dest_idx.as_ref();
-            let s_normalized = broadcast_normalize(Self::S, Self::R, Dest::R);
-
-            let mut src_idx = [0; Self::R];
-            let mut dim = 0;
-            for i in 0..Dest::R {
-                if s_normalized[i] == 1 && Dest::S[i] != 1 {
-                    continue;
-                }
-                src_idx[dim] = idx[i];
-                dim += 1;
-            }
-
-            crate::storage::storage_idx_gen(Self::R, &src_idx, Self::S, layout).unwrap()
-        });
-        View {
-            storage: self.storage(),
-            layout,
-            idx_translate: Some(t),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::{matrix::Matrix, shape::MAX_DIMS, vector::Vector};
-
     use super::*;
 
     #[test]
@@ -116,25 +95,6 @@ mod tests {
         assert_eq!(
             t3,
             GenericTensor::<f64, 2, { [2, 1, 0, 0, 0, 0] }>::from([6, 15])
-        );
-    }
-
-    #[test]
-    fn test_broadcast() {
-        let v = Vector::<f64, _>::from([1, 2, 3]);
-        let m: Matrix<_, 3, 3> = v.broadcast().into();
-        assert_eq!(
-            m,
-            Matrix::<f64, _, _>::from([[1, 2, 3], [1, 2, 3], [1, 2, 3]])
-        );
-
-        let t: GenericTensor<_, 3, { [3; MAX_DIMS] }> = v.broadcast().into();
-        assert_eq!(
-            t,
-            [1, 2, 3]
-                .into_iter()
-                .cycle()
-                .collect::<GenericTensor<f64, 3, { [3; MAX_DIMS] }>>()
         );
     }
 }

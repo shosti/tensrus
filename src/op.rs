@@ -1,5 +1,5 @@
 use crate::{
-    broadcast::{broadcast_compat, Broadcastable, Reducible},
+    broadcast::{broadcast_compat, Reducible},
     generic_tensor::GenericTensor,
     matrix::Matrix,
     numeric::Numeric,
@@ -8,7 +8,7 @@ use crate::{
     tensor::{BasicTensor, ShapedTensor, Tensor},
     tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
-    vector::Vector,
+    vector::Vector, broadcast::Broadcastable,
 };
 use num::{traits::real::Real, One, Zero};
 use std::fmt::Debug;
@@ -144,7 +144,7 @@ impl<Tn, Rhs> BCastMulOp<Tn, Rhs> {
 impl<Tn, Rhs> Op<Tn::T> for BCastMulOp<Tn, Rhs>
 where
     Tn: Tensor + ShapedTensor,
-    Rhs: Tensor<T = Tn::T> + ShapedTensor + Broadcastable<Rhs::T, { Rhs::R }, { Rhs::S }>,
+    Rhs: Tensor<T = Tn::T> + ShapedTensor + Broadcastable<Rhs::T>,
     for<'a> TensorView<'a, Rhs::T, { Rhs::R }, { Rhs::S }>: From<&'a Rhs>,
     Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
 {

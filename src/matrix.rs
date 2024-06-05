@@ -7,7 +7,7 @@ use crate::{
     tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
     vector::Vector,
-    view::Broadcastable,
+    broadcast::Broadcastable,
 };
 use num::ToPrimitive;
 use std::ops::{Index, Mul};
