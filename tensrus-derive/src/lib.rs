@@ -27,9 +27,14 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
     let mut generics_with_lifetime = ast.generics.clone();
     push_lifetime_param(&mut generics_with_lifetime);
 
+    let mut generics_with_lifetime_and_rhs = generics_with_lifetime.clone();
+    push_rhs_param(&mut generics_with_lifetime_and_rhs);
+
     let (impl_generics, type_generics, _where_clause) = ast.generics.split_for_impl();
     let (f_impl_generics, _, _) = f_generics.split_for_impl();
     let (impl_generics_with_lifetime, _, _) = generics_with_lifetime.split_for_impl();
+    let (impl_generics_with_lifetime_and_rhs, _, _) =
+        generics_with_lifetime_and_rhs.split_for_impl();
 
     let gen = quote! {
         impl #impl_generics Tensor for #name #type_generics {
@@ -172,11 +177,14 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
 
         impl #impl_generics crate::broadcast::Broadcastable<T> for #name #type_generics {}
 
-        impl #impl_generics_with_lifetime std::ops::Add<&'a Self> for #name #type_generics {
+        impl #impl_generics_with_lifetime_and_rhs std::ops::Add<Rhs> for #name #type_generics
+            where crate::view::View<'a, Self>: From<Rhs>
+        {
             type Output = Self;
 
-            fn add(self, other: &Self) -> Self::Output {
-                self.map(|idx, v| v + other[idx])
+            fn add(self, other: Rhs) -> Self::Output {
+                let view: crate::view::View<'a, Self> = other.into();
+                self.map(|idx, v| v + view[idx])
             }
         }
 
@@ -358,4 +366,11 @@ fn push_to_primitive_f_param(generics: &mut Generics) {
 fn push_lifetime_param(generics: &mut Generics) {
     let param = LifetimeParam::new(Lifetime::new("'a", Span::call_site()));
     generics.params.insert(0, param.into());
+}
+
+// This adds a Rhs param
+fn push_rhs_param(generics: &mut Generics) {
+    let ident = syn::Ident::new("Rhs", Span::call_site());
+    let param = syn::GenericParam::Type(syn::TypeParam::from(ident));
+    generics.params.push(param.into());
 }
