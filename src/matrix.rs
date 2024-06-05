@@ -461,6 +461,13 @@ mod tests {
     }
 
     #[test]
+    fn test_add() {
+        let x: Matrix<f64, _, _> = Matrix::from([[1, 2], [3, 4]]);
+        let y = GenericTensor::<f64, 2, { matrix_shape(2, 2) }>::from([1, 2, 3, 4]);
+        assert_eq!(x + y.view(), Matrix::from([[2, 4], [6, 8]]));
+    }
+
+    #[test]
     #[rustfmt::skip]
     fn test_from_iter() {
         let x: Matrix<f64, 3, 2> = [1, 2, 3].into_iter().cycle().collect();

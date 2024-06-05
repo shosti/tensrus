@@ -62,6 +62,35 @@ where
     }
 }
 
+impl<'a, Tn> From<View<'a, GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>> for View<'a, Tn>
+where
+    Tn: ShapedTensor + Tensor + From<GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>,
+    [usize; Tn::R]: From<Tn::Idx>,
+{
+    fn from(v: View<'a, GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>) -> Self {
+        let storage = v.storage;
+        let layout = v.layout;
+        match v.idx_translate {
+            None => Self {
+                storage,
+                layout,
+                idx_translate: None,
+            },
+            Some(t) => {
+                let idx_translate = Box::new(move |idx_orig: Tn::Idx| {
+                    let idx: [usize; Tn::R] = idx_orig.into();
+                    t(idx)
+                });
+                Self {
+                    storage,
+                    layout,
+                    idx_translate: Some(idx_translate),
+                }
+            }
+        }
+    }
+}
+
 impl<'a, 'b, Tn> Index<&'b Tn::Idx> for View<'a, Tn>
 where
     Tn: Tensor + ShapedTensor,
