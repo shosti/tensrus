@@ -1,6 +1,6 @@
 use crate::{
     generic_tensor::GenericTensor,
-    shape::reduced_shape,
+    shape::{reduced_shape, Shape},
     storage::{Layout, TensorStorage},
     tensor::{ShapedTensor, Tensor},
 };
@@ -60,6 +60,11 @@ where
             idx_translate: None,
         }
     }
+}
+
+impl<'a, Tn: Tensor + ShapedTensor> ShapedTensor for View<'a, Tn> {
+    const R: usize = Tn::R;
+    const S: Shape = Tn::S;
 }
 
 impl<'a, Tn> From<View<'a, GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>> for View<'a, Tn>
