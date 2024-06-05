@@ -1,4 +1,5 @@
 use crate::{
+    broadcast::Broadcastable,
     generic_tensor::GenericTensor,
     numeric::Numeric,
     shape::Shape,
@@ -7,7 +8,6 @@ use crate::{
     tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
     vector::Vector,
-    broadcast::Broadcastable,
 };
 use num::ToPrimitive;
 use std::ops::{Index, Mul};
@@ -57,7 +57,7 @@ impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N> {
         self.map_rows(|v| v.normalize().into())
     }
 
-    pub fn view(&self) -> MatrixView<T, M, N> {
+    pub fn matrix_view(&self) -> MatrixView<T, M, N> {
         MatrixView {
             storage: &self.storage,
             layout: self.layout,
@@ -446,7 +446,6 @@ impl<T: Numeric, const M: usize, const N: usize> std::fmt::Debug for Matrix<T, M
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::broadcast::Reducible;
     use crate::vector::Vector;
     use proptest::prelude::*;
     use seq_macro::seq;
@@ -709,9 +708,9 @@ mod tests {
     #[test]
     fn test_reduce_dim() {
         let m = Matrix::<f64, _, _>::from([[1, 2, 3], [4, 5, 6]]);
-        let m2: Matrix<f64, 1, 3> = m.reduce_dim::<0>(|x, y| x + y).into();
+        let m2: Matrix<f64, 1, 3> = m.view().reduce_dim::<0>(|x, y| x + y).into();
         assert_eq!(m2, Matrix::<f64, _, _>::from([[5, 7, 9]]));
-        let m3: Matrix<f64, 2, 1> = m.reduce_dim::<1>(|x, y| x + y).into();
+        let m3: Matrix<f64, 2, 1> = m.view().reduce_dim::<1>(|x, y| x + y).into();
         assert_eq!(m3, Matrix::<f64, _, _>::from([[6], [15]]));
     }
 }

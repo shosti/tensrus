@@ -12,6 +12,8 @@ use rand_distr::{Distribution, StandardNormal};
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
 use crate::shape::Shape;
+use crate::storage::TensorStorage;
+use crate::view::View;
 
 pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {
     fn as_any(&self) -> &dyn Any;
@@ -61,6 +63,12 @@ pub trait Tensor:
     fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx>;
 
     // Provided methods
+    fn view(&self) -> View<Self>
+    where
+        Self: TensorStorage<Self::T>,
+    {
+        self.into()
+    }
     fn repeat(n: Self::T) -> Self {
         Self::from_fn(|_| n)
     }

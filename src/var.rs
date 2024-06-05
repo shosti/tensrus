@@ -1,4 +1,3 @@
-use crate::broadcast::Reducible;
 use crate::generic_tensor::GenericTensor;
 use crate::matrix::Matrix;
 use crate::numeric::Numeric;
@@ -9,8 +8,8 @@ use crate::op::{
 use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
 use crate::shape::reduced_shape;
+use crate::storage::TensorStorage;
 use crate::tensor::{BasicTensor, ShapedTensor, Tensor};
-use crate::tensor_view::TensorView;
 use crate::vector::Vector;
 use num::{One, ToPrimitive};
 use std::cell::{Ref, RefCell};
@@ -191,8 +190,8 @@ where
 {
     pub fn dim_sum<Dest, const DIM: usize>(&self) -> Var<Dest>
     where
-        Tn: Reducible<Tn::T, { Tn::R }, { Tn::S }>,
-        for<'a> TensorView<'a, Tn::T, { Tn::R }, { Tn::S }>: From<&'a Tn>,
+        Tn: ShapedTensor + TensorStorage<Tn::T>,
+        Tn::Idx: From<[usize; Tn::R]>,
         Dest: Tensor<T = Tn::T>
             + ShapedTensor<R = { Tn::R }, S = { reduced_shape(Tn::R, Tn::S, DIM) }>
             + From<GenericTensor<Tn::T, { Tn::R }, { reduced_shape(Tn::R, Tn::S, DIM) }>>,

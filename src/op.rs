@@ -1,14 +1,15 @@
 use crate::{
-    broadcast::{broadcast_compat, Reducible},
+    broadcast::{broadcast_compat, Broadcastable},
     generic_tensor::GenericTensor,
     matrix::Matrix,
     numeric::Numeric,
     scalar::Scalar,
     shape::reduced_shape,
+    storage::TensorStorage,
     tensor::{BasicTensor, ShapedTensor, Tensor},
     tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
-    vector::Vector, broadcast::Broadcastable,
+    vector::Vector,
 };
 use num::{traits::real::Real, One, Zero};
 use std::fmt::Debug;
@@ -99,8 +100,8 @@ impl<Src: Tensor, Dest: Tensor<T = Src::T>, const DIM: usize> DimSumOp<Src, Dest
 
 impl<Src: Tensor, Dest: Tensor, const DIM: usize> Op<Src::T> for DimSumOp<Src, Dest, DIM>
 where
-    Src: ShapedTensor + Reducible<Src::T, { Src::R }, { Src::S }>,
-    for<'a> TensorView<'a, Src::T, { Src::R }, { Src::S }>: From<&'a Src>,
+    Src: ShapedTensor + TensorStorage<Src::T>,
+    Src::Idx: From<[usize; Src::R]>,
     Dest: Tensor<T = Src::T>
         + ShapedTensor<R = { Src::R }, S = { reduced_shape(Src::R, Src::S, DIM) }>
         + From<GenericTensor<Src::T, { Src::R }, { reduced_shape(Src::R, Src::S, DIM) }>>,
@@ -108,7 +109,7 @@ where
     fn forward(&self, args: ForwardInput<Src::T>) -> Box<dyn BasicTensor<Src::T>> {
         let input = args.unary();
         let in_typed = Src::ref_from_basic(input);
-        let reduced: Dest = in_typed.reduce_dim::<DIM>(|x, y| x + y).into();
+        let reduced: Dest = in_typed.view().reduce_dim::<DIM>(|x, y| x + y).into();
         Box::new(reduced)
     }
 
@@ -435,11 +436,11 @@ binary_op!(MatMulOp<T: Numeric> {
     forward: |a: &Matrix<T, M, N>, b: &Matrix<T, N, P>, _| a * b,
     backward_1: |a_grad: Matrix<T, M, N>, args: BinaryBackwardArgs<Matrix<T, M, N>, Matrix<T, N, P>, Matrix<T, M, P>, _>| {
         let b = args.other_in_data;
-        args.out_grad.matmul_view_into(b.view().transpose(), a_grad)
+        args.out_grad.matmul_view_into(b.matrix_view().transpose(), a_grad)
     },
     backward_2: |b_grad: Matrix<T, N, P>, args: BinaryBackwardArgs<Matrix<T, N, P>, Matrix<T, M, N>, Matrix<T, M, P>, _>| {
         let a = args.other_in_data;
-        a.view().transpose().matmul_into(args.out_grad, b_grad)
+        a.matrix_view().transpose().matmul_into(args.out_grad, b_grad)
     },
 });
 
@@ -458,6 +459,6 @@ binary_op!(MatVecMulOp<T: Numeric> {
     },
     backward_2: |x_grad: Vector<T, N>, args: BinaryBackwardArgs<Vector<T, N>, Matrix<T, M, N>, Vector<T, M>, _>| {
         let a = args.other_in_data;
-        a.view().transpose().matvecmul_into(args.out_grad, x_grad)
+        a.matrix_view().transpose().matvecmul_into(args.out_grad, x_grad)
     },
 });

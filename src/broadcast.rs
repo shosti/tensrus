@@ -1,10 +1,7 @@
 use crate::{
-    generic_tensor::GenericTensor,
-    numeric::Numeric,
-    shape::{self, reduced_shape, Shape},
+    shape::{self, Shape},
     storage::TensorStorage,
     tensor::{ShapedTensor, Tensor},
-    tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
     view::View,
 };
@@ -75,30 +72,9 @@ pub trait Broadcastable<T>: ShapedTensor + TensorStorage<T> {
     }
 }
 
-pub trait Reducible<T: Numeric, const R: usize, const S: Shape>
-where
-    for<'a> TensorView<'a, T, R, S>: From<&'a Self>,
-{
-    fn reduce_dim<const DIM: usize>(
-        &self,
-        f: impl Fn(T, T) -> T + 'static,
-    ) -> GenericTensor<T, R, { reduced_shape(R, S, DIM) }> {
-        let view: TensorView<T, R, S> = self.into();
-        view.reduce_dim(f)
-    }
-
-    fn dim_sum<const DIM: usize>(&self) -> GenericTensor<T, R, { reduced_shape(R, S, DIM) }> {
-        self.reduce_dim(|x, y| x + y)
-    }
-
-    fn dim_mul<const DIM: usize>(&self) -> GenericTensor<T, R, { reduced_shape(R, S, DIM) }> {
-        self.reduce_dim(|x, y| x * y)
-    }
-}
-
 #[cfg(test)]
 pub mod tests {
-    use crate::{matrix::Matrix, shape::MAX_DIMS, vector::Vector};
+    use crate::{generic_tensor::GenericTensor, matrix::Matrix, shape::MAX_DIMS, vector::Vector};
 
     use super::*;
 
