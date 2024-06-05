@@ -68,20 +68,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 }
             }
 
-            fn map(mut self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
-                let mut next_idx = Some(Self::default_idx());
-                while let Some(idx) = next_idx {
-                    let i = crate::storage::storage_idx(&idx, #shape, self.layout).unwrap();
-                    self.storage[i] = f(&idx, self.storage[i]);
-                    next_idx = self.next_idx(&idx);
-                }
-
-                Self {
-                    storage: self.storage,
-                    layout: self.layout,
-                }
-            }
-
             fn set(mut self, idx: &Self::Idx, f: impl Fn(Self::T) -> Self::T) -> Self {
                 let i = crate::storage::storage_idx(idx, #shape, self.layout).expect("out of bounds");
                 self.storage[i] = f(self.storage[i]);

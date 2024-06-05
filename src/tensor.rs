@@ -63,7 +63,6 @@ pub trait Tensor:
     fn shape() -> Shape;
 
     fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self;
-    fn map(self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self;
     fn set(self, idx: &Self::Idx, f: impl Fn(Self::T) -> Self::T) -> Self;
 
     fn num_elems() -> usize;
@@ -71,6 +70,16 @@ pub trait Tensor:
     fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx>;
 
     // Provided methods
+    fn map(mut self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
+        let mut next_idx = Some(Self::default_idx());
+        while let Some(idx) = next_idx {
+            self = self.set(&idx, |val| f(&idx, val));
+            next_idx = self.next_idx(&idx);
+        }
+
+        self
+    }
+
     fn view(&self) -> View<Self>
     where
         Self: TensorStorage<Self::T>,
