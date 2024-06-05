@@ -3,8 +3,8 @@ use crate::generic_tensor::GenericTensor;
 use crate::matrix::Matrix;
 use crate::numeric::Numeric;
 use crate::op::{
-    AddOp, BackwardArgs, DimSumOp, ElemLnOp, ElemMulOp, ElemPowOp, ForwardInput, MatMulOp,
-    MatVecMulOp, Op, ReLUOp, ScalarMulOp, SumOp,
+    AddOp, BackwardArgs, DimSumOp, ElemAddOp, ElemLnOp, ElemMulOp, ElemPowOp, ForwardInput,
+    MatMulOp, MatVecMulOp, Op, ReLUOp, ScalarMulOp, SumOp,
 };
 use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
@@ -13,6 +13,7 @@ use crate::storage::TensorStorage;
 use crate::tensor::{BasicTensor, Tensor};
 use crate::type_assert::{Assert, IsTrue};
 use crate::vector::Vector;
+use crate::view::View;
 use num::{One, ToPrimitive};
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -544,13 +545,27 @@ impl<Tn: Tensor> Var<Tn> {
     pub fn elem_mul<Rhs>(&self, other: Var<Rhs>) -> Self
     where
         Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn> + Shaped,
-        Tn: Shaped,
         Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
     {
         if self.id() == other.id() {
             return self.elem_pow(Tn::T::two());
         }
         let op = ElemMulOp::<Tn, Rhs>::new();
+        let other_ref = (&other).into();
+
+        self.new_from_binary(other_ref, op)
+    }
+
+    pub fn elem_add<Rhs>(&self, other: Var<Rhs>) -> Self
+    where
+        Tn: for<'a> Add<View<'a, Tn>, Output = Tn>,
+        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn>,
+        Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
+    {
+        if self.id() == other.id() {
+            return self.elem_pow(Tn::T::two());
+        }
+        let op = ElemAddOp::<Tn, Rhs>::new();
         let other_ref = (&other).into();
 
         self.new_from_binary(other_ref, op)
@@ -763,5 +778,17 @@ mod tests {
         l.backward().unwrap();
 
         assert_eq!(*y.grad().unwrap(), Scalar::from(21));
+    }
+
+    #[test]
+    fn test_bcast_elem_add() {
+        let x: Var<Matrix<f64, _, _>> = [[1, 2, 3], [4, 5, 6]].into();
+        let y: Var<Scalar<f64>> = 1.into();
+        let z = x.elem_add(y.clone());
+        let l = z.sum_elems();
+        assert_eq!(l.data().val(), 27.0);
+
+        l.backward().unwrap();
+        assert_eq!(*y.grad().unwrap(), Scalar::from(6));
     }
 }

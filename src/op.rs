@@ -356,6 +356,31 @@ binary_op!(AddOp<Tn: Tensor> {
     backward_2: |in_grad: Tn, args: BinaryBackwardArgs<Tn, Tn, Tn, _>| in_grad.map(|idx, in_grad| in_grad + args.out_grad[idx]),
 });
 
+binary_op!(ElemAddOp<Tn: Tensor, Rhs: Tensor> {
+    args: (),
+    where_clauses: (Tn: for<'a> Add<View<'a, Tn>, Output = Tn>,
+                    Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn>,
+                    Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue),
+    const_params: (),
+    in_type_1: Tn,
+    in_type_2: Rhs,
+    out_type: Tn,
+    numeric_type: Tn::T,
+    forward: |in1: &Tn, in2: &Rhs, _| {
+        let other: View<Tn> = in2.broadcast();
+        in1.clone() + other
+    },
+    backward_1: |in_grad: Tn, args: BinaryBackwardArgs<Tn, Rhs, Tn, _>| in_grad.map(|idx, in_grad| in_grad + args.out_grad[idx]),
+    backward_2: |in_grad: Rhs, args: BinaryBackwardArgs<Rhs, Tn, Tn, _>| {
+        let mut in_grad_updated = in_grad;
+        for (idx, out_grad) in args.out_grad.iter() {
+            let in_idx = <Rhs as BroadcastableTo<_, Tn>>::unbroadcasted_idx(&idx);
+            in_grad_updated = in_grad_updated.set(&Rhs::Idx::from_slice(&in_idx), |val| val + out_grad);
+        }
+        in_grad_updated
+    },
+});
+
 binary_op!(ElemMulOp<Tn: Tensor, Rhs: Tensor> {
     args: (),
     where_clauses: (Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn>,
