@@ -5,7 +5,6 @@ use crate::{
     shape::Shape,
     storage::{num_elems, storage_idx, IndexError, Layout, Storage, TensorStorage},
     tensor::{ShapedTensor, Tensor},
-    tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
     vector::Vector,
 };
@@ -208,17 +207,6 @@ impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
     /// Multiplies self * x and adds the result to out, returning out
     pub fn matvecmul_into(&self, x: &Vector<T, N>, out: Vector<T, M>) -> Vector<T, M> {
         matvecmul_with_initial_impl::<T, M, N>(self.storage, self.layout, &x.storage, out)
-    }
-}
-
-impl<'a, 'b, T: Numeric, const M: usize, const N: usize> From<&'a MatrixView<'b, T, M, N>>
-    for TensorView<'a, T, 2, { matrix_shape(M, N) }>
-{
-    fn from(v: &'a MatrixView<'b, T, M, N>) -> Self {
-        Self {
-            storage: v.storage,
-            layout: v.layout,
-        }
     }
 }
 
@@ -564,9 +552,9 @@ mod tests {
                         let b: Matrix::<f64, N, P> = v_b.into_iter().collect();
 
                         assert_eq_within_tolerance(&a * &b, (&b.clone().transpose() * &a.clone().transpose()).transpose());
-                        assert_eq_within_tolerance(&a * b.view(), (&b.clone().transpose() * a.view().transpose()).transpose());
-                        assert_eq_within_tolerance(a.view() * &b, (&b.clone().transpose() * a.view().transpose()).transpose());
-                        assert_eq_within_tolerance(a.view() * b.view(), (b.view().transpose() * a.view().transpose()).transpose());
+                        assert_eq_within_tolerance(&a * b.matrix_view(), (&b.clone().transpose() * a.matrix_view().transpose()).transpose());
+                        assert_eq_within_tolerance(a.matrix_view() * &b, (&b.clone().transpose() * a.matrix_view().transpose()).transpose());
+                        assert_eq_within_tolerance(a.matrix_view() * b.matrix_view(), (b.matrix_view().transpose() * a.matrix_view().transpose()).transpose());
                     }
                 }
             });

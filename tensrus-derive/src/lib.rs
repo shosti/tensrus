@@ -160,15 +160,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics_with_lifetime From<&'a #name #type_generics> for crate::tensor_view::TensorView<'a, T, #rank, #shape> {
-            fn from(t: &'a #name #type_generics) -> Self {
-                Self {
-                    storage: &t.storage,
-                    layout: t.layout,
-                }
-            }
-        }
-
         impl #impl_generics crate::storage::TensorStorage<T> for #name #type_generics {
             fn storage(&self) -> &[T] {
                 &self.storage

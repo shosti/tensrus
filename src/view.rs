@@ -91,7 +91,8 @@ mod tests {
             t2,
             GenericTensor::<f64, 2, { [1, 3, 0, 0, 0, 0] }>::from([5, 7, 9])
         );
-        let t3 = t.view().reduce_dim::<1>(|x, y| x + y);
+        let t3: GenericTensor<f64, 2, { [2, 1, 0, 0, 0, 0] }> =
+            t.view().reduce_dim::<1>(|x, y| x + y);
         assert_eq!(
             t3,
             GenericTensor::<f64, 2, { [2, 1, 0, 0, 0, 0] }>::from([6, 15])

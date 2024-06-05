@@ -21,7 +21,6 @@ pub mod scalar;
 pub mod shape;
 pub mod storage;
 pub mod tensor;
-pub mod tensor_view;
 pub mod type_assert;
 pub mod var;
 pub mod vector;

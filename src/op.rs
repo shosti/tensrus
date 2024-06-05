@@ -7,7 +7,6 @@ use crate::{
     shape::reduced_shape,
     storage::TensorStorage,
     tensor::{BasicTensor, ShapedTensor, Tensor},
-    tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
     vector::Vector,
 };
@@ -146,7 +145,6 @@ impl<Tn, Rhs> Op<Tn::T> for BCastMulOp<Tn, Rhs>
 where
     Tn: Tensor + ShapedTensor,
     Rhs: Tensor<T = Tn::T> + ShapedTensor + Broadcastable<Rhs::T>,
-    for<'a> TensorView<'a, Rhs::T, { Rhs::R }, { Rhs::S }>: From<&'a Rhs>,
     Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
 {
     fn forward(&self, _args: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {

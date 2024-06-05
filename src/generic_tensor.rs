@@ -3,7 +3,6 @@ use crate::{
     shape::{subtensor_shape, transpose_shape, Shape},
     storage::{num_elems, storage_idx, IndexError, Layout, Storage},
     tensor::Tensor,
-    tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
 };
 use num::ToPrimitive;
@@ -45,13 +44,6 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
     {
         GenericTensor {
             storage: self.storage,
-            layout: self.layout,
-        }
-    }
-
-    pub fn view(&self) -> TensorView<T, R, S> {
-        TensorView {
-            storage: &self.storage,
             layout: self.layout,
         }
     }
