@@ -41,6 +41,7 @@ pub trait ShapedTensor {
 pub trait Tensor:
     Clone
     + BasicTensor<Self::T>
+    + ShapedTensor
     + Mul<Self::T, Output = Self>
     + for<'a> Index<&'a Self::Idx, Output = Self::T>
     + Eq
