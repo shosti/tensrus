@@ -1,7 +1,7 @@
 use crate::{
     generic_tensor::GenericTensor,
     shape::{reduced_shape, Shape, Shaped},
-    storage::{Layout, TensorStorage},
+    storage::Layout,
     tensor::Tensor,
 };
 use std::ops::Index;
@@ -59,7 +59,7 @@ where
 
 impl<'a, Tn> From<&'a Tn> for View<'a, Tn>
 where
-    Tn: Tensor + TensorStorage<Tn::T>,
+    Tn: Tensor,
 {
     fn from(t: &'a Tn) -> Self {
         Self {

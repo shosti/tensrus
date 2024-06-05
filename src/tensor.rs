@@ -49,6 +49,7 @@ pub trait Tensor:
     Clone
     + BasicTensor<Self::T>
     + Shaped
+    + TensorStorage<Self::T>
     + Mul<Self::T, Output = Self>
     + for<'a> Index<&'a Self::Idx, Output = Self::T>
     + Eq
