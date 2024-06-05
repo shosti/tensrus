@@ -1,3 +1,4 @@
+use crate::broadcast::{broadcast_compat, BroadcastableTo};
 use crate::generic_tensor::GenericTensor;
 use crate::matrix::Matrix;
 use crate::numeric::Numeric;
@@ -10,6 +11,7 @@ use crate::scalar::Scalar;
 use crate::shape::reduced_shape;
 use crate::storage::TensorStorage;
 use crate::tensor::{BasicTensor, ShapedTensor, Tensor};
+use crate::type_assert::{Assert, IsTrue};
 use crate::vector::Vector;
 use num::{One, ToPrimitive};
 use std::cell::{Ref, RefCell};
@@ -539,11 +541,16 @@ impl<Tn: Tensor> Var<Tn> {
         self.new_from_unary(op)
     }
 
-    pub fn elem_mul(&self, other: Var<Tn>) -> Self {
+    pub fn elem_mul<Rhs>(&self, other: Var<Rhs>) -> Self
+    where
+        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn> + ShapedTensor,
+        Tn: ShapedTensor,
+        Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
+    {
         if self.id() == other.id() {
             return self.elem_pow(Tn::T::two());
         }
-        let op = ElemMulOp::<Tn>::new();
+        let op = ElemMulOp::<Tn, Rhs>::new();
         let other_ref = (&other).into();
 
         self.new_from_binary(other_ref, op)

@@ -1,5 +1,5 @@
 use crate::{
-    broadcast::broadcast_compat,
+    broadcast::{broadcast_compat, BroadcastableTo},
     generic_tensor::GenericTensor,
     matrix::Matrix,
     numeric::Numeric,
@@ -9,6 +9,7 @@ use crate::{
     tensor::{BasicTensor, ShapedTensor, Tensor},
     type_assert::{Assert, IsTrue},
     vector::Vector,
+    view::View,
 };
 use num::{traits::real::Real, One, Zero};
 use std::fmt::Debug;
@@ -389,19 +390,26 @@ binary_op!(AddOp<Tn: Tensor> {
     backward_2: |in_grad: Tn, args: BinaryBackwardArgs<Tn, Tn, Tn, _>| in_grad.map(|idx, in_grad| in_grad + args.out_grad[idx]),
 });
 
-binary_op!(ElemMulOp<Tn: Tensor> {
+binary_op!(ElemMulOp<Tn: Tensor, Rhs: Tensor> {
     args: (),
-    where_clauses: (),
+    where_clauses: (Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn>,
+                    Tn: ShapedTensor,
+                    Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue),
     const_params: (),
     in_type_1: Tn,
-    in_type_2: Tn,
+    in_type_2: Rhs,
     out_type: Tn,
     numeric_type: Tn::T,
-    forward: |in1: &Tn, in2: &Tn, _| Tn::from_fn(|idx| in1[idx] * in2[idx]),
-    backward_1: (|in_grad: Tn, args: BinaryBackwardArgs<Tn, Tn, Tn, _>|
-                 in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
-    backward_2: (|in_grad: Tn, args: BinaryBackwardArgs<Tn, Tn, Tn, _>|
-                 in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
+    forward: |in1: &Tn, in2: &Rhs, _| {
+        let other: View<Tn> = in2.broadcast();
+        Tn::from_fn(|idx| in1[idx] * other[idx])
+    },
+    backward_1: (|in_grad: Tn, args: BinaryBackwardArgs<Tn, Rhs, Tn, _>|
+                 todo!()),
+                 // in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
+    backward_2: (|in_grad: Rhs, args: BinaryBackwardArgs<Rhs, Tn, Tn, _>|
+                 todo!()),
+                 // in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
 });
 
 binary_op!(ScalarMulOp<Tn: Tensor> {
