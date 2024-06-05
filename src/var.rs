@@ -753,4 +753,15 @@ mod tests {
             Matrix::<f64, _, _>::from([[1, 1, 1], [1, 1, 1]])
         );
     }
+
+    #[test]
+    fn test_bcast_elem_mul() {
+        let x: Var<Matrix<f64, _, _>> = [[1, 2, 3], [4, 5, 6]].into();
+        let y: Var<Scalar<f64>> = 2.into();
+        let z = x.elem_mul(y.clone());
+        let l = z.sum_elems();
+        l.backward().unwrap();
+
+        assert_eq!(*y.grad().unwrap(), Scalar::from(21));
+    }
 }
