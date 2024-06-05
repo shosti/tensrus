@@ -197,14 +197,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        // impl #impl_generics_with_lifetime std::ops::Add<&'a dyn crate::tensor::ShapedTensor<T, #rank, #shape>> for #name #type_generics {
-        //     type Output = Self;
-
-        //     fn add(self, other: &dyn crate::tensor::ShapedTensor<T, #rank, #shape>) -> Self {
-        //         self.map(|idx, v| v + other[idx])
-        //     }
-        // }
-
         impl #impl_generics std::ops::Mul<crate::scalar::Scalar<T>> for #name #type_generics {
             type Output = Self;
 
