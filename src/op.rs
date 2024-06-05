@@ -6,7 +6,7 @@ use crate::{
     scalar::Scalar,
     shape::{reduced_shape, Shaped},
     storage::TensorStorage,
-    tensor::{BasicTensor, Tensor},
+    tensor::{BasicTensor, Tensor, TensorIndex},
     type_assert::{Assert, IsTrue},
     vector::Vector,
     view::View,
@@ -374,9 +374,14 @@ binary_op!(ElemMulOp<Tn: Tensor, Rhs: Tensor> {
         let other: View<Tn> = args.other_in_data.broadcast();
         in_grad.map(|idx, in_grad| in_grad + other[idx] * args.out_grad[idx])
     }),
-    backward_2: (|_in_grad: Rhs, _args: BinaryBackwardArgs<Rhs, Tn, Tn, _>|
-                 todo!()),
-                 // in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
+    backward_2: (|in_grad: Rhs, args: BinaryBackwardArgs<Rhs, Tn, Tn, _>| {
+        let mut in_grad_updated = in_grad;
+        for (idx, out_grad) in args.out_grad.iter() {
+            let in_idx = <Rhs as BroadcastableTo<_, Tn>>::unbroadcasted_idx(&idx);
+            in_grad_updated = in_grad_updated.set(&Rhs::Idx::from_slice(&in_idx), |val| val + args.other_in_data[&idx] * out_grad)
+        }
+        in_grad_updated
+    }),
 });
 
 binary_op!(ScalarMulOp<Tn: Tensor> {

@@ -33,6 +33,18 @@ pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T
     fn add(self: Box<Self>, other: &dyn BasicTensor<T>, scale: T) -> Box<dyn BasicTensor<T>>;
 }
 
+pub trait TensorIndex: AsRef<[usize]> + Copy {
+    fn from_slice(s: &[usize]) -> Self;
+}
+
+impl<const R: usize> TensorIndex for [usize; R] {
+    fn from_slice(s: &[usize]) -> Self {
+        let mut ret = [0; R];
+        ret.copy_from_slice(s);
+        ret
+    }
+}
+
 pub trait Tensor:
     Clone
     + BasicTensor<Self::T>
@@ -44,7 +56,7 @@ pub trait Tensor:
     + 'static
 {
     type T: Numeric;
-    type Idx: AsRef<[usize]> + Copy + 'static;
+    type Idx: TensorIndex;
 
     // Required methods
     fn rank() -> usize;
