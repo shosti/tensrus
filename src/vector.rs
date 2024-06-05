@@ -138,8 +138,8 @@ impl<T: Numeric, const N: usize> From<NormalizedVector<T, N>> for Vector<T, N> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::broadcast::Broadcastable;
     use crate::matrix::Matrix;
+    use crate::view::Broadcastable;
     use proptest::prelude::*;
     use seq_macro::seq;
 
@@ -184,11 +184,11 @@ mod tests {
     #[test]
     fn test_broadcast() {
         let x: Vector<f64, _> = [1, 2, 3].into();
-        let m1: Matrix<f64, 2, 3> = Matrix::from_broadcast(x.clone().broadcast());
+        let m1: Matrix<f64, 2, 3> = x.broadcast().into();
         assert_eq!(m1, Matrix::<f64, _, _>::from([[1, 2, 3], [1, 2, 3]]));
 
         let x_col = x.as_col_vector();
-        let m2: Matrix<f64, 3, 2> = Matrix::from_broadcast(x_col.broadcast());
+        let m2: Matrix<f64, 3, 2> = x_col.broadcast().into();
         assert_eq!(m2, Matrix::<f64, _, _>::from([[1, 1], [2, 2], [3, 3]]));
     }
 

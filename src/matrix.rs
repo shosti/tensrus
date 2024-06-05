@@ -1,13 +1,13 @@
 use crate::{
-    broadcast::Broadcastable,
     generic_tensor::GenericTensor,
     numeric::Numeric,
     shape::Shape,
-    storage::{num_elems, storage_idx, IndexError, Layout, Storage},
+    storage::{num_elems, storage_idx, IndexError, Layout, Storage, TensorStorage},
     tensor::{ShapedTensor, Tensor},
     tensor_view::TensorView,
     type_assert::{Assert, IsTrue},
     vector::Vector,
+    view::Broadcastable,
 };
 use num::ToPrimitive;
 use std::ops::{Index, Mul};
@@ -157,6 +157,8 @@ pub struct MatrixView<'a, T: Numeric, const M: usize, const N: usize> {
     pub layout: Layout,
 }
 
+impl<'a, T: Numeric, const M: usize, const N: usize> Broadcastable<T> for MatrixView<'a, T, M, N> {}
+
 impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
     pub fn transpose(&self) -> MatrixView<'a, T, N, M> {
         MatrixView {
@@ -220,9 +222,14 @@ impl<'a, 'b, T: Numeric, const M: usize, const N: usize> From<&'a MatrixView<'b,
     }
 }
 
-impl<'a, T: Numeric, const M: usize, const N: usize> Broadcastable<T, 2, { matrix_shape(M, N) }>
-    for MatrixView<'a, T, M, N>
-{
+impl<'a, T: Numeric, const M: usize, const N: usize> TensorStorage<T> for MatrixView<'a, T, M, N> {
+    fn storage(&self) -> &[T] {
+        self.storage
+    }
+
+    fn layout(&self) -> Layout {
+        self.layout
+    }
 }
 
 impl<'a, T: Numeric, const M: usize, const N: usize> Index<&[usize; 2]>
