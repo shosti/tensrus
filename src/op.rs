@@ -129,40 +129,6 @@ where
     }
 }
 
-#[derive(Debug)]
-pub struct BCastMulOp<Tn, Rhs> {
-    _markers: PhantomData<(Tn, Rhs)>,
-}
-
-impl<Tn, Rhs> BCastMulOp<Tn, Rhs> {
-    pub fn new() -> Box<Self> {
-        Box::new(Self {
-            _markers: PhantomData,
-        })
-    }
-}
-
-impl<Tn, Rhs> Op<Tn::T> for BCastMulOp<Tn, Rhs>
-where
-    Tn: Tensor + Shaped,
-    Rhs: Tensor<T = Tn::T> + Shaped,
-    Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
-{
-    fn forward(&self, _args: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
-        // let (a_untyped, b_untyped) = args.binary();
-        // let a = Tn::ref_from_basic(a_untyped);
-        // let b_orig = Rhs::ref_from_basic(b_untyped);
-        // let b = b_orig.broadcast::<{ Tn::R }, { Tn::S }>();
-        todo!()
-        // let out = a.map(|idx, x| x * b[&idx]);
-        // Box::new(out)
-    }
-
-    fn backward(&self, _args: BackwardArgs<Tn::T>) -> BackwardOutput<Tn::T> {
-        todo!()
-    }
-}
-
 macro_rules! unary_op {
     ($name:ident < $( $generic:ident : $subtype:ident ),* > {
         args: ( $( $arg:ident : $argty:ty ),* ),
@@ -404,10 +370,11 @@ binary_op!(ElemMulOp<Tn: Tensor, Rhs: Tensor> {
         let other: View<Tn> = in2.broadcast();
         Tn::from_fn(|idx| in1[idx] * other[idx])
     },
-    backward_1: (|in_grad: Tn, args: BinaryBackwardArgs<Tn, Rhs, Tn, _>|
-                 todo!()),
+    backward_1: (|_in_grad: Tn, _args: BinaryBackwardArgs<Tn, Rhs, Tn, _>| {
+       todo!()
+    }),
                  // in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
-    backward_2: (|in_grad: Rhs, args: BinaryBackwardArgs<Rhs, Tn, Tn, _>|
+    backward_2: (|_in_grad: Rhs, _args: BinaryBackwardArgs<Rhs, Tn, Tn, _>|
                  todo!()),
                  // in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
 });
