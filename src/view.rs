@@ -66,10 +66,10 @@ where
     }
 }
 
-pub trait Broadcastable: Tensor + ShapedTensor + TensorStorage<Self::T> {
+pub trait Broadcastable<T>: ShapedTensor + TensorStorage<T> {
     fn broadcast<Dest>(&self) -> View<Dest>
     where
-        Dest: Tensor<T = Self::T> + ShapedTensor,
+        Dest: Tensor<T = T> + ShapedTensor,
         Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
     {
         let layout = self.layout();
