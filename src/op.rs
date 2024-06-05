@@ -4,9 +4,9 @@ use crate::{
     matrix::Matrix,
     numeric::Numeric,
     scalar::Scalar,
-    shape::reduced_shape,
+    shape::{reduced_shape, Shaped},
     storage::TensorStorage,
-    tensor::{BasicTensor, ShapedTensor, Tensor},
+    tensor::{BasicTensor, Tensor},
     type_assert::{Assert, IsTrue},
     vector::Vector,
     view::View,
@@ -100,10 +100,10 @@ impl<Src: Tensor, Dest: Tensor<T = Src::T>, const DIM: usize> DimSumOp<Src, Dest
 
 impl<Src: Tensor, Dest: Tensor, const DIM: usize> Op<Src::T> for DimSumOp<Src, Dest, DIM>
 where
-    Src: ShapedTensor + TensorStorage<Src::T>,
+    Src: Shaped + TensorStorage<Src::T>,
     Src::Idx: From<[usize; Src::R]>,
     Dest: Tensor<T = Src::T>
-        + ShapedTensor<R = { Src::R }, S = { reduced_shape(Src::R, Src::S, DIM) }>
+        + Shaped<R = { Src::R }, S = { reduced_shape(Src::R, Src::S, DIM) }>
         + From<GenericTensor<Src::T, { Src::R }, { reduced_shape(Src::R, Src::S, DIM) }>>,
 {
     fn forward(&self, args: ForwardInput<Src::T>) -> Box<dyn BasicTensor<Src::T>> {
@@ -144,8 +144,8 @@ impl<Tn, Rhs> BCastMulOp<Tn, Rhs> {
 
 impl<Tn, Rhs> Op<Tn::T> for BCastMulOp<Tn, Rhs>
 where
-    Tn: Tensor + ShapedTensor,
-    Rhs: Tensor<T = Tn::T> + ShapedTensor,
+    Tn: Tensor + Shaped,
+    Rhs: Tensor<T = Tn::T> + Shaped,
     Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
 {
     fn forward(&self, _args: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {
@@ -393,7 +393,7 @@ binary_op!(AddOp<Tn: Tensor> {
 binary_op!(ElemMulOp<Tn: Tensor, Rhs: Tensor> {
     args: (),
     where_clauses: (Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn>,
-                    Tn: ShapedTensor,
+                    Tn: Shaped,
                     Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue),
     const_params: (),
     in_type_1: Tn,

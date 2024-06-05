@@ -11,7 +11,7 @@ use rand_distr::{Distribution, StandardNormal};
 
 use crate::numeric::Numeric;
 use crate::scalar::Scalar;
-use crate::shape::Shape;
+use crate::shape::{Shape, Shaped};
 use crate::storage::TensorStorage;
 use crate::view::View;
 
@@ -33,15 +33,10 @@ pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T
     fn add(self: Box<Self>, other: &dyn BasicTensor<T>, scale: T) -> Box<dyn BasicTensor<T>>;
 }
 
-pub trait ShapedTensor {
-    const R: usize;
-    const S: Shape;
-}
-
 pub trait Tensor:
     Clone
     + BasicTensor<Self::T>
-    + ShapedTensor
+    + Shaped
     + Mul<Self::T, Output = Self>
     + for<'a> Index<&'a Self::Idx, Output = Self::T>
     + Eq

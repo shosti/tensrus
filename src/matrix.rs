@@ -2,9 +2,9 @@ use crate::{
     broadcast::{broadcast_compat, BroadcastableTo},
     generic_tensor::GenericTensor,
     numeric::Numeric,
-    shape::Shape,
+    shape::{Shape, Shaped},
     storage::{num_elems, storage_idx, IndexError, Layout, Storage, TensorStorage},
-    tensor::{ShapedTensor, Tensor},
+    tensor::Tensor,
     type_assert::{Assert, IsTrue},
     vector::Vector,
 };
@@ -159,7 +159,7 @@ pub struct MatrixView<'a, T: Numeric, const M: usize, const N: usize> {
 impl<'a, T: Numeric, const M: usize, const N: usize, Dest> BroadcastableTo<'a, T, Dest>
     for MatrixView<'a, T, M, N>
 where
-    Dest: Tensor<T = T> + ShapedTensor,
+    Dest: Tensor<T = T> + Shaped,
     Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
 {
 }
@@ -238,7 +238,7 @@ impl<'a, T: Numeric, const M: usize, const N: usize> Index<&[usize; 2]>
     }
 }
 
-impl<'a, T: Numeric, const M: usize, const N: usize> ShapedTensor for MatrixView<'a, T, M, N> {
+impl<'a, T: Numeric, const M: usize, const N: usize> Shaped for MatrixView<'a, T, M, N> {
     const R: usize = 2;
     const S: Shape = { matrix_shape(M, N) };
 }

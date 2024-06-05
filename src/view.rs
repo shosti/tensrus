@@ -1,8 +1,8 @@
 use crate::{
     generic_tensor::GenericTensor,
-    shape::{reduced_shape, Shape},
+    shape::{reduced_shape, Shape, Shaped},
     storage::{Layout, TensorStorage},
-    tensor::{ShapedTensor, Tensor},
+    tensor::Tensor,
 };
 use std::ops::Index;
 
@@ -36,7 +36,7 @@ impl<'a, Tn: Tensor> View<'a, Tn> {
 
 impl<'a, Tn: Tensor> View<'a, Tn>
 where
-    Tn: ShapedTensor,
+    Tn: Shaped,
     Tn::Idx: From<[usize; Tn::R]>,
 {
     pub fn reduce_dim<const DIM: usize>(
@@ -70,14 +70,14 @@ where
     }
 }
 
-impl<'a, Tn: Tensor + ShapedTensor> ShapedTensor for View<'a, Tn> {
+impl<'a, Tn: Tensor + Shaped> Shaped for View<'a, Tn> {
     const R: usize = Tn::R;
     const S: Shape = Tn::S;
 }
 
 impl<'a, Tn> From<View<'a, GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>> for View<'a, Tn>
 where
-    Tn: ShapedTensor + Tensor + From<GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>,
+    Tn: Shaped + Tensor + From<GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>,
     [usize; Tn::R]: From<Tn::Idx>,
 {
     fn from(v: View<'a, GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>) -> Self {
@@ -106,7 +106,7 @@ where
 
 impl<'a, 'b, Tn> Index<&'b Tn::Idx> for View<'a, Tn>
 where
-    Tn: Tensor + ShapedTensor,
+    Tn: Tensor + Shaped,
 {
     type Output = Tn::T;
 

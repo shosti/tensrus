@@ -1,6 +1,11 @@
 pub const MAX_DIMS: usize = 6;
 pub type Shape = [usize; MAX_DIMS];
 
+pub trait Shaped {
+    const R: usize;
+    const S: Shape;
+}
+
 pub const fn stride(r: usize, s: Shape) -> Shape {
     let mut res = [0; MAX_DIMS];
     let mut dim = 0;
