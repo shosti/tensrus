@@ -31,6 +31,20 @@ pub const fn transpose_shape(r: usize, s: Shape) -> Shape {
     out
 }
 
+pub const fn shapes_equal(r1: usize, s1: Shape, r2: usize, s2: Shape) -> bool {
+    if r1 != r2 {
+        return false;
+    }
+    let mut i = 0;
+    while i < r1 {
+        if s1[i] != s2[i] {
+            return false;
+        }
+        i += 1;
+    }
+    true
+}
+
 // Returns the tensor shape when downranking by 1
 pub const fn subtensor_shape(r: usize, s: Shape) -> Shape {
     if r == 0 {

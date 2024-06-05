@@ -1,5 +1,5 @@
 use crate::{
-    shape::{self, Shape},
+    shape::{self, shapes_equal, Shape},
     storage::TensorStorage,
     tensor::{ShapedTensor, Tensor},
     type_assert::{Assert, IsTrue},
@@ -51,6 +51,10 @@ where
     Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
 {
     fn broadcast(&'a self) -> View<'a, Dest> {
+        // Special case: if dimensions match, no need to translate
+        if shapes_equal(Self::R, Self::S, Dest::R, Dest::S) {
+            return View::new(self.storage(), self.layout());
+        }
         let layout = self.layout();
         let t = Box::new(move |dest_idx: Dest::Idx| {
             let idx: &[usize] = dest_idx.as_ref();

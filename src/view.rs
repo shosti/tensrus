@@ -13,6 +13,14 @@ pub struct View<'a, Tn: Tensor> {
 }
 
 impl<'a, Tn: Tensor> View<'a, Tn> {
+    pub fn new(storage: &'a [Tn::T], layout: Layout) -> Self {
+        Self {
+            storage,
+            layout,
+            idx_translate: None,
+        }
+    }
+
     pub fn with_translation(
         storage: &'a [Tn::T],
         layout: Layout,
