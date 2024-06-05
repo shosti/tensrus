@@ -571,6 +571,19 @@ impl<Tn: Tensor> Var<Tn> {
         self.new_from_binary(other_ref, op)
     }
 
+    pub fn elem_div<Rhs>(&self, other: Var<Rhs>) -> Self
+    where
+        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn>,
+        Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
+    {
+        if self.id() == other.id() {
+            return Var::new(Tn::ones());
+        }
+
+        let inv = other.elem_pow(-Tn::T::one());
+        self.elem_mul(inv)
+    }
+
     pub fn sum_elems(&self) -> Var<Scalar<Tn::T>> {
         let op = SumOp::<Tn>::new();
 
@@ -790,5 +803,17 @@ mod tests {
 
         l.backward().unwrap();
         assert_eq!(*y.grad().unwrap(), Scalar::from(6));
+    }
+
+    #[test]
+    fn test_bcast_elem_div() {
+        let x: Var<Matrix<f64, _, _>> = [[2, 4, 6], [8, 10, 12]].into();
+        let y: Var<Scalar<f64>> = 2.into();
+        let z = x.elem_div(y.clone());
+        let l = z.sum_elems();
+        assert_eq!(l.data().val(), 21.0);
+
+        l.backward().unwrap();
+        assert_eq!(*y.grad().unwrap(), Scalar::from(-10.5));
     }
 }
