@@ -1,5 +1,5 @@
 use crate::{
-    broadcast::{broadcast_compat, Broadcastable},
+    broadcast::broadcast_compat,
     generic_tensor::GenericTensor,
     matrix::Matrix,
     numeric::Numeric,
@@ -144,7 +144,7 @@ impl<Tn, Rhs> BCastMulOp<Tn, Rhs> {
 impl<Tn, Rhs> Op<Tn::T> for BCastMulOp<Tn, Rhs>
 where
     Tn: Tensor + ShapedTensor,
-    Rhs: Tensor<T = Tn::T> + ShapedTensor + Broadcastable<Rhs::T>,
+    Rhs: Tensor<T = Tn::T> + ShapedTensor,
     Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
 {
     fn forward(&self, _args: ForwardInput<Tn::T>) -> Box<dyn BasicTensor<Tn::T>> {

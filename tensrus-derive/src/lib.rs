@@ -175,7 +175,10 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics crate::broadcast::Broadcastable<T> for #name #type_generics {}
+        impl #impl_generics_with_lifetime_and_rhs crate::broadcast::BroadcastableTo<'a, T, Rhs> for #name #type_generics
+            where Rhs: crate::tensor::Tensor<T = T> + crate::tensor::ShapedTensor,
+            crate::type_assert::Assert<{ crate::broadcast::broadcast_compat(<Self as crate::tensor::ShapedTensor>::R, <Self as crate::tensor::ShapedTensor>::S, Rhs::R, Rhs::S) }>: crate::type_assert::IsTrue,
+        {}
 
         impl #impl_generics_with_lifetime_and_rhs std::ops::Add<Rhs> for #name #type_generics
             where crate::view::View<'a, Self>: From<Rhs>

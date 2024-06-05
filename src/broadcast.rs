@@ -45,12 +45,12 @@ pub const fn broadcast_normalize(s: Shape, r_src: usize, r_dest: usize) -> Shape
     ret
 }
 
-pub trait Broadcastable<T>: ShapedTensor + TensorStorage<T> {
-    fn broadcast<Dest>(&self) -> View<Dest>
-    where
-        Dest: Tensor<T = T> + ShapedTensor,
-        Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
-    {
+pub trait BroadcastableTo<'a, T, Dest>: ShapedTensor + TensorStorage<T>
+where
+    Dest: Tensor<T = T> + ShapedTensor,
+    Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
+{
+    fn broadcast(&'a self) -> View<'a, Dest> {
         let layout = self.layout();
         let t = Box::new(move |dest_idx: Dest::Idx| {
             let idx: &[usize] = dest_idx.as_ref();
