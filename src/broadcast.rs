@@ -76,6 +76,8 @@ where
     }
 }
 
+// pub fn broadcast_original_idx<const R_SRC: usize, const R_DEST: usize>() -> [usize; R]
+
 #[cfg(test)]
 pub mod tests {
     use crate::{

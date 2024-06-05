@@ -370,10 +370,10 @@ binary_op!(ElemMulOp<Tn: Tensor, Rhs: Tensor> {
         let other: View<Tn> = in2.broadcast();
         Tn::from_fn(|idx| in1[idx] * other[idx])
     },
-    backward_1: (|_in_grad: Tn, _args: BinaryBackwardArgs<Tn, Rhs, Tn, _>| {
-       todo!()
+    backward_1: (|in_grad: Tn, args: BinaryBackwardArgs<Tn, Rhs, Tn, _>| {
+        let other: View<Tn> = args.other_in_data.broadcast();
+        in_grad.map(|idx, in_grad| in_grad + other[idx] * args.out_grad[idx])
     }),
-                 // in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
     backward_2: (|_in_grad: Rhs, _args: BinaryBackwardArgs<Rhs, Tn, Tn, _>|
                  todo!()),
                  // in_grad.map(|idx, in_grad| in_grad + args.other_in_data[idx] * args.out_grad[idx])),
