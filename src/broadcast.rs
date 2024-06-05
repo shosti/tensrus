@@ -78,7 +78,10 @@ where
 
 #[cfg(test)]
 pub mod tests {
-    use crate::{generic_tensor::GenericTensor, matrix::Matrix, shape::MAX_DIMS, vector::Vector};
+    use crate::{
+        generic_tensor::GenericTensor, matrix::Matrix, scalar::Scalar, shape::MAX_DIMS,
+        vector::Vector,
+    };
 
     use super::*;
 
@@ -124,5 +127,11 @@ pub mod tests {
                 .cycle()
                 .collect::<GenericTensor<f64, 3, { [3; MAX_DIMS] }>>()
         );
+
+        let x: Matrix<f64, _, _> = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+        let one = Scalar::<f64>::from(1);
+        let ones: View<Matrix<_, 2, 3>> = one.broadcast();
+
+        assert_eq!(x + ones, Matrix::<f64, _, _>::from([[2, 3, 4], [5, 6, 7]]));
     }
 }
