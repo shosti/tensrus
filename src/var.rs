@@ -798,7 +798,7 @@ mod tests {
     #[test]
     fn test_dim_sum() {
         let x: Var<Matrix<f64, _, _>> = [[1, 2, 3], [4, 5, 6]].into();
-        let y: Var<Matrix<f64, 2, 1>> = x.dim_sum::<_, 1>();
+        let y: Var<Matrix<f64, 2, 1>> = x.clone().to_generic().dim_sum::<1>().from_generic();
         let z = y.sum_elems();
         z.backward().unwrap();
         assert_eq!(
@@ -811,7 +811,7 @@ mod tests {
     fn test_bcast_elem_mul() {
         let x: Var<Matrix<f64, _, _>> = [[1, 2, 3], [4, 5, 6]].into();
         let y: Var<Scalar<f64>> = 2.into();
-        let z = x.elem_mul(y.clone());
+        let z = x.to_generic().elem_mul(y.clone().to_generic());
         let l = z.sum_elems();
         l.backward().unwrap();
 
@@ -822,7 +822,7 @@ mod tests {
     fn test_bcast_elem_add() {
         let x: Var<Matrix<f64, _, _>> = [[1, 2, 3], [4, 5, 6]].into();
         let y: Var<Scalar<f64>> = 1.into();
-        let z = x.elem_add(y.clone());
+        let z = x.to_generic().elem_add(y.clone().to_generic());
         let l = z.sum_elems();
         assert_eq!(l.data().val(), 27.0);
 
@@ -834,7 +834,7 @@ mod tests {
     fn test_bcast_elem_div() {
         let x: Var<Matrix<f64, _, _>> = [[2, 4, 6], [8, 10, 12]].into();
         let y: Var<Scalar<f64>> = 2.into();
-        let z = x.elem_div(y.clone());
+        let z = x.to_generic().elem_div(y.clone().to_generic());
         let l = z.sum_elems();
         assert_eq!(l.data().val(), 21.0);
 

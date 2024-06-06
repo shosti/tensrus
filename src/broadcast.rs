@@ -120,13 +120,14 @@ pub mod tests {
     #[test]
     fn test_broadcast() {
         let v = Vector::<f64, _>::from([1, 2, 3]);
-        let m: Matrix<_, 3, 3> = v.broadcast().into();
+        let m: Matrix<_, 3, 3> = v.view().to_generic().broadcast().from_generic().into();
+
         assert_eq!(
             m,
             Matrix::<f64, _, _>::from([[1, 2, 3], [1, 2, 3], [1, 2, 3]])
         );
 
-        let t: GenericTensor<_, 3, { [3; MAX_DIMS] }> = v.broadcast().into();
+        let t: GenericTensor<_, 3, { [3; MAX_DIMS] }> = v.view().to_generic().broadcast().into();
         assert_eq!(
             t,
             [1, 2, 3]
@@ -137,7 +138,8 @@ pub mod tests {
 
         let x: Matrix<f64, _, _> = Matrix::from([[1, 2, 3], [4, 5, 6]]);
         let one = Scalar::<f64>::from(1);
-        let ones: View<Matrix<_, 2, 3>> = one.broadcast();
+        let one_gen = one.view().to_generic();
+        let ones: View<Matrix<_, 2, 3>> = one_gen.broadcast().from_generic();
 
         assert_eq!(x + ones, Matrix::<f64, _, _>::from([[2, 3, 4], [5, 6, 7]]));
     }

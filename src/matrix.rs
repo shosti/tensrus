@@ -6,6 +6,7 @@ use crate::{
     tensor::{Tensor, TensorLike},
     type_assert::{Assert, IsTrue},
     vector::Vector,
+    view::View,
 };
 use num::ToPrimitive;
 use std::ops::{Index, Mul};
@@ -175,6 +176,10 @@ impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
             storage: self.storage,
             layout: self.layout,
         }
+    }
+
+    pub fn view(&self) -> View<'a, Matrix<T, M, N>> {
+        View::new(self.storage, self.layout)
     }
 
     pub fn matmul_into<const P: usize>(
@@ -704,9 +709,9 @@ mod tests {
     #[test]
     fn test_reduce_dim() {
         let m = Matrix::<f64, _, _>::from([[1, 2, 3], [4, 5, 6]]);
-        let m2: Matrix<f64, 1, 3> = m.view().reduce_dim::<0>(|x, y| x + y).into();
+        let m2: Matrix<f64, 1, 3> = m.view().to_generic().reduce_dim::<0>(|x, y| x + y).into();
         assert_eq!(m2, Matrix::<f64, _, _>::from([[5, 7, 9]]));
-        let m3: Matrix<f64, 2, 1> = m.view().reduce_dim::<1>(|x, y| x + y).into();
+        let m3: Matrix<f64, 2, 1> = m.view().to_generic().reduce_dim::<1>(|x, y| x + y).into();
         assert_eq!(m3, Matrix::<f64, _, _>::from([[6], [15]]));
     }
 }

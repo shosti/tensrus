@@ -1,5 +1,10 @@
 use crate::{
-    broadcast::broadcast_normalize, generic_tensor::GenericTensor, numeric::Numeric, shape::{reduced_shape, shapes_equal, Shape, Shaped}, storage::Layout, tensor::{Tensor, TensorIndex}
+    broadcast::broadcast_normalize,
+    generic_tensor::GenericTensor,
+    numeric::Numeric,
+    shape::{reduced_shape, shapes_equal, Shape, Shaped},
+    storage::Layout,
+    tensor::{Tensor, TensorIndex},
 };
 use std::ops::Index;
 
@@ -54,6 +59,32 @@ impl<'a, Tn: Tensor> View<'a, Tn> {
 }
 
 impl<'a, T: Numeric, const R: usize, const S: Shape> View<'a, GenericTensor<T, R, S>> {
+    pub fn from_generic<Tn>(self) -> View<'a, Tn>
+    where
+        Tn: Tensor<T = T> + From<GenericTensor<T, R, S>>,
+    {
+        match self.idx_translate {
+            None => View {
+                storage: self.storage,
+                layout: self.layout,
+                idx_translate: None,
+            },
+            Some(t) => {
+                let tr = Box::new(move |tn_idx: Tn::Idx| {
+                    let mut idx = [0; R];
+                    idx.copy_from_slice(tn_idx.as_ref());
+                    t(idx)
+                });
+
+                View {
+                    storage: self.storage,
+                    layout: self.layout,
+                    idx_translate: Some(tr),
+                }
+            }
+        }
+    }
+
     pub fn reduce_dim<const DIM: usize>(
         self,
         f: impl Fn(T, T) -> T + 'static,
