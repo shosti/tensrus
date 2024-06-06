@@ -8,7 +8,7 @@ use crate::op::{
 };
 use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
-use crate::shape::{reduced_shape, Shaped};
+use crate::shape::reduced_shape;
 use crate::tensor::{BasicTensor, Tensor};
 use crate::type_assert::{Assert, IsTrue};
 use crate::vector::Vector;
@@ -184,13 +184,10 @@ impl<Tn: Tensor> Var<Tn> {
 
         out_var
     }
-}
 
-impl<Tn: Tensor> Var<Tn> {
     pub fn dim_sum<Dest, const DIM: usize>(&self) -> Var<Dest>
     where
         Dest: Tensor<T = Tn::T>
-            + Shaped<R = { Tn::R }, S = { reduced_shape(Tn::R, Tn::S, DIM) }>
             + From<GenericTensor<Tn::T, { Tn::R }, { reduced_shape(Tn::R, Tn::S, DIM) }>>,
     {
         let op = DimSumOp::<Tn, Dest, DIM>::new();

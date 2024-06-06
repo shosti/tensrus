@@ -4,8 +4,8 @@ use crate::{
     matrix::Matrix,
     numeric::Numeric,
     scalar::Scalar,
-    shape::{reduced_shape, Shaped},
-    tensor::{BasicTensor, Tensor, TensorIndex, TensorLike},
+    shape::reduced_shape,
+    tensor::{BasicTensor, Tensor, TensorIndex},
     type_assert::{Assert, IsTrue},
     vector::Vector,
     view::View,
@@ -97,12 +97,10 @@ impl<Src: Tensor, Dest: Tensor<T = Src::T>, const DIM: usize> DimSumOp<Src, Dest
     }
 }
 
-impl<Src: Tensor, Dest: Tensor, const DIM: usize> Op<Src::T> for DimSumOp<Src, Dest, DIM>
+impl<Src: Tensor, Dest: Tensor<T = Src::T>, const DIM: usize> Op<Src::T>
+    for DimSumOp<Src, Dest, DIM>
 where
-    Src: TensorLike,
-    Dest: Tensor<T = Src::T>
-        + Shaped<R = { Src::R }, S = { reduced_shape(Src::R, Src::S, DIM) }>
-        + From<GenericTensor<Src::T, { Src::R }, { reduced_shape(Src::R, Src::S, DIM) }>>,
+    Dest: From<GenericTensor<Src::T, { Src::R }, { reduced_shape(Src::R, Src::S, DIM) }>>,
 {
     fn forward(&self, args: ForwardInput<Src::T>) -> Box<dyn BasicTensor<Src::T>> {
         let input = args.unary();
