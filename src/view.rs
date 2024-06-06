@@ -36,7 +36,6 @@ impl<'a, Tn: Tensor> View<'a, Tn> {
 
 impl<'a, Tn: Tensor> View<'a, Tn>
 where
-    Tn: Shaped,
     Tn::Idx: From<[usize; Tn::R]>,
 {
     pub fn reduce_dim<const DIM: usize>(
@@ -77,7 +76,7 @@ impl<'a, Tn: Tensor + Shaped> Shaped for View<'a, Tn> {
 
 impl<'a, Tn> From<View<'a, GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>> for View<'a, Tn>
 where
-    Tn: Shaped + Tensor + From<GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>,
+    Tn: Tensor + From<GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>,
     [usize; Tn::R]: From<Tn::Idx>,
 {
     fn from(v: View<'a, GenericTensor<Tn::T, { Tn::R }, { Tn::S }>>) -> Self {
@@ -106,7 +105,7 @@ where
 
 impl<'a, 'b, Tn> Index<&'b Tn::Idx> for View<'a, Tn>
 where
-    Tn: Tensor + Shaped,
+    Tn: Tensor,
 {
     type Output = Tn::T;
 

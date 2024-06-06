@@ -163,7 +163,7 @@ impl<'a, T: Numeric, const M: usize, const N: usize> TensorLike for MatrixView<'
 impl<'a, T: Numeric, const M: usize, const N: usize, Dest> BroadcastableTo<'a, Dest>
     for MatrixView<'a, T, M, N>
 where
-    Dest: Tensor<T = T> + Shaped,
+    Dest: Tensor<T = T>,
     Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
 {
 }

@@ -5,8 +5,7 @@ use crate::{
     numeric::Numeric,
     scalar::Scalar,
     shape::{reduced_shape, Shaped},
-    storage::TensorStorage,
-    tensor::{BasicTensor, Tensor, TensorIndex},
+    tensor::{BasicTensor, Tensor, TensorIndex, TensorLike},
     type_assert::{Assert, IsTrue},
     vector::Vector,
     view::View,
@@ -100,7 +99,7 @@ impl<Src: Tensor, Dest: Tensor<T = Src::T>, const DIM: usize> DimSumOp<Src, Dest
 
 impl<Src: Tensor, Dest: Tensor, const DIM: usize> Op<Src::T> for DimSumOp<Src, Dest, DIM>
 where
-    Src: Shaped + TensorStorage<Src::T>,
+    Src: TensorLike,
     Src::Idx: From<[usize; Src::R]>,
     Dest: Tensor<T = Src::T>
         + Shaped<R = { Src::R }, S = { reduced_shape(Src::R, Src::S, DIM) }>
@@ -384,7 +383,6 @@ binary_op!(ElemAddOp<Tn: Tensor, Rhs: Tensor> {
 binary_op!(ElemMulOp<Tn: Tensor, Rhs: Tensor> {
     args: (),
     where_clauses: (Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn>,
-                    Tn: Shaped,
                     Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue),
     const_params: (),
     in_type_1: Tn,

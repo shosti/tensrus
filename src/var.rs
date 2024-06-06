@@ -9,7 +9,6 @@ use crate::op::{
 use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
 use crate::shape::{reduced_shape, Shaped};
-use crate::storage::TensorStorage;
 use crate::tensor::{BasicTensor, Tensor};
 use crate::type_assert::{Assert, IsTrue};
 use crate::vector::Vector;
@@ -187,13 +186,9 @@ impl<Tn: Tensor> Var<Tn> {
     }
 }
 
-impl<Tn: Tensor> Var<Tn>
-where
-    Tn: Shaped,
-{
+impl<Tn: Tensor> Var<Tn> {
     pub fn dim_sum<Dest, const DIM: usize>(&self) -> Var<Dest>
     where
-        Tn: Shaped + TensorStorage<Tn::T>,
         Tn::Idx: From<[usize; Tn::R]>,
         Dest: Tensor<T = Tn::T>
             + Shaped<R = { Tn::R }, S = { reduced_shape(Tn::R, Tn::S, DIM) }>
@@ -544,7 +539,7 @@ impl<Tn: Tensor> Var<Tn> {
 
     pub fn elem_mul<Rhs>(&self, other: Var<Rhs>) -> Self
     where
-        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn> + Shaped,
+        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn>,
         Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
     {
         if self.id() == other.id() {
