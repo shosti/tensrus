@@ -2,7 +2,7 @@ use crate::{
     generic_tensor::GenericTensor,
     shape::{reduced_shape, Shape, Shaped},
     storage::Layout,
-    tensor::Tensor,
+    tensor::{Tensor, TensorIndex},
 };
 use std::ops::Index;
 
@@ -34,10 +34,7 @@ impl<'a, Tn: Tensor> View<'a, Tn> {
     }
 }
 
-impl<'a, Tn: Tensor> View<'a, Tn>
-where
-    Tn::Idx: From<[usize; Tn::R]>,
-{
+impl<'a, Tn: Tensor> View<'a, Tn> {
     pub fn reduce_dim<const DIM: usize>(
         self,
         f: impl Fn(Tn::T, Tn::T) -> Tn::T + 'static,
@@ -46,10 +43,10 @@ where
             let mut src_idx = *idx;
             debug_assert!(src_idx[DIM] == 0);
 
-            let mut res = self[&src_idx.into()];
+            let mut res = self[&Tn::Idx::from_slice(&idx[..])];
             for i in 1..Tn::S[DIM] {
                 src_idx[DIM] = i;
-                res = f(res, self[&src_idx.into()]);
+                res = f(res, self[&Tn::Idx::from_slice(&src_idx)]);
             }
             res
         })

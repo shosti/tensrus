@@ -100,7 +100,6 @@ impl<Src: Tensor, Dest: Tensor<T = Src::T>, const DIM: usize> DimSumOp<Src, Dest
 impl<Src: Tensor, Dest: Tensor, const DIM: usize> Op<Src::T> for DimSumOp<Src, Dest, DIM>
 where
     Src: TensorLike,
-    Src::Idx: From<[usize; Src::R]>,
     Dest: Tensor<T = Src::T>
         + Shaped<R = { Src::R }, S = { reduced_shape(Src::R, Src::S, DIM) }>
         + From<GenericTensor<Src::T, { Src::R }, { reduced_shape(Src::R, Src::S, DIM) }>>,

@@ -189,7 +189,6 @@ impl<Tn: Tensor> Var<Tn> {
 impl<Tn: Tensor> Var<Tn> {
     pub fn dim_sum<Dest, const DIM: usize>(&self) -> Var<Dest>
     where
-        Tn::Idx: From<[usize; Tn::R]>,
         Dest: Tensor<T = Tn::T>
             + Shaped<R = { Tn::R }, S = { reduced_shape(Tn::R, Tn::S, DIM) }>
             + From<GenericTensor<Tn::T, { Tn::R }, { reduced_shape(Tn::R, Tn::S, DIM) }>>,
