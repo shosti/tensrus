@@ -184,9 +184,26 @@ impl<Tn: Tensor> Var<Tn> {
 
         out_var
     }
+
+    pub fn to_generic(self) -> Var<GenericTensor<Tn::T, { Tn::R }, { Tn::S }>> {
+        match self {
+            Var::Parameter(p, _) => Var::Parameter(p, PhantomData),
+            Var::Output(o, _) => Var::Output(o, PhantomData),
+        }
+    }
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> Var<GenericTensor<T, R, S>> {
+    pub fn from_generic<Tn: Tensor<T = T>>(self) -> Var<Tn>
+    where
+        Tn: From<GenericTensor<T, R, S>>,
+    {
+        match self {
+            Var::Parameter(p, _) => Var::Parameter(p, PhantomData),
+            Var::Output(o, _) => Var::Output(o, PhantomData),
+        }
+    }
+
     pub fn dim_sum<const DIM: usize>(
         &self,
     ) -> Var<GenericTensor<T, R, { reduced_shape(R, S, DIM) }>>
