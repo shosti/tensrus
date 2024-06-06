@@ -1,4 +1,4 @@
-use crate::broadcast::{broadcast_compat, BroadcastableTo};
+use crate::broadcast::broadcast_compat;
 use crate::generic_tensor::GenericTensor;
 use crate::matrix::Matrix;
 use crate::numeric::Numeric;
@@ -13,7 +13,6 @@ use crate::storage::num_elems;
 use crate::tensor::{BasicTensor, Tensor};
 use crate::type_assert::{Assert, IsTrue};
 use crate::vector::Vector;
-use crate::view::View;
 use num::{One, ToPrimitive};
 use std::cell::{Ref, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -198,17 +197,63 @@ impl<T: Numeric, const R: usize, const S: Shape> Var<GenericTensor<T, R, S>> {
 
         self.new_from_unary(op)
     }
-}
 
-// impl<T: Numeric, const S: Shape> Var<GenericTensor<T, 2, S>> {
-//     pub fn softmax(&self) -> Self
-//     where
-//         [(); num_elems(2, reduced_shape(2, S, 1))]:,
-//     {
-//         let row_sums = self.dim_sum::<1>();
-//         self.elem_div(row_sums)
-//     }
-// }
+    pub fn elem_mul<const R_RHS: usize, const S_RHS: Shape>(
+        &self,
+        other: Var<GenericTensor<T, R_RHS, S_RHS>>,
+    ) -> Self
+    where
+        Assert<{ broadcast_compat(R_RHS, S_RHS, R, S) }>: IsTrue,
+    {
+        if self.id() == other.id() {
+            return self.elem_pow(T::two());
+        }
+        let op = ElemMulOp::<T, R, S, R_RHS, S_RHS>::new();
+        let other_ref = (&other).into();
+
+        self.new_from_binary(other_ref, op)
+    }
+
+    pub fn elem_add<const R_RHS: usize, const S_RHS: Shape>(
+        &self,
+        other: Var<GenericTensor<T, R_RHS, S_RHS>>,
+    ) -> Self
+    where
+        Assert<{ broadcast_compat(R_RHS, S_RHS, R, S) }>: IsTrue,
+    {
+        if self.id() == other.id() {
+            return self.elem_pow(T::two());
+        }
+        let op = ElemAddOp::<T, R, S, R_RHS, S_RHS>::new();
+        let other_ref = (&other).into();
+
+        self.new_from_binary(other_ref, op)
+    }
+
+    pub fn elem_div<const R_RHS: usize, const S_RHS: Shape>(
+        &self,
+        other: Var<GenericTensor<T, R_RHS, S_RHS>>,
+    ) -> Self
+    where
+        Assert<{ broadcast_compat(R_RHS, S_RHS, R, S) }>: IsTrue,
+    {
+        if self.id() == other.id() {
+            return Var::new(GenericTensor::ones());
+        }
+
+        let inv = other.elem_pow(-T::one());
+        self.elem_mul(inv)
+    }
+
+    pub fn softmax(&self) -> Self
+    where
+        Assert<{ broadcast_compat(R, reduced_shape(R, S, 1), R, S) }>: IsTrue,
+        [(); num_elems(R, reduced_shape(R, S, 1))]:,
+    {
+        let row_sums = self.dim_sum::<1>();
+        self.elem_div(row_sums)
+    }
+}
 
 impl<T: Numeric> VarRef<T> {
     fn id(&self) -> Id {
@@ -545,48 +590,6 @@ impl<Tn: Tensor> Var<Tn> {
         let op = ElemLnOp::<Tn>::new();
 
         self.new_from_unary(op)
-    }
-
-    pub fn elem_mul<Rhs>(&self, other: Var<Rhs>) -> Self
-    where
-        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn>,
-        Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
-    {
-        if self.id() == other.id() {
-            return self.elem_pow(Tn::T::two());
-        }
-        let op = ElemMulOp::<Tn, Rhs>::new();
-        let other_ref = (&other).into();
-
-        self.new_from_binary(other_ref, op)
-    }
-
-    pub fn elem_add<Rhs>(&self, other: Var<Rhs>) -> Self
-    where
-        Tn: for<'a> Add<View<'a, Tn>, Output = Tn>,
-        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn>,
-        Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
-    {
-        if self.id() == other.id() {
-            return self.elem_pow(Tn::T::two());
-        }
-        let op = ElemAddOp::<Tn, Rhs>::new();
-        let other_ref = (&other).into();
-
-        self.new_from_binary(other_ref, op)
-    }
-
-    pub fn elem_div<Rhs>(&self, other: Var<Rhs>) -> Self
-    where
-        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn>,
-        Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
-    {
-        if self.id() == other.id() {
-            return Var::new(Tn::ones());
-        }
-
-        let inv = other.elem_pow(-Tn::T::one());
-        self.elem_mul(inv)
     }
 
     pub fn sum_elems(&self) -> Var<Scalar<Tn::T>> {

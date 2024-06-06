@@ -188,7 +188,7 @@ mod tests {
         assert_eq!(m1, Matrix::<f64, _, _>::from([[1, 2, 3], [1, 2, 3]]));
 
         let x_col = x.as_col_vector();
-        let m2: Matrix<f64, 3, 2> = x_col.broadcast().into();
+        let m2: Matrix<f64, 3, 2> = x_col.broadcast_to().into();
         assert_eq!(m2, Matrix::<f64, _, _>::from([[1, 1], [2, 2], [3, 3]]));
     }
 

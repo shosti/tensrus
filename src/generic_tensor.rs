@@ -1,9 +1,11 @@
 use crate::{
+    broadcast::broadcast_normalize,
     numeric::Numeric,
-    shape::{subtensor_shape, transpose_shape, Shape},
+    shape::{shapes_equal, subtensor_shape, transpose_shape, Shape},
     storage::{num_elems, storage_idx, IndexError, Layout, Storage},
     tensor::Tensor,
     type_assert::{Assert, IsTrue},
+    view::View,
 };
 use num::ToPrimitive;
 
@@ -28,6 +30,39 @@ impl<T: Numeric, const R: usize, const S: Shape, U: ToPrimitive> From<[U; num_el
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
+    pub fn broadcast<const R_DEST: usize, const S_DEST: Shape>(
+        &self,
+    ) -> View<GenericTensor<T, R_DEST, S_DEST>> {
+        if shapes_equal(R, S, R_DEST, S_DEST) {
+            return View::new(&self.storage, self.layout);
+        }
+        let layout = self.layout;
+        let t = Box::new(move |bcast_idx: [usize; R_DEST]| {
+            let src_idx = Self::unbroadcasted_idx::<R_DEST, S_DEST>(&bcast_idx);
+
+            crate::storage::storage_idx_gen(R, &src_idx, S, layout).unwrap()
+        });
+        View::with_translation(&self.storage, layout, t)
+    }
+
+    pub fn unbroadcasted_idx<const R_DEST: usize, const S_DEST: Shape>(
+        bcast_idx: &[usize; R_DEST],
+    ) -> [usize; R] {
+        let s_normalized = broadcast_normalize(S, R, R_DEST);
+
+        let mut src_idx = [0; R];
+        let mut dim = 0;
+        for i in 0..R_DEST {
+            if s_normalized[i] == 1 && S_DEST[i] != 1 {
+                continue;
+            }
+            src_idx[dim] = bcast_idx[i];
+            dim += 1;
+        }
+
+        src_idx
+    }
+
     pub fn transpose(self) -> GenericTensor<T, R, { transpose_shape(R, S) }>
     where
         Assert<{ R >= 2 }>: IsTrue,

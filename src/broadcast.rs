@@ -49,7 +49,7 @@ where
     Dest: Tensor<T = Self::T>,
     Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
 {
-    fn broadcast(&'a self) -> View<'a, Dest> {
+    fn broadcast_to(&'a self) -> View<'a, Dest> {
         // Special case: if dimensions match, no need to translate
         if shapes_equal(Self::R, Self::S, Dest::R, Dest::S) {
             return View::new(self.storage(), self.layout());
