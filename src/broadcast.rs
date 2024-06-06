@@ -1,7 +1,6 @@
 use crate::{
-    shape::{self, shapes_equal, Shape, Shaped},
-    storage::TensorStorage,
-    tensor::Tensor,
+    shape::{self, shapes_equal, Shape},
+    tensor::{Tensor, TensorLike},
     type_assert::{Assert, IsTrue},
     view::View,
 };
@@ -45,9 +44,9 @@ pub const fn broadcast_normalize(s: Shape, r_src: usize, r_dest: usize) -> Shape
     ret
 }
 
-pub trait BroadcastableTo<'a, T, Dest>: Shaped + TensorStorage<T>
+pub trait BroadcastableTo<'a, Dest>: TensorLike
 where
-    Dest: Tensor<T = T> + Shaped,
+    Dest: Tensor<T = Self::T>,
     Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
 {
     fn broadcast(&'a self) -> View<'a, Dest> {

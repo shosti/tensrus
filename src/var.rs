@@ -544,7 +544,7 @@ impl<Tn: Tensor> Var<Tn> {
 
     pub fn elem_mul<Rhs>(&self, other: Var<Rhs>) -> Self
     where
-        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn> + Shaped,
+        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn> + Shaped,
         Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
     {
         if self.id() == other.id() {
@@ -559,7 +559,7 @@ impl<Tn: Tensor> Var<Tn> {
     pub fn elem_add<Rhs>(&self, other: Var<Rhs>) -> Self
     where
         Tn: for<'a> Add<View<'a, Tn>, Output = Tn>,
-        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn>,
+        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn>,
         Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
     {
         if self.id() == other.id() {
@@ -573,7 +573,7 @@ impl<Tn: Tensor> Var<Tn> {
 
     pub fn elem_div<Rhs>(&self, other: Var<Rhs>) -> Self
     where
-        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn>,
+        Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn>,
         Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue,
     {
         if self.id() == other.id() {

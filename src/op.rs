@@ -359,7 +359,7 @@ binary_op!(AddOp<Tn: Tensor> {
 binary_op!(ElemAddOp<Tn: Tensor, Rhs: Tensor> {
     args: (),
     where_clauses: (Tn: for<'a> Add<View<'a, Tn>, Output = Tn>,
-                    Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn>,
+                    Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn>,
                     Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue),
     const_params: (),
     in_type_1: Tn,
@@ -374,7 +374,7 @@ binary_op!(ElemAddOp<Tn: Tensor, Rhs: Tensor> {
     backward_2: |in_grad: Rhs, args: BinaryBackwardArgs<Rhs, Tn, Tn, _>| {
         let mut in_grad_updated = in_grad;
         for (idx, out_grad) in args.out_grad.iter() {
-            let in_idx = <Rhs as BroadcastableTo<_, Tn>>::unbroadcasted_idx(&idx);
+            let in_idx = <Rhs as BroadcastableTo<Tn>>::unbroadcasted_idx(&idx);
             in_grad_updated = in_grad_updated.set(&Rhs::Idx::from_slice(&in_idx), |val| val + out_grad);
         }
         in_grad_updated
@@ -383,7 +383,7 @@ binary_op!(ElemAddOp<Tn: Tensor, Rhs: Tensor> {
 
 binary_op!(ElemMulOp<Tn: Tensor, Rhs: Tensor> {
     args: (),
-    where_clauses: (Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn::T, Tn>,
+    where_clauses: (Rhs: Tensor<T = Tn::T> + for<'a> BroadcastableTo<'a, Tn>,
                     Tn: Shaped,
                     Assert<{ broadcast_compat(Rhs::R, Rhs::S, Tn::R, Tn::S) }>: IsTrue),
     const_params: (),
@@ -402,7 +402,7 @@ binary_op!(ElemMulOp<Tn: Tensor, Rhs: Tensor> {
     backward_2: (|in_grad: Rhs, args: BinaryBackwardArgs<Rhs, Tn, Tn, _>| {
         let mut in_grad_updated = in_grad;
         for (idx, out_grad) in args.out_grad.iter() {
-            let in_idx = <Rhs as BroadcastableTo<_, Tn>>::unbroadcasted_idx(&idx);
+            let in_idx = <Rhs as BroadcastableTo<_>>::unbroadcasted_idx(&idx);
             in_grad_updated = in_grad_updated.set(&Rhs::Idx::from_slice(&in_idx), |val| val + args.other_in_data[&idx] * out_grad)
         }
         in_grad_updated

@@ -4,7 +4,7 @@ use crate::{
     numeric::Numeric,
     shape::{Shape, Shaped},
     storage::{num_elems, storage_idx, IndexError, Layout, Storage, TensorStorage},
-    tensor::Tensor,
+    tensor::{Tensor, TensorLike},
     type_assert::{Assert, IsTrue},
     vector::Vector,
 };
@@ -156,7 +156,11 @@ pub struct MatrixView<'a, T: Numeric, const M: usize, const N: usize> {
     pub layout: Layout,
 }
 
-impl<'a, T: Numeric, const M: usize, const N: usize, Dest> BroadcastableTo<'a, T, Dest>
+impl<'a, T: Numeric, const M: usize, const N: usize> TensorLike for MatrixView<'a, T, M, N> {
+    type T = T;
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize, Dest> BroadcastableTo<'a, Dest>
     for MatrixView<'a, T, M, N>
 where
     Dest: Tensor<T = T> + Shaped,

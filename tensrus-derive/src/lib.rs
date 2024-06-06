@@ -38,7 +38,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
 
     let gen = quote! {
         impl #impl_generics Tensor for #name #type_generics {
-            type T = T;
             type Idx = [usize; #rank];
 
             fn rank() -> usize {
@@ -94,6 +93,10 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         impl #impl_generics crate::shape::Shaped for #name #type_generics {
             const R: usize = #rank;
             const S: Shape = #shape;
+        }
+
+        impl #impl_generics crate::tensor::TensorLike for #name #type_generics {
+            type T = T;
         }
 
         impl #impl_generics crate::tensor::BasicTensor<T> for #name #type_generics {
@@ -161,7 +164,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
         }
 
-        impl #impl_generics_with_lifetime_and_rhs crate::broadcast::BroadcastableTo<'a, T, Rhs> for #name #type_generics
+        impl #impl_generics_with_lifetime_and_rhs crate::broadcast::BroadcastableTo<'a, Rhs> for #name #type_generics
             where Rhs: crate::tensor::Tensor<T = T>,
             crate::type_assert::Assert<{ crate::broadcast::broadcast_compat(<Self as crate::shape::Shaped>::R, <Self as crate::shape::Shaped>::S, Rhs::R, Rhs::S) }>: crate::type_assert::IsTrue,
         {}

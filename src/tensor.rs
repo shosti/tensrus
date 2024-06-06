@@ -45,18 +45,20 @@ impl<const R: usize> TensorIndex for [usize; R] {
     }
 }
 
+pub trait TensorLike: Shaped + TensorStorage<Self::T> {
+    type T: Numeric;
+}
+
 pub trait Tensor:
     Clone
     + BasicTensor<Self::T>
-    + Shaped
-    + TensorStorage<Self::T>
+    + TensorLike
     + Mul<Self::T, Output = Self>
     + for<'a> Index<&'a Self::Idx, Output = Self::T>
     + Eq
     + FromIterator<Self::T>
     + 'static
 {
-    type T: Numeric;
     type Idx: TensorIndex;
 
     // Required methods
