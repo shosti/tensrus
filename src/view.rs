@@ -1,5 +1,6 @@
 use crate::{
     generic_tensor::GenericTensor,
+    numeric::Numeric,
     shape::{reduced_shape, Shape, Shaped},
     storage::Layout,
     tensor::{Tensor, TensorIndex},
@@ -32,25 +33,6 @@ impl<'a, Tn: Tensor> View<'a, Tn> {
             idx_translate: Some(t),
         }
     }
-}
-
-impl<'a, Tn: Tensor> View<'a, Tn> {
-    pub fn reduce_dim<const DIM: usize>(
-        self,
-        f: impl Fn(Tn::T, Tn::T) -> Tn::T + 'static,
-    ) -> GenericTensor<Tn::T, { Tn::R }, { reduced_shape(Tn::R, Tn::S, DIM) }> {
-        GenericTensor::from_fn(|idx| {
-            let mut src_idx = *idx;
-            debug_assert!(src_idx[DIM] == 0);
-
-            let mut res = self[&Tn::Idx::from_slice(&idx[..])];
-            for i in 1..Tn::S[DIM] {
-                src_idx[DIM] = i;
-                res = f(res, self[&Tn::Idx::from_slice(&src_idx)]);
-            }
-            res
-        })
-    }
 
     pub fn to_generic(self) -> View<'a, GenericTensor<Tn::T, { Tn::R }, { Tn::S }>> {
         match self.idx_translate {
@@ -72,6 +54,25 @@ impl<'a, Tn: Tensor> View<'a, Tn> {
                 }
             }
         }
+    }
+}
+
+impl<'a, T: Numeric, const R: usize, const S: Shape> View<'a, GenericTensor<T, R, S>> {
+    pub fn reduce_dim<const DIM: usize>(
+        self,
+        f: impl Fn(T, T) -> T + 'static,
+    ) -> GenericTensor<T, R, { reduced_shape(R, S, DIM) }> {
+        GenericTensor::from_fn(|idx| {
+            let mut src_idx: [usize; R] = *idx;
+            debug_assert!(src_idx[DIM] == 0);
+
+            let mut res = self[&idx];
+            for i in 1..S[DIM] {
+                src_idx[DIM] = i;
+                res = f(res, self[&src_idx]);
+            }
+            res
+        })
     }
 }
 

@@ -4,7 +4,8 @@ use crate::{
     matrix::Matrix,
     numeric::Numeric,
     scalar::Scalar,
-    shape::reduced_shape,
+    shape::{reduced_shape, Shape},
+    storage::num_elems,
     tensor::{BasicTensor, Tensor, TensorIndex},
     type_assert::{Assert, IsTrue},
     vector::Vector,
@@ -85,11 +86,11 @@ pub trait Op<T: Numeric>: Debug {
 }
 
 #[derive(Debug)]
-pub struct DimSumOp<Src: Tensor, Dest: Tensor<T = Src::T>, const DIM: usize> {
-    _markers: PhantomData<(Src, Dest)>,
+pub struct DimSumOp<T: Numeric, const R: usize, const S: Shape, const DIM: usize> {
+    _markers: PhantomData<GenericTensor<T, R, S>>,
 }
 
-impl<Src: Tensor, Dest: Tensor<T = Src::T>, const DIM: usize> DimSumOp<Src, Dest, DIM> {
+impl<T: Numeric, const R: usize, const S: Shape, const DIM: usize> DimSumOp<T, R, S, DIM> {
     pub fn new() -> Box<Self> {
         Box::new(Self {
             _markers: PhantomData,
@@ -97,26 +98,26 @@ impl<Src: Tensor, Dest: Tensor<T = Src::T>, const DIM: usize> DimSumOp<Src, Dest
     }
 }
 
-impl<Src: Tensor, Dest: Tensor<T = Src::T>, const DIM: usize> Op<Src::T>
-    for DimSumOp<Src, Dest, DIM>
+impl<T: Numeric, const R: usize, const S: Shape, const DIM: usize> Op<T> for DimSumOp<T, R, S, DIM>
 where
-    Dest: From<GenericTensor<Src::T, { Src::R }, { reduced_shape(Src::R, Src::S, DIM) }>>,
+    [(); num_elems(R, reduced_shape(R, S, DIM))]:,
 {
-    fn forward(&self, args: ForwardInput<Src::T>) -> Box<dyn BasicTensor<Src::T>> {
+    fn forward(&self, args: ForwardInput<T>) -> Box<dyn BasicTensor<T>> {
         let input = args.unary();
-        let in_typed = Src::ref_from_basic(input);
-        let reduced: Dest = in_typed.view().reduce_dim::<DIM>(|x, y| x + y).into();
+        let in_typed = GenericTensor::<T, R, S>::ref_from_basic(input);
+        let reduced: GenericTensor<T, R, { reduced_shape(R, S, DIM) }> =
+            in_typed.view().reduce_dim::<DIM>(|x, y| x + y);
         Box::new(reduced)
     }
 
-    fn backward(&self, args: BackwardArgs<Src::T>) -> BackwardOutput<Src::T> {
+    fn backward(&self, args: BackwardArgs<T>) -> BackwardOutput<T> {
         if let BackwardArgs::Unary {
             in_grad: in_grad_basic,
             ..
         } = args
         {
-            let in_grad = *Src::from_basic_boxed(in_grad_basic);
-            let in_grad_updated = in_grad.map(|_, x| x + Src::T::one());
+            let in_grad = *GenericTensor::<T, R, S>::from_basic_boxed(in_grad_basic);
+            let in_grad_updated = in_grad.map(|_, x| x + T::one());
 
             BackwardOutput::Unary(Box::new(in_grad_updated))
         } else {

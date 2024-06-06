@@ -8,7 +8,8 @@ use crate::op::{
 };
 use crate::render::{Edge, Graphable, Node};
 use crate::scalar::Scalar;
-use crate::shape::reduced_shape;
+use crate::shape::{reduced_shape, Shape};
+use crate::storage::num_elems;
 use crate::tensor::{BasicTensor, Tensor};
 use crate::type_assert::{Assert, IsTrue};
 use crate::vector::Vector;
@@ -184,17 +185,30 @@ impl<Tn: Tensor> Var<Tn> {
 
         out_var
     }
+}
 
-    pub fn dim_sum<Dest, const DIM: usize>(&self) -> Var<Dest>
+impl<T: Numeric, const R: usize, const S: Shape> Var<GenericTensor<T, R, S>> {
+    pub fn dim_sum<const DIM: usize>(
+        &self,
+    ) -> Var<GenericTensor<T, R, { reduced_shape(R, S, DIM) }>>
     where
-        Dest: Tensor<T = Tn::T>
-            + From<GenericTensor<Tn::T, { Tn::R }, { reduced_shape(Tn::R, Tn::S, DIM) }>>,
+        [(); num_elems(R, reduced_shape(R, S, DIM))]:,
     {
-        let op = DimSumOp::<Tn, Dest, DIM>::new();
+        let op = DimSumOp::<T, R, S, DIM>::new();
 
         self.new_from_unary(op)
     }
 }
+
+// impl<T: Numeric, const S: Shape> Var<GenericTensor<T, 2, S>> {
+//     pub fn softmax(&self) -> Self
+//     where
+//         [(); num_elems(2, reduced_shape(2, S, 1))]:,
+//     {
+//         let row_sums = self.dim_sum::<1>();
+//         self.elem_div(row_sums)
+//     }
+// }
 
 impl<T: Numeric> VarRef<T> {
     fn id(&self) -> Id {
