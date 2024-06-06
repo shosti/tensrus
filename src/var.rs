@@ -194,9 +194,9 @@ impl<Tn: Tensor> Var<Tn> {
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> Var<GenericTensor<T, R, S>> {
-    pub fn from_generic<Tn: Tensor<T = T>>(self) -> Var<Tn>
+    pub fn from_generic<Tn>(self) -> Var<Tn>
     where
-        Tn: From<GenericTensor<T, R, S>>,
+        Tn: Tensor<T = T> + From<GenericTensor<T, R, S>>,
     {
         match self {
             Var::Parameter(p, _) => Var::Parameter(p, PhantomData),

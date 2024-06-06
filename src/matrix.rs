@@ -1,5 +1,4 @@
 use crate::{
-    broadcast::{broadcast_compat, BroadcastableTo},
     generic_tensor::GenericTensor,
     numeric::Numeric,
     shape::{Shape, Shaped},
@@ -158,14 +157,6 @@ pub struct MatrixView<'a, T: Numeric, const M: usize, const N: usize> {
 
 impl<'a, T: Numeric, const M: usize, const N: usize> TensorLike for MatrixView<'a, T, M, N> {
     type T = T;
-}
-
-impl<'a, T: Numeric, const M: usize, const N: usize, Dest> BroadcastableTo<'a, Dest>
-    for MatrixView<'a, T, M, N>
-where
-    Dest: Tensor<T = T>,
-    Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
-{
 }
 
 impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
