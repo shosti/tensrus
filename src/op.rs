@@ -362,7 +362,8 @@ binary_op!(ElemAddOp<T: Numeric> {
     out_type: GenericTensor<T, R, S>,
     numeric_type: T,
     forward: |in1: &GenericTensor<T, R, S>, in2: &GenericTensor<T, R_RHS, S_RHS>, _| {
-        let other: View<GenericTensor<T, R, S>> = in2.broadcast();
+        let v = in2.view();
+        let other: View<GenericTensor<T, R, S>> = v.broadcast();
         in1.clone() + other
     },
     backward_1: |in_grad: GenericTensor<T, R, S>, args: BinaryBackwardArgs<GenericTensor<T, R, S>, GenericTensor<T, R_RHS, S_RHS>, GenericTensor<T, R, S>, _>| {
@@ -371,7 +372,7 @@ binary_op!(ElemAddOp<T: Numeric> {
     backward_2: |in_grad: GenericTensor<T, R_RHS, S_RHS>, args: BinaryBackwardArgs<GenericTensor<T, R_RHS, S_RHS>, GenericTensor<T, R, S>, GenericTensor<T, R, S>, _>| {
         let mut in_grad_updated = in_grad;
         for (idx, out_grad) in args.out_grad.iter() {
-            let in_idx = GenericTensor::<T, R_RHS, S_RHS>::unbroadcasted_idx::<R, S>(&idx);
+            let in_idx = View::<GenericTensor<T, R_RHS, S_RHS>>::unbroadcasted_idx::<R, S>(&idx);
             in_grad_updated = in_grad_updated.set(&in_idx, |val| val + out_grad);
         }
         in_grad_updated
@@ -387,17 +388,19 @@ binary_op!(ElemMulOp<T: Numeric> {
     out_type: GenericTensor<T, R, S>,
     numeric_type: T,
     forward: |in1: &GenericTensor<T, R, S>, in2: &GenericTensor<T, R_RHS, S_RHS>, _| {
-        let other: View<GenericTensor<T, R, S>> = in2.broadcast();
+        let v = in2.view();
+        let other: View<GenericTensor<T, R, S>> = v.broadcast();
         GenericTensor::from_fn(|idx| in1[idx] * other[idx])
     },
     backward_1: (|in_grad: GenericTensor<T, R, S>, args: BinaryBackwardArgs<GenericTensor<T, R, S>, GenericTensor<T, R_RHS, S_RHS>, GenericTensor<T, R, S>, _>| {
-        let other: View<GenericTensor<T, R, S>> = args.other_in_data.broadcast();
+        let v = args.other_in_data.view();
+        let other: View<GenericTensor<T, R, S>> = v.broadcast();
         in_grad.map(|idx, in_grad| in_grad + other[idx] * args.out_grad[idx])
     }),
     backward_2: (|in_grad: GenericTensor<T, R_RHS, S_RHS>, args: BinaryBackwardArgs<GenericTensor<T, R_RHS, S_RHS>, GenericTensor<T, R, S>, GenericTensor<T, R, S>, _>| {
         let mut in_grad_updated = in_grad;
         for (idx, out_grad) in args.out_grad.iter() {
-            let in_idx = GenericTensor::<T, R_RHS, S_RHS>::unbroadcasted_idx::<R, S>(&idx);
+            let in_idx = View::<GenericTensor<T, R_RHS, S_RHS>>::unbroadcasted_idx::<R, S>(&idx);
             in_grad_updated = in_grad_updated.set(&in_idx, |val| val + args.other_in_data[&idx] * out_grad)
         }
         in_grad_updated
