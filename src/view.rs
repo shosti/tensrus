@@ -51,6 +51,28 @@ impl<'a, Tn: Tensor> View<'a, Tn> {
             res
         })
     }
+
+    pub fn to_generic(self) -> View<'a, GenericTensor<Tn::T, { Tn::R }, { Tn::S }>> {
+        match self.idx_translate {
+            None => View {
+                storage: self.storage,
+                layout: self.layout,
+                idx_translate: None,
+            },
+            Some(t) => {
+                let tr = Box::new(move |idx: [usize; Tn::R]| {
+                    let idx = Tn::Idx::from_slice(&idx);
+                    t(idx)
+                });
+
+                View {
+                    storage: self.storage,
+                    layout: self.layout,
+                    idx_translate: Some(tr),
+                }
+            }
+        }
+    }
 }
 
 impl<'a, Tn> From<&'a Tn> for View<'a, Tn>
