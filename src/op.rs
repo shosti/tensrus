@@ -1,6 +1,6 @@
 use crate::{
     broadcast::broadcast_compat,
-    generic_tensor::GenericTensor,
+    generic_tensor::{AsGeneric, GenericTensor},
     matrix::{Matrix, MatrixLike},
     numeric::Numeric,
     scalar::Scalar,
@@ -379,31 +379,38 @@ binary_op!(ElemAddOp<T: Numeric> {
     },
 });
 
-binary_op!(ElemMulOp<T: Numeric> {
+binary_op!(ElemMulOp<Lhs: Tensor, Rhs: Tensor> {
     args: (),
-    where_clauses: (Assert<{ broadcast_compat(R_RHS, S_RHS, R, S) }>: IsTrue),
+    where_clauses: (Assert<{ broadcast_compat(R_RHS, S_RHS, R, S) }>: IsTrue,
+                    Lhs: AsGeneric<Lhs::T, R, S>,
+                    Rhs: AsGeneric<Lhs::T, R_RHS, S_RHS> + Tensor<T = Lhs::T>),
     const_params: (R: usize, S: Shape, R_RHS: usize, S_RHS: Shape),
-    in_type_1: GenericTensor<T, R, S>,
-    in_type_2: GenericTensor<T, R_RHS, S_RHS>,
-    out_type: GenericTensor<T, R, S>,
-    numeric_type: T,
-    forward: |in1: &GenericTensor<T, R, S>, in2: &GenericTensor<T, R_RHS, S_RHS>, _| {
-        let v = in2.view();
-        let other: View<GenericTensor<T, R, S>> = v.broadcast();
-        GenericTensor::from_fn(|idx| in1[idx] * other[idx])
+    in_type_1: Lhs,
+    in_type_2: Rhs,
+    out_type: GenericTensor<Lhs::T, R, S>,
+    numeric_type: Lhs::T,
+    forward: |in1: &Lhs, in2: &Rhs, _| {
+        let lhs = in1.as_generic();
+        let rhs_orig = in2.as_generic();
+        let rhs: View<GenericTensor<_, R, S>> = rhs_orig.broadcast();
+        GenericTensor::from_fn(|idx| lhs[idx] * rhs[idx])
     },
-    backward_1: (|in_grad: GenericTensor<T, R, S>, args: BinaryBackwardArgs<GenericTensor<T, R, S>, GenericTensor<T, R_RHS, S_RHS>, GenericTensor<T, R, S>, _>| {
-        let v = args.other_in_data.view();
-        let other: View<GenericTensor<T, R, S>> = v.broadcast();
-        in_grad.map(|idx, in_grad| in_grad + other[idx] * args.out_grad[idx])
+    backward_1: (|in_grad: Lhs, args: BinaryBackwardArgs<Lhs, Rhs, GenericTensor<Lhs::T, R, S>, _>| {
+        let rhs_orig = args.other_in_data.as_generic();
+        let rhs: View<GenericTensor<_, R, S>> = rhs_orig.broadcast();
+        let mut in_grad_gen: GenericTensor<_, R, S> = in_grad.into();
+        in_grad_gen = in_grad_gen.map(|idx, in_grad| in_grad + rhs[idx] * args.out_grad[idx]);
+        in_grad_gen.into()
     }),
-    backward_2: (|in_grad: GenericTensor<T, R_RHS, S_RHS>, args: BinaryBackwardArgs<GenericTensor<T, R_RHS, S_RHS>, GenericTensor<T, R, S>, GenericTensor<T, R, S>, _>| {
-        let mut in_grad_updated = in_grad;
-        for (idx, out_grad) in args.out_grad.iter() {
-            let in_idx = View::<GenericTensor<T, R_RHS, S_RHS>>::unbroadcasted_idx::<R, S>(&idx);
-            in_grad_updated = in_grad_updated.set(&in_idx, |val| val + args.other_in_data[&idx] * out_grad)
+    backward_2: (|in_grad: Rhs, args: BinaryBackwardArgs<Rhs, Lhs, GenericTensor<Lhs::T, R, S>, _>| {
+        let mut in_grad_updated: GenericTensor<Lhs::T, R_RHS, S_RHS> = in_grad.into();
+        let out_grad_gen = args.out_grad.as_generic();
+        let lhs_in_data = args.other_in_data.as_generic();
+        for (idx, out_grad) in out_grad_gen.iter() {
+            let in_idx = View::<GenericTensor<Lhs::T, R_RHS, S_RHS>>::unbroadcasted_idx::<R, S>(&idx);
+            in_grad_updated = in_grad_updated.set(&in_idx, |val| val + lhs_in_data[&idx] * out_grad)
         }
-        in_grad_updated
+        in_grad_updated.into()
     }),
 });
 

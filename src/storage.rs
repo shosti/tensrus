@@ -100,20 +100,32 @@ pub(crate) fn nth_idx<const R: usize>(
     shape: Shape,
     layout: Layout,
 ) -> Result<[usize; R], IndexError> {
-    if n >= num_elems(R, shape) {
+    let idx = nth_idx_gen(R, n, shape, layout)?;
+    let mut out = [0; R];
+    out.copy_from_slice(&idx);
+    Ok(out)
+}
+
+pub(crate) fn nth_idx_gen(
+    r: usize,
+    n: usize,
+    shape: Shape,
+    layout: Layout,
+) -> Result<Shape, IndexError> {
+    if n >= num_elems(r, shape) {
         return Err(IndexError {});
     }
 
     if layout == Layout::Transposed {
-        let mut t_idx = nth_idx(n, transpose_shape(R, shape), Layout::Normal).unwrap();
+        let mut t_idx = nth_idx(n, transpose_shape(r, shape), Layout::Normal).unwrap();
         t_idx.reverse();
         return Ok(t_idx);
     }
 
     let mut i = n;
-    let stride = crate::shape::stride(R, shape);
-    let mut res = [0; R];
-    for dim in 0..R {
+    let stride = crate::shape::stride(r, shape);
+    let mut res = [0; MAX_DIMS];
+    for dim in 0..r {
         let s = stride[dim];
         let cur = i / s;
         res[dim] = cur;

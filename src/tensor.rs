@@ -45,32 +45,33 @@ impl<const R: usize> TensorIndex for [usize; R] {
     }
 }
 
-pub trait TensorLike: Shaped + TensorStorage<Self::T> {
+pub trait TensorLike: Shaped + TensorStorage<Self::T> + Indexable {
+}
+
+pub trait Indexable: for<'a> Index<&'a Self::Idx, Output = Self::T> {
+    type Idx: TensorIndex;
     type T: Numeric;
+
+    fn num_elems() -> usize;
+    fn default_idx() -> Self::Idx;
+    fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx>;
 }
 
 pub trait Tensor:
     Clone
     + BasicTensor<Self::T>
-    + TensorLike
     + Mul<Self::T, Output = Self>
-    + for<'a> Index<&'a Self::Idx, Output = Self::T>
+    + TensorLike
     + Eq
     + FromIterator<Self::T>
     + 'static
 {
-    type Idx: TensorIndex;
-
     // Required methods
     fn rank() -> usize;
     fn shape() -> Shape;
 
     fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self;
     fn set(self, idx: &Self::Idx, f: impl Fn(Self::T) -> Self::T) -> Self;
-
-    fn num_elems() -> usize;
-    fn default_idx() -> Self::Idx;
-    fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx>;
 
     // Provided methods
     fn map(mut self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
@@ -100,7 +101,7 @@ pub trait Tensor:
     }
     fn rand(d: impl Distribution<Self::T>, rng: &mut impl Rng) -> Self {
         d.sample_iter(rng)
-            .take(<Self as Tensor>::num_elems())
+            .take(<Self as Indexable>::num_elems())
             .collect()
     }
     fn randn(rng: &mut impl Rng) -> Self
@@ -120,7 +121,7 @@ pub trait Tensor:
     }
 
     fn from_basic(from: &dyn BasicTensor<Self::T>) -> Self {
-        if from.len() != <Self as Tensor>::num_elems() {
+        if from.len() != <Self as Indexable>::num_elems() {
             panic!("cannot create a Tensor from a BasicTensor unless the number of elements is identical");
         }
 
@@ -150,7 +151,7 @@ pub trait Tensor:
 
 pub struct TensorIterator<'a, Tn>
 where
-    Tn: Tensor,
+    Tn: Indexable,
 {
     t: &'a Tn,
     cur: Option<Tn::Idx>,
@@ -158,7 +159,7 @@ where
 
 impl<'a, Tn> TensorIterator<'a, Tn>
 where
-    Tn: Tensor,
+    Tn: Indexable,
 {
     pub fn new(t: &'a Tn) -> Self {
         Self {
@@ -174,7 +175,7 @@ where
 
 impl<'a, Tn> Iterator for TensorIterator<'a, Tn>
 where
-    Tn: Tensor,
+    Tn: Indexable,
 {
     type Item = (Tn::Idx, Tn::T);
 

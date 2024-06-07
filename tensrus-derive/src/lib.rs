@@ -38,8 +38,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
 
     let gen = quote! {
         impl #impl_generics Tensor for #name #type_generics {
-            type Idx = [usize; #rank];
-
             fn rank() -> usize {
                 #rank
             }
@@ -48,15 +46,11 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 #shape
             }
 
-            fn num_elems() -> usize {
-                crate::storage::num_elems(#rank, #shape)
-            }
-
             fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self {
-                let mut v = Vec::with_capacity(Self::num_elems());
+                let mut v = Vec::with_capacity(<Self as crate::tensor::Indexable>::num_elems());
                 let layout = Layout::Normal;
 
-                for i in 0..Self::num_elems() {
+                for i in 0..<Self as crate::tensor::Indexable>::num_elems() {
                     let idx = crate::storage::nth_idx(i, #shape, layout).unwrap();
                     v.push(f(&idx));
                 }
@@ -76,13 +70,22 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                     layout: self.layout,
                 }
             }
+        }
+
+        impl #impl_generics crate::tensor::Indexable for #name #type_generics {
+            type Idx = [usize; #rank];
+            type T = T;
+
+            fn num_elems() -> usize {
+                crate::storage::num_elems(#rank, #shape)
+            }
 
             fn default_idx() -> Self::Idx {
                 [0; #rank]
             }
             fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
                 let i = crate::storage::storage_idx(idx, #shape, self.layout).ok()?;
-                if i >= Self::num_elems() - 1 {
+                if i >= <Self as crate::tensor::Indexable>::num_elems() - 1 {
                     return None;
                 }
 
@@ -96,7 +99,6 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
         }
 
         impl #impl_generics crate::tensor::TensorLike for #name #type_generics {
-            type T = T;
         }
 
         impl #impl_generics crate::tensor::BasicTensor<T> for #name #type_generics {
@@ -121,7 +123,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
 
             fn len(&self) -> usize {
-                Self::num_elems()
+                <Self as crate::tensor::Indexable>::num_elems()
             }
 
             // Scales `self` by `scale` and adds to `other`
@@ -161,6 +163,16 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
 
             fn layout(&self) -> crate::storage::Layout {
                 self.layout
+            }
+        }
+
+        impl #impl_generics crate::generic_tensor::AsGeneric<T, #rank, #shape> for #name #type_generics {
+            fn as_generic(&self) -> crate::view::View<crate::generic_tensor::GenericTensor<T, #rank, #shape>> {
+                let layout = self.layout;
+                let t = Box::new(move |idx: [usize; #rank]| {
+                    crate::storage::storage_idx::<#rank>(&idx, #shape, layout).expect("out of bounds")
+                });
+                crate::view::View::with_translation(&self.storage, layout, t)
             }
         }
 
@@ -207,7 +219,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                     .into_iter()
                     .map(|v| T::from(v).unwrap())
                     .chain(std::iter::repeat(T::zero()))
-                    .take(Self::num_elems())
+                    .take(<Self as crate::tensor::Indexable>::num_elems())
                     .collect();
                 Self {
                     storage: vals.into(),

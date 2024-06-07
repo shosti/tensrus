@@ -1,8 +1,5 @@
 use crate::{
-    shape::{self, shapes_equal, Shape},
-    tensor::{Tensor, TensorLike},
-    type_assert::{Assert, IsTrue},
-    view::View,
+    shape::{self, Shape},
 };
 
 pub const fn broadcast_compat(r_src: usize, s_src: Shape, r_dest: usize, s_dest: Shape) -> bool {
@@ -42,45 +39,6 @@ pub const fn broadcast_normalize(s: Shape, r_src: usize, r_dest: usize) -> Shape
     }
 
     ret
-}
-
-pub trait BroadcastableTo<'a, Dest>: TensorLike
-where
-    Dest: Tensor<T = Self::T>,
-    Assert<{ broadcast_compat(Self::R, Self::S, Dest::R, Dest::S) }>: IsTrue,
-{
-    fn broadcast_to(&'a self) -> View<'a, Dest> {
-        // Special case: if dimensions match, no need to translate
-        if shapes_equal(Self::R, Self::S, Dest::R, Dest::S) {
-            return View::new(self.storage(), self.layout());
-        }
-        let layout = self.layout();
-        let t = Box::new(move |bcast_idx: Dest::Idx| {
-            let src_idx = Self::unbroadcasted_idx(&bcast_idx);
-
-            crate::storage::storage_idx_gen(Self::R, &src_idx, Self::S, layout).unwrap()
-        });
-        View::with_translation(self.storage(), layout, t)
-    }
-
-    /// For an input index that for the broradcasted shape, returns the index
-    /// for shape of Self
-    fn unbroadcasted_idx(bcast_idx: &Dest::Idx) -> [usize; Self::R] {
-        let idx: &[usize] = bcast_idx.as_ref();
-        let s_normalized = broadcast_normalize(Self::S, Self::R, Dest::R);
-
-        let mut src_idx = [0; Self::R];
-        let mut dim = 0;
-        for i in 0..Dest::R {
-            if s_normalized[i] == 1 && Dest::S[i] != 1 {
-                continue;
-            }
-            src_idx[dim] = idx[i];
-            dim += 1;
-        }
-
-        src_idx
-    }
 }
 
 #[cfg(test)]

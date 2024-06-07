@@ -208,7 +208,14 @@ impl<T: Numeric, const R: usize, const S: Shape> Var<GenericTensor<T, R, S>> {
         if self.id() == other.id() {
             return self.elem_pow(T::two());
         }
-        let op = ElemMulOp::<T, R, S, R_RHS, S_RHS>::new();
+        let op = ElemMulOp::<
+            GenericTensor<T, R, S>,
+            GenericTensor<T, R_RHS, S_RHS>,
+            R,
+            S,
+            R_RHS,
+            S_RHS,
+        >::new();
         let other_ref = (&other).into();
 
         self.new_from_binary(other_ref, op)

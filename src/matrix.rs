@@ -3,7 +3,7 @@ use crate::{
     numeric::Numeric,
     shape::{Shape, Shaped},
     storage::{num_elems, storage_idx, IndexError, Layout, Storage, TensorStorage},
-    tensor::{Tensor, TensorLike},
+    tensor::{Indexable, Tensor, TensorLike},
     type_assert::{Assert, IsTrue},
     vector::Vector,
     view::View,
@@ -185,8 +185,28 @@ impl<'a, T: Numeric, const M: usize, const N: usize> MatrixLike<T, M, N>
     }
 }
 
-impl<'a, T: Numeric, const M: usize, const N: usize> TensorLike for MatrixView<'a, T, M, N> {
+impl<'a, T: Numeric, const M: usize, const N: usize> Indexable for MatrixView<'a, T, M, N> {
+    type Idx = <Matrix::<T, M, N> as Indexable>::Idx;
     type T = T;
+
+    fn num_elems() -> usize {
+        Matrix::<T, M, N>::num_elems()
+    }
+    fn default_idx() -> Self::Idx {
+        Matrix::<T, M, N>::default_idx()
+    }
+    fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
+        let shape = Matrix::<T, M, N>::shape();
+        let i = crate::storage::storage_idx(idx, shape, self.layout).ok()?;
+        if i >= Self::num_elems() - 1 {
+            return None;
+        }
+
+        crate::storage::nth_idx(i + 1, shape, self.layout).ok()
+    }
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize> TensorLike for MatrixView<'a, T, M, N> {
 }
 
 impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {

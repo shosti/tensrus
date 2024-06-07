@@ -1,8 +1,5 @@
 use crate::{
-    numeric::Numeric,
-    shape::{self, Shape},
-    storage::{Layout, Storage},
-    tensor::Tensor,
+    generic_tensor::GenericTensor, numeric::Numeric, shape::{self, Shape}, storage::{Layout, Storage}, tensor::Tensor
 };
 use num::ToPrimitive;
 
@@ -33,6 +30,24 @@ where
         Self {
             storage: vals.into(),
             layout: Layout::default(),
+        }
+    }
+}
+
+impl<T: Numeric> From<GenericTensor<T, 0, { scalar_shape() }>> for Scalar<T> {
+    fn from(t: GenericTensor<T, 0, { scalar_shape() }>) -> Self {
+        Self {
+            storage: t.storage,
+            layout: t.layout,
+        }
+    }
+}
+
+impl<T: Numeric> From<Scalar<T>> for GenericTensor<T, 0, { scalar_shape() }> {
+    fn from(t: Scalar<T>) -> Self {
+        Self {
+            storage: t.storage,
+            layout: t.layout,
         }
     }
 }

@@ -5,6 +5,7 @@ use crate::{
     storage::{num_elems, storage_idx, IndexError, Layout, Storage},
     tensor::Tensor,
     type_assert::{Assert, IsTrue},
+    view::View,
 };
 use num::ToPrimitive;
 
@@ -14,6 +15,12 @@ use num::ToPrimitive;
 pub struct GenericTensor<T: Numeric, const R: usize, const S: Shape> {
     pub(crate) storage: Storage<T>,
     pub layout: Layout,
+}
+
+pub trait AsGeneric<T: Numeric, const R: usize, const S: Shape>:
+    From<GenericTensor<T, R, S>> + Into<GenericTensor<T, R, S>>
+{
+    fn as_generic(&self) -> View<GenericTensor<T, R, S>>;
 }
 
 impl<T: Numeric, const R: usize, const S: Shape, U: ToPrimitive> From<[U; num_elems(R, S)]>

@@ -4,7 +4,7 @@ use crate::{
     numeric::Numeric,
     shape::{reduced_shape, shapes_equal, Shape, Shaped},
     storage::Layout,
-    tensor::{Tensor, TensorIndex},
+    tensor::{Indexable, Tensor, TensorIndex, TensorIterator},
 };
 use std::ops::Index;
 
@@ -33,6 +33,10 @@ impl<'a, Tn: Tensor> View<'a, Tn> {
             layout,
             idx_translate: Some(t),
         }
+    }
+
+    pub fn iter(&self) -> TensorIterator<Self> {
+        TensorIterator::new(self)
     }
 
     pub fn to_generic(self) -> View<'a, GenericTensor<Tn::T, { Tn::R }, { Tn::S }>> {
@@ -133,6 +137,28 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> View<'a, GenericTensor<T, R
         }
 
         src_idx
+    }
+}
+
+impl<'a, Tn: Tensor> Indexable for View<'a, Tn> {
+    type Idx = Tn::Idx;
+    type T = Tn::T;
+
+    fn num_elems() -> usize {
+        Tn::num_elems()
+    }
+    fn default_idx() -> Self::Idx {
+        Tn::default_idx()
+    }
+    fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
+        let shape = Tn::shape();
+        let i = crate::storage::storage_idx_gen(Self::R, idx.as_ref(), shape, self.layout).ok()?;
+        if i >= Self::num_elems() - 1 {
+            return None;
+        }
+
+        let idx = crate::storage::nth_idx_gen(Self::R, i + 1, shape, self.layout).ok()?;
+        Some(Self::Idx::from_slice(&idx))
     }
 }
 
