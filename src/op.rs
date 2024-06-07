@@ -1,7 +1,7 @@
 use crate::{
     broadcast::broadcast_compat,
     generic_tensor::GenericTensor,
-    matrix::Matrix,
+    matrix::{Matrix, MatrixLike},
     numeric::Numeric,
     scalar::Scalar,
     shape::{reduced_shape, Shape},
@@ -426,22 +426,24 @@ binary_op!(ScalarMulOp<Tn: Tensor> {
     }),
 });
 
-binary_op!(MatMulOp<T: Numeric> {
+binary_op!(MatMulOp<Lhs: Tensor, Rhs: Tensor> {
     args: (),
-    where_clauses: (),
+    where_clauses: (Lhs: MatrixLike<Lhs::T, M, N> + From<Matrix<Lhs::T, M, N>>, Rhs: Tensor<T = Lhs::T> + MatrixLike<Lhs::T, N, P> + From<Matrix<Lhs::T, N, P>>),
     const_params: (M: usize, N: usize, P: usize),
-    in_type_1: Matrix<T, M, N>,
-    in_type_2: Matrix<T, N, P>,
-    out_type: Matrix<T, M, P>,
-    numeric_type: T,
-    forward: |a: &Matrix<T, M, N>, b: &Matrix<T, N, P>, _| a * b,
-    backward_1: |a_grad: Matrix<T, M, N>, args: BinaryBackwardArgs<Matrix<T, M, N>, Matrix<T, N, P>, Matrix<T, M, P>, _>| {
+    in_type_1: Lhs,
+    in_type_2: Rhs,
+    out_type: Matrix<Lhs::T, M, P>,
+    numeric_type: Lhs::T,
+    forward: |a: &Lhs, b: &Rhs, _| a.as_matrix() * b.as_matrix(),
+    backward_1: |a_grad: Lhs, args: BinaryBackwardArgs<Lhs, Rhs, Matrix<Lhs::T, M, P>, _>| {
         let b = args.other_in_data;
-        args.out_grad.matmul_view_into(b.matrix_view().transpose(), a_grad)
+        let a_grad_mat = args.out_grad.matmul_view_into(b.as_matrix().transpose(), a_grad.into_matrix());
+        a_grad_mat.into()
     },
-    backward_2: |b_grad: Matrix<T, N, P>, args: BinaryBackwardArgs<Matrix<T, N, P>, Matrix<T, M, N>, Matrix<T, M, P>, _>| {
+    backward_2: |b_grad: Rhs, args: BinaryBackwardArgs<Rhs, Lhs, Matrix<Lhs::T, M, P>, _>| {
         let a = args.other_in_data;
-        a.matrix_view().transpose().matmul_into(args.out_grad, b_grad)
+        let b_grad_mat = a.as_matrix().transpose().matmul_into(args.out_grad, b_grad.into_matrix());
+        b_grad_mat.into()
     },
 });
 
@@ -460,6 +462,6 @@ binary_op!(MatVecMulOp<T: Numeric> {
     },
     backward_2: |x_grad: Vector<T, N>, args: BinaryBackwardArgs<Vector<T, N>, Matrix<T, M, N>, Vector<T, M>, _>| {
         let a = args.other_in_data;
-        a.matrix_view().transpose().matvecmul_into(args.out_grad, x_grad)
+        a.as_matrix().transpose().matvecmul_into(args.out_grad, x_grad)
     },
 });

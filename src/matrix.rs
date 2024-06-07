@@ -15,6 +15,11 @@ pub const fn matrix_shape(m: usize, n: usize) -> Shape {
     [m, n, 0, 0, 0, 0]
 }
 
+pub trait MatrixLike<T: Numeric, const M: usize, const N: usize> {
+    fn as_matrix(&self) -> MatrixView<T, M, N>;
+    fn into_matrix(self) -> Matrix<T, M, N>;
+}
+
 #[derive(Tensor, Clone)]
 #[tensor_rank = 2]
 #[tensor_shape = "matrix_shape(M, N)"]
@@ -54,13 +59,6 @@ impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N> {
 
     pub fn normalize_rows(self) -> Self {
         self.map_rows(|v| v.normalize().into())
-    }
-
-    pub fn matrix_view(&self) -> MatrixView<T, M, N> {
-        MatrixView {
-            storage: &self.storage,
-            layout: self.layout,
-        }
     }
 
     pub fn transpose(self) -> Matrix<T, N, M> {
@@ -103,6 +101,19 @@ impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N> {
     /// Multiplies self * x and adds the result to out, returning out
     pub fn matvecmul_into(&self, x: &Vector<T, N>, out: Vector<T, M>) -> Vector<T, M> {
         matvecmul_with_initial_impl::<T, M, N>(&self.storage, self.layout, &x.storage, out)
+    }
+}
+
+impl<T: Numeric, const M: usize, const N: usize> MatrixLike<T, M, N> for Matrix<T, M, N> {
+    fn as_matrix(&self) -> MatrixView<T, M, N> {
+        MatrixView {
+            storage: &self.storage,
+            layout: self.layout,
+        }
+    }
+
+    fn into_matrix(self) -> Matrix<T, M, N> {
+        self
     }
 }
 
@@ -154,6 +165,24 @@ impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<&'a Mat
 pub struct MatrixView<'a, T: Numeric, const M: usize, const N: usize> {
     pub(crate) storage: &'a [T],
     pub layout: Layout,
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
+    pub fn new(storage: &'a [T], layout: Layout) -> Self {
+        Self { storage, layout }
+    }
+}
+
+impl<'a, T: Numeric, const M: usize, const N: usize> MatrixLike<T, M, N>
+    for MatrixView<'a, T, M, N>
+{
+    fn as_matrix(&self) -> MatrixView<T, M, N> {
+        Self::new(self.storage, self.layout)
+    }
+
+    fn into_matrix(self) -> Matrix<T, M, N> {
+        Matrix::from_fn(|idx| self[idx])
+    }
 }
 
 impl<'a, T: Numeric, const M: usize, const N: usize> TensorLike for MatrixView<'a, T, M, N> {

@@ -1,4 +1,5 @@
 use crate::{
+    matrix::{matrix_shape, Matrix, MatrixLike, MatrixView},
     numeric::Numeric,
     shape::{subtensor_shape, transpose_shape, Shape},
     storage::{num_elems, storage_idx, IndexError, Layout, Storage},
@@ -63,6 +64,21 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
                 self.storage[storage_idx(&self_idx, S, self.layout).unwrap()]
             });
         Ok(out)
+    }
+}
+
+impl<T: Numeric, const M: usize, const N: usize> MatrixLike<T, M, N>
+    for GenericTensor<T, 2, { matrix_shape(M, N) }>
+{
+    fn as_matrix(&self) -> MatrixView<T, M, N> {
+        MatrixView::new(&self.storage, self.layout)
+    }
+
+    fn into_matrix(self) -> Matrix<T, M, N> {
+        Matrix {
+            storage: self.storage,
+            layout: self.layout,
+        }
     }
 }
 

@@ -184,26 +184,9 @@ impl<Tn: Tensor> Var<Tn> {
 
         out_var
     }
-
-    pub fn to_generic(self) -> Var<GenericTensor<Tn::T, { Tn::R }, { Tn::S }>> {
-        match self {
-            Var::Parameter(p, _) => Var::Parameter(p, PhantomData),
-            Var::Output(o, _) => Var::Output(o, PhantomData),
-        }
-    }
 }
 
 impl<T: Numeric, const R: usize, const S: Shape> Var<GenericTensor<T, R, S>> {
-    pub fn from_generic<Tn>(self) -> Var<Tn>
-    where
-        Tn: Tensor<T = T> + From<GenericTensor<T, R, S>>,
-    {
-        match self {
-            Var::Parameter(p, _) => Var::Parameter(p, PhantomData),
-            Var::Output(o, _) => Var::Output(o, PhantomData),
-        }
-    }
-
     pub fn dim_sum<const DIM: usize>(
         &self,
     ) -> Var<GenericTensor<T, R, { reduced_shape(R, S, DIM) }>>
@@ -662,7 +645,7 @@ impl<T: Numeric, const M: usize, const N: usize, const P: usize> Mul<Var<Matrix<
         if self.id() == other.id() {
             todo!()
         }
-        let op = MatMulOp::<T, M, N, P>::new();
+        let op = MatMulOp::<Matrix<T, M, N>, Matrix<T, N, P>, M, N, P>::new();
         let other_ref: VarRef<T> = (&other).into();
 
         self.new_from_binary(other_ref, op)
