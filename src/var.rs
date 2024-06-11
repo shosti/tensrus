@@ -1,5 +1,5 @@
 use crate::broadcast::broadcast_compat;
-use crate::generic_tensor::GenericTensor;
+use crate::generic_tensor::{AsGeneric, GenericTensor};
 use crate::matrix::Matrix;
 use crate::numeric::Numeric;
 use crate::op::{
@@ -198,35 +198,24 @@ impl<T: Numeric, const R: usize, const S: Shape> Var<GenericTensor<T, R, S>> {
         self.new_from_unary(op)
     }
 
-    pub fn elem_mul<const R_RHS: usize, const S_RHS: Shape>(
-        &self,
-        other: Var<GenericTensor<T, R_RHS, S_RHS>>,
-    ) -> Self
+    pub fn elem_mul<Rhs, const R_RHS: usize, const S_RHS: Shape>(&self, other: Var<Rhs>) -> Self
     where
         Assert<{ broadcast_compat(R_RHS, S_RHS, R, S) }>: IsTrue,
+        Rhs: Tensor<T = T> + AsGeneric<T, R_RHS, S_RHS>,
     {
         if self.id() == other.id() {
             return self.elem_pow(T::two());
         }
-        let op = ElemMulOp::<
-            GenericTensor<T, R, S>,
-            GenericTensor<T, R_RHS, S_RHS>,
-            R,
-            S,
-            R_RHS,
-            S_RHS,
-        >::new();
+        let op = ElemMulOp::<GenericTensor<T, R, S>, Rhs, R, S, R_RHS, S_RHS>::new();
         let other_ref = (&other).into();
 
         self.new_from_binary(other_ref, op)
     }
 
-    pub fn elem_add<const R_RHS: usize, const S_RHS: Shape>(
-        &self,
-        other: Var<GenericTensor<T, R_RHS, S_RHS>>,
-    ) -> Self
+    pub fn elem_add<Rhs, const R_RHS: usize, const S_RHS: Shape>(&self, other: Var<Rhs>) -> Self
     where
         Assert<{ broadcast_compat(R_RHS, S_RHS, R, S) }>: IsTrue,
+        Rhs: Tensor<T = T> + AsGeneric<T, R_RHS, S_RHS>,
     {
         if self.id() == other.id() {
             return self.elem_pow(T::two());
@@ -237,12 +226,10 @@ impl<T: Numeric, const R: usize, const S: Shape> Var<GenericTensor<T, R, S>> {
         self.new_from_binary(other_ref, op)
     }
 
-    pub fn elem_div<const R_RHS: usize, const S_RHS: Shape>(
-        &self,
-        other: Var<GenericTensor<T, R_RHS, S_RHS>>,
-    ) -> Self
+    pub fn elem_div<Rhs, const R_RHS: usize, const S_RHS: Shape>(&self, other: Var<Rhs>) -> Self
     where
         Assert<{ broadcast_compat(R_RHS, S_RHS, R, S) }>: IsTrue,
+        Rhs: Tensor<T = T> + AsGeneric<T, R_RHS, S_RHS>,
     {
         if self.id() == other.id() {
             return Var::new(GenericTensor::ones());
@@ -801,7 +788,7 @@ mod tests {
     #[test]
     fn test_bcast_elem_mul() {
         let x = Var::new(Matrix::from([[1, 2, 3], [4, 5, 6]]).to_generic());
-        let y = Var::new(Scalar::from(2).to_generic());
+        let y = Var::new(Scalar::from(2));
         let z = x.elem_mul(y.clone());
         let l = z.sum_elems();
         l.backward().unwrap();
@@ -829,16 +816,16 @@ mod tests {
 
     #[test]
     fn test_bcast_elem_div() {
-        // let x = Var::new(Matrix::from([[2, 4, 6], [8, 10, 12]]).to_generic());
-        // let y = Var::new(Scalar::from(2).to_generic());
-        // let z = x.elem_div(y.clone());
-        // let l = z.sum_elems();
-        // assert_eq!(l.data().val(), 21.0);
+        let x = Var::new(Matrix::from([[2, 4, 6], [8, 10, 12]]).to_generic());
+        let y = Var::new(Scalar::from(2));
+        let z = x.elem_div(y.clone());
+        let l = z.sum_elems();
+        assert_eq!(l.data().val(), 21.0);
 
-        // l.backward().unwrap();
-        // assert_eq!(
-        //     Scalar::from(y.grad().unwrap().clone()),
-        //     Scalar::<f64>::from(-10.5)
-        // );
+        l.backward().unwrap();
+        assert_eq!(
+            Scalar::from(y.grad().unwrap().clone()),
+            Scalar::<f64>::from(-10.5)
+        );
     }
 }
