@@ -110,7 +110,7 @@ pub(crate) fn get_nth_idx(
     }
 
     if layout == Layout::Transposed {
-        get_nth_idx(n, idx, r, shape, layout)?;
+        get_nth_idx(n, idx, r, transpose_shape(r, shape), layout.transpose())?;
         for i in 0..(r / 2) {
             let tmp = idx[i];
             idx[i] = idx[r - i - 1];

@@ -40,7 +40,7 @@ pub trait TensorIndex: AsRef<[usize]> + Copy {
 impl<const R: usize> TensorIndex for [usize; R] {
     fn from_slice(s: &[usize]) -> Self {
         let mut ret = [0; R];
-        ret.copy_from_slice(s);
+        ret.copy_from_slice(&s[..R]);
         ret
     }
 }
