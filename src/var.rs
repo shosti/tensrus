@@ -801,17 +801,18 @@ mod tests {
 
     #[test]
     fn test_bcast_elem_add() {
-        // let x = Var::new(Matrix::from([[1, 2, 3], [4, 5, 6]]).to_generic());
-        // let y = Var::new(Scalar::from(1).to_generic());
-        // let z = x.elem_add(y.clone());
-        // let l = z.sum_elems();
-        // assert_eq!(l.data().val(), 27.0);
+        let x: Var<GenericTensor<f64, _, _>> =
+            Var::new(Matrix::from([[1, 2, 3], [4, 5, 6]]).to_generic());
+        let y: Var<GenericTensor<f64, _, _>> = Var::new(Scalar::from(1).to_generic());
+        let z = x.elem_add(y.clone());
+        let l = z.sum_elems();
+        assert_eq!(l.data().val(), 27.0);
 
-        // l.backward().unwrap();
-        // assert_eq!(
-        //     Scalar::from(y.grad().unwrap().clone()),
-        //     Scalar::<f64>::from(6)
-        // );
+        l.backward().unwrap();
+        assert_eq!(
+            Scalar::from(y.grad().unwrap().clone()),
+            Scalar::<f64>::from(6)
+        );
     }
 
     #[test]

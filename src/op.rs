@@ -364,7 +364,10 @@ binary_op!(ElemAddOp<T: Numeric> {
     forward: |in1: &GenericTensor<T, R, S>, in2: &GenericTensor<T, R_RHS, S_RHS>, _| {
         let v = in2.view();
         let other: View<GenericTensor<T, R, S>> = v.broadcast();
-        in1.clone() + other
+        // This _should_ be just in1.clone() + other, but there's compiler bug
+        // (I think there are actually some overlapping trait implementations
+        // somewhere). See https://github.com/rust-lang/rust/issues/119692
+        in1.clone().map(|idx, x| x + other[idx])
     },
     backward_1: |in_grad: GenericTensor<T, R, S>, args: BinaryBackwardArgs<GenericTensor<T, R, S>, GenericTensor<T, R_RHS, S_RHS>, GenericTensor<T, R, S>, _>| {
         in_grad.map(|idx, in_grad| in_grad + args.out_grad[idx])
