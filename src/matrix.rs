@@ -50,7 +50,7 @@ impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N> {
         for i in 0..M {
             let v = f(Vector::from_fn(|[j]| self[&[i, *j]]));
             for j in 0..N {
-                let idx = storage_idx(&[i, j], Self::shape(), self.layout).unwrap();
+                let idx = storage_idx(Self::rank(), &[i, j], Self::shape(), self.layout).unwrap();
                 self.storage[idx] = v[&[j]];
             }
         }
@@ -186,7 +186,7 @@ impl<'a, T: Numeric, const M: usize, const N: usize> MatrixLike<T, M, N>
 }
 
 impl<'a, T: Numeric, const M: usize, const N: usize> Indexable for MatrixView<'a, T, M, N> {
-    type Idx = <Matrix::<T, M, N> as Indexable>::Idx;
+    type Idx = <Matrix<T, M, N> as Indexable>::Idx;
     type T = T;
 
     fn num_elems() -> usize {
@@ -197,7 +197,8 @@ impl<'a, T: Numeric, const M: usize, const N: usize> Indexable for MatrixView<'a
     }
     fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
         let shape = Matrix::<T, M, N>::shape();
-        let i = crate::storage::storage_idx(idx, shape, self.layout).ok()?;
+        let i =
+            crate::storage::storage_idx(Matrix::<T, M, N>::rank(), idx, shape, self.layout).ok()?;
         if i >= Self::num_elems() - 1 {
             return None;
         }
@@ -206,8 +207,7 @@ impl<'a, T: Numeric, const M: usize, const N: usize> Indexable for MatrixView<'a
     }
 }
 
-impl<'a, T: Numeric, const M: usize, const N: usize> TensorLike for MatrixView<'a, T, M, N> {
-}
+impl<'a, T: Numeric, const M: usize, const N: usize> TensorLike for MatrixView<'a, T, M, N> {}
 
 impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
     pub fn transpose(&self) -> MatrixView<'a, T, N, M> {
@@ -281,8 +281,13 @@ impl<'a, T: Numeric, const M: usize, const N: usize> Index<&[usize; 2]>
     type Output = T;
 
     fn index(&self, idx: &[usize; 2]) -> &Self::Output {
-        let i = crate::storage::storage_idx(idx, matrix_shape(M, N), self.layout)
-            .expect("out of bounds");
+        let i = crate::storage::storage_idx(
+            Matrix::<T, M, N>::rank(),
+            idx,
+            matrix_shape(M, N),
+            self.layout,
+        )
+        .expect("out of bounds");
         self.storage.index(i)
     }
 }

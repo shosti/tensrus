@@ -97,7 +97,7 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> View<'a, GenericTensor<T, R
             let mut src_idx: [usize; R] = *idx;
             debug_assert!(src_idx[DIM] == 0);
 
-            let mut res = self[&idx];
+            let mut res = self[idx];
             for i in 1..S[DIM] {
                 src_idx[DIM] = i;
                 res = f(res, self[&src_idx]);
@@ -110,15 +110,15 @@ impl<'a, T: Numeric, const R: usize, const S: Shape> View<'a, GenericTensor<T, R
         &self,
     ) -> View<GenericTensor<T, R_DEST, S_DEST>> {
         if shapes_equal(R, S, R_DEST, S_DEST) {
-            return View::new(&self.storage, self.layout);
+            return View::new(self.storage, self.layout);
         }
         let layout = self.layout;
         let t = Box::new(move |bcast_idx: [usize; R_DEST]| {
             let src_idx = Self::unbroadcasted_idx::<R_DEST, S_DEST>(&bcast_idx);
 
-            crate::storage::storage_idx_gen(R, &src_idx, S, layout).unwrap()
+            crate::storage::storage_idx(R, &src_idx, S, layout).unwrap()
         });
-        View::with_translation(&self.storage, layout, t)
+        View::with_translation(self.storage, layout, t)
     }
 
     pub fn unbroadcasted_idx<const R_DEST: usize, const S_DEST: Shape>(
@@ -152,7 +152,7 @@ impl<'a, Tn: Tensor> Indexable for View<'a, Tn> {
     }
     fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
         let shape = Tn::shape();
-        let i = crate::storage::storage_idx_gen(Self::R, idx.as_ref(), shape, self.layout).ok()?;
+        let i = crate::storage::storage_idx(Self::R, idx.as_ref(), shape, self.layout).ok()?;
         if i >= Self::num_elems() - 1 {
             return None;
         }
@@ -218,7 +218,7 @@ where
     fn index(&self, idx: &'b Tn::Idx) -> &Self::Output {
         let i = match &self.idx_translate {
             Some(t) => t(*idx),
-            None => crate::storage::storage_idx_gen(Tn::R, idx.as_ref(), Tn::S, self.layout)
+            None => crate::storage::storage_idx(Tn::R, idx.as_ref(), Tn::S, self.layout)
                 .expect("out of bounds"),
         };
         self.storage.index(i)

@@ -62,7 +62,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             }
 
             fn set(mut self, idx: &Self::Idx, f: impl Fn(Self::T) -> Self::T) -> Self {
-                let i = crate::storage::storage_idx(idx, #shape, self.layout).expect("out of bounds");
+                let i = crate::storage::storage_idx(#rank, idx, #shape, self.layout).expect("out of bounds");
                 self.storage[i] = f(self.storage[i]);
 
                 Self {
@@ -84,7 +84,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
                 [0; #rank]
             }
             fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
-                let i = crate::storage::storage_idx(idx, #shape, self.layout).ok()?;
+                let i = crate::storage::storage_idx(#rank, idx, #shape, self.layout).ok()?;
                 if i >= <Self as crate::tensor::Indexable>::num_elems() - 1 {
                     return None;
                 }
@@ -138,7 +138,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             type Output = T;
 
             fn index(&self, idx: &[usize; #rank]) -> &Self::Output {
-                let i = crate::storage::storage_idx(idx, #shape, self.layout).unwrap();
+                let i = crate::storage::storage_idx(#rank, idx, #shape, self.layout).unwrap();
                 self.storage.index(i)
             }
         }
@@ -170,7 +170,7 @@ fn impl_tensor_macro(ast: &DeriveInput) -> TokenStream {
             fn as_generic(&self) -> crate::view::View<crate::generic_tensor::GenericTensor<T, #rank, #shape>> {
                 let layout = self.layout;
                 let t = Box::new(move |idx: [usize; #rank]| {
-                    crate::storage::storage_idx::<#rank>(&idx, #shape, layout).expect("out of bounds")
+                    crate::storage::storage_idx(#rank, &idx, #shape, layout).expect("out of bounds")
                 });
                 crate::view::View::with_translation(&self.storage, layout, t)
             }

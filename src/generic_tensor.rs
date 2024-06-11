@@ -21,6 +21,9 @@ pub trait AsGeneric<T: Numeric, const R: usize, const S: Shape>:
     From<GenericTensor<T, R, S>> + Into<GenericTensor<T, R, S>>
 {
     fn as_generic(&self) -> View<GenericTensor<T, R, S>>;
+    fn to_generic(self) -> GenericTensor<T, R, S> {
+        self.into()
+    }
 }
 
 impl<T: Numeric, const R: usize, const S: Shape, U: ToPrimitive> From<[U; num_elems(R, S)]>
@@ -68,7 +71,7 @@ impl<T: Numeric, const R: usize, const S: Shape> GenericTensor<T, R, S> {
             GenericTensor::from_fn(|idx| {
                 let mut self_idx = [i; R];
                 self_idx[1..R].copy_from_slice(&idx[..(R - 1)]);
-                self.storage[storage_idx(&self_idx, S, self.layout).unwrap()]
+                self.storage[storage_idx(R, &self_idx, S, self.layout).unwrap()]
             });
         Ok(out)
     }

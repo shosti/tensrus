@@ -49,15 +49,7 @@ pub const fn num_elems(r: usize, s: Shape) -> usize {
     n
 }
 
-pub(crate) fn storage_idx<const R: usize>(
-    idx: &[usize; R],
-    shape: Shape,
-    layout: Layout,
-) -> Result<usize, IndexError> {
-    storage_idx_gen(R, idx, shape, layout)
-}
-
-pub(crate) fn storage_idx_gen(
+pub(crate) fn storage_idx(
     r: usize,
     idx: &[usize],
     shape: Shape,
