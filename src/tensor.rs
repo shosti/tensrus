@@ -45,8 +45,7 @@ impl<const R: usize> TensorIndex for [usize; R] {
     }
 }
 
-pub trait TensorLike: Shaped + TensorStorage<Self::T> + Indexable {
-}
+pub trait TensorLike: Shaped + TensorStorage<Self::T> + Indexable {}
 
 pub trait Indexable: for<'a> Index<&'a Self::Idx, Output = Self::T> {
     type Idx: TensorIndex;

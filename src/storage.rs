@@ -92,40 +92,44 @@ pub(crate) fn nth_idx<const R: usize>(
     shape: Shape,
     layout: Layout,
 ) -> Result<[usize; R], IndexError> {
-    let idx = nth_idx_gen(R, n, shape, layout)?;
-    let mut out = [0; R];
-    out.copy_from_slice(&idx);
-    Ok(out)
+    let mut idx = [0; R];
+    get_nth_idx(n, &mut idx, R, shape, layout)?;
+    Ok(idx)
 }
 
-pub(crate) fn nth_idx_gen(
-    r: usize,
+/// Finds the nth index for the given tensor parameters and copies it into idx.
+pub(crate) fn get_nth_idx(
     n: usize,
+    idx: &mut [usize],
+    r: usize,
     shape: Shape,
     layout: Layout,
-) -> Result<Shape, IndexError> {
+) -> Result<(), IndexError> {
     if n >= num_elems(r, shape) {
         return Err(IndexError {});
     }
 
     if layout == Layout::Transposed {
-        let mut t_idx = nth_idx(n, transpose_shape(r, shape), Layout::Normal).unwrap();
-        t_idx.reverse();
-        return Ok(t_idx);
+        get_nth_idx(n, idx, r, shape, layout)?;
+        for i in 0..(r / 2) {
+            let tmp = idx[i];
+            idx[i] = idx[r - i - 1];
+            idx[r - i - 1] = tmp;
+            return Ok(());
+        }
     }
 
     let mut i = n;
     let stride = crate::shape::stride(r, shape);
-    let mut res = [0; MAX_DIMS];
     for dim in 0..r {
         let s = stride[dim];
         let cur = i / s;
-        res[dim] = cur;
+        idx[dim] = cur;
         i -= cur * s;
     }
     debug_assert_eq!(i, 0);
 
-    Ok(res)
+    Ok(())
 }
 
 #[cfg(test)]

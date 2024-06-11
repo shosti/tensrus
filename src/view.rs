@@ -2,7 +2,7 @@ use crate::{
     broadcast::broadcast_normalize,
     generic_tensor::GenericTensor,
     numeric::Numeric,
-    shape::{reduced_shape, shapes_equal, Shape, Shaped},
+    shape::{reduced_shape, shapes_equal, Shape, Shaped, MAX_DIMS},
     storage::Layout,
     tensor::{Indexable, Tensor, TensorIndex, TensorIterator},
 };
@@ -157,7 +157,8 @@ impl<'a, Tn: Tensor> Indexable for View<'a, Tn> {
             return None;
         }
 
-        let idx = crate::storage::nth_idx_gen(Self::R, i + 1, shape, self.layout).ok()?;
+        let mut idx = [0; MAX_DIMS];
+        crate::storage::get_nth_idx(i + 1, &mut idx, Self::R, shape, self.layout).ok()?;
         Some(Self::Idx::from_slice(&idx))
     }
 }
