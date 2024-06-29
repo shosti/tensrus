@@ -87,14 +87,13 @@ impl<'a, Tn: Tensor + 'a> View<'a, Tn> {
         }
     }
 
-    pub fn reduce_dim<Dest, const DIM: usize>(
+    pub fn reduce_dim<const DIM: usize>(
         self,
         f: impl Fn(Tn::T, Tn::T) -> Tn::T + 'static,
-    ) -> Dest
+    ) -> Tn::Reduced
     where
-        Tn: Reducible<Dest, DIM>,
+        Tn: Reducible<DIM>,
         Tn::T: Copy,
-        Dest: Tensor<T = Tn::T, Idx = Tn::Idx>,
     {
         self.as_translation().reduce_dim(f)
     }

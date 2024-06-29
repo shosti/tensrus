@@ -327,16 +327,16 @@ unary_op!(SumOp<Tn: DifferentiableTensor> {
     backward: |in_grad: Tn, _| in_grad.map(|_, v| *v + Tn::T::one()),
 });
 
-unary_op!(DimSumOp<Tn: DifferentiableTensor, Dest: DifferentiableTensor> {
+unary_op!(DimSumOp<Tn: DifferentiableTensor> {
     args: (),
-    where_clauses: (Tn: Reducible<Dest, DIM>,
-                    Dest: DifferentiableTensor<T = Tn::T, Idx = Tn::Idx>,
-                    Tn::T: Differentiable),
+    where_clauses: (Tn: Reducible<DIM>,
+                    Tn::T: Differentiable,
+                    Tn::Reduced: DifferentiableTensor),
     const_params: (DIM: usize),
     in_type: Tn,
-    out_type: Dest,
+    out_type: Tn::Reduced,
     numeric_type: Tn::T,
-    forward: |input: &Tn, _| input.view().reduce_dim::<Dest, DIM>(|x, y| x + y),
+    forward: |input: &Tn, _| input.view().reduce_dim::< DIM>(|x, y| x + y),
     backward: |in_grad: Tn, _| in_grad.map(|_, x| *x + Tn::T::one()),
 });
 

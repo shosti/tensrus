@@ -287,8 +287,12 @@ where
     }
 }
 
-impl<T, const M: usize, const N: usize> Reducible<Matrix<T, 1, N>, 0> for Matrix<T, M, N> {}
-impl<T, const M: usize, const N: usize> Reducible<Matrix<T, M, 1>, 1> for Matrix<T, M, N> {}
+impl<T, const M: usize, const N: usize> Reducible<0> for Matrix<T, M, N> {
+    type Reduced = Matrix<T, 1, N>;
+}
+impl<T, const M: usize, const N: usize> Reducible<1> for Matrix<T, M, N> {
+    type Reduced = Matrix<T, M, 1>;
+}
 
 impl<T, const M: usize, const N: usize, const R_DEST: usize, const S_DEST: Shape>
     Broadcastable<GenericTensor<T, R_DEST, S_DEST>> for Matrix<T, M, N>
@@ -437,9 +441,9 @@ mod tests {
     #[test]
     fn test_reduce_dim() {
         let m = Matrix::from([[1, 2, 3], [4, 5, 6]]);
-        let m2: Matrix<_, 1, 3> = m.view().reduce_dim::<_, 0>(|x, y| x + y);
+        let m2: Matrix<_, 1, 3> = m.view().reduce_dim::<0>(|x, y| x + y);
         assert_eq!(m2, Matrix::from([[5, 7, 9]]));
-        let m3: Matrix<_, 2, 1> = m.view().reduce_dim::<_, 1>(|x, y| x + y);
+        let m3: Matrix<_, 2, 1> = m.view().reduce_dim::<1>(|x, y| x + y);
         assert_eq!(m3, Matrix::from([[6], [15]]));
     }
 }

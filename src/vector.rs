@@ -4,7 +4,7 @@ use crate::{
     encoding::EncodingError,
     generic_tensor::{GenericTensor, IntoGeneric},
     matrix::{self, IntoMatrix, Matrix},
-    shape::{self, broadcast_compat, Broadcastable, Shape, Shaped, Transposable},
+    shape::{self, broadcast_compat, Broadcastable, Reducible, Shape, Shaped, Transposable},
     storage::{Layout, Storage, TensorLayout, TensorStorage},
     tensor::{Indexable, Tensor},
     type_assert::{Assert, IsTrue},
@@ -192,6 +192,10 @@ impl<T, const N: usize, const R: usize, const S: Shape> Broadcastable<GenericTen
 where
     Assert<{ broadcast_compat(RANK, Self::shape(), matrix::RANK, S) }>: IsTrue,
 {
+}
+
+impl<T, const N: usize> Reducible<0> for Vector<T, N> {
+    type Reduced = Vector<T, 1>;
 }
 
 #[cfg(test)]

@@ -5,15 +5,13 @@ use self::var_ref::VarRef;
 use self::{input::Input, param::Param};
 use crate::differentiable::{Differentiable, DifferentiableTensor};
 use crate::errors::GraphError;
-use crate::generic_tensor::GenericTensor;
-use crate::matrix::{self, Matrix};
+use crate::matrix::Matrix;
 use crate::op::{
     AddOp, DimSumOp, ElemAddOp, ElemLnOp, ElemMulOp, ElemPowOp, MatMulOp, MatVecMulOp, Op, ReLUOp,
     ScalarMulOp, SumOp,
 };
 use crate::scalar::Scalar;
-use crate::shape::{broadcast_compat, reduced_shape, Broadcastable, Reducible, Shape};
-use crate::type_assert::{Assert, IsTrue};
+use crate::shape::{Broadcastable, Reducible};
 use crate::vector::Vector;
 use std::cell::Ref;
 use std::cell::RefCell;
@@ -196,42 +194,22 @@ where
         id
     }
 
-    pub fn dim_sum<Dest, const DIM: usize>(&self) -> Var<Dest>
+    pub fn dim_sum<const DIM: usize>(&self) -> Var<Tn::Reduced>
     where
-        Dest: DifferentiableTensor<T = Tn::T, Idx = Tn::Idx>,
-        Tn: Reducible<Dest, DIM>,
+        Tn: Reducible<DIM>,
+        Tn::Reduced: DifferentiableTensor,
     {
-        let op = DimSumOp::<Tn, Dest, DIM>::new();
+        let op = DimSumOp::<Tn, DIM>::new();
 
         self.unary_output(op)
     }
-}
 
-impl<T: Differentiable, const R: usize, const S: Shape> Var<GenericTensor<T, R, S>> {
     pub fn softmax(&self) -> Self
     where
-        Assert<{ broadcast_compat(R, reduced_shape(R, S, 1), R, S) }>: IsTrue,
+        Tn: Reducible<1>,
+        Tn::Reduced: DifferentiableTensor + Broadcastable<Tn>,
     {
-        let row_sums = self.dim_sum::<GenericTensor<T, R, { reduced_shape(R, S, 1) }>, 1>();
-        self.elem_div(row_sums)
-    }
-}
-
-impl<T: Differentiable, const M: usize, const N: usize> Var<Matrix<T, M, N>> {
-    pub fn softmax(&self) -> Self
-    where
-        Assert<
-            {
-                broadcast_compat(
-                    matrix::RANK,
-                    Matrix::<T, M, 1>::shape(),
-                    matrix::RANK,
-                    Matrix::<T, M, N>::shape(),
-                )
-            },
-        >: IsTrue,
-    {
-        let row_sums = self.dim_sum::<_, 1>();
+        let row_sums = self.dim_sum::<1>();
         self.elem_div(row_sums)
     }
 }
@@ -434,7 +412,7 @@ mod tests {
     #[test]
     fn test_dim_sum() {
         let x = Var::param(Matrix::from([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]));
-        let y = x.clone().dim_sum::<_, 1>();
+        let y = x.clone().dim_sum::<1>();
         let z = y.sum_elems();
         z.backward().unwrap();
         let grad = x.as_param().unwrap().grad().unwrap().clone();

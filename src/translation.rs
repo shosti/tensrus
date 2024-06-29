@@ -81,16 +81,15 @@ impl<'a, Tn: Tensor> Translation<'a, Tn> {
         (self.idx_translate)(*idx)
     }
 
-    pub fn reduce_dim<Dest, const DIM: usize>(
+    pub fn reduce_dim<const DIM: usize>(
         self,
         f: impl Fn(Tn::T, Tn::T) -> Tn::T + 'static,
-    ) -> Dest
+    ) -> Tn::Reduced
     where
-        Tn: Reducible<Dest, DIM>,
+        Tn: Reducible<DIM>,
         Tn::T: Copy,
-        Dest: Tensor<T = Tn::T, Idx = Tn::Idx>,
     {
-        Dest::from_fn(|idx| {
+        Tn::Reduced::from_fn(|idx| {
             let mut src_idx = *idx;
             debug_assert!(src_idx[DIM] == 0);
 
@@ -248,13 +247,13 @@ mod tests {
     fn test_reduce_dim() {
         let t = GenericTensor::<_, 2, { shape::rank2([2, 3]) }>::from([1, 2, 3, 4, 5, 6]);
         let v = t.view();
-        let t2 = v.reduce_dim::<_, 0>(|x, y| x + y);
+        let t2 = v.reduce_dim::<0>(|x, y| x + y);
         assert_eq!(
             t2,
             GenericTensor::<_, 2, { shape::rank2([1, 3]) }>::from([5, 7, 9])
         );
         let t3: GenericTensor<_, 2, { shape::rank2([2, 1]) }> =
-            t.view().reduce_dim::<_, 1>(|x, y| x + y);
+            t.view().reduce_dim::<1>(|x, y| x + y);
         assert_eq!(
             t3,
             GenericTensor::<_, 2, { shape::rank2([2, 1]) }>::from([6, 15])

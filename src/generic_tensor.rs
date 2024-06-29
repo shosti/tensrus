@@ -1,7 +1,8 @@
 use crate::differentiable::{Differentiable, DifferentiableTensor};
 use crate::matrix::{IntoMatrix, Matrix};
 use crate::shape::{
-    self, broadcast_compat, reduced_shape, Broadcastable, Reducible, Shape, Shaped, Transposable,
+    self, broadcast_compat, num_elems, reduced_shape, Broadcastable, Reducible, Shape, Shaped,
+    Transposable,
 };
 use crate::storage::{OwnedTensorStorage, Storage};
 use crate::tensor::{Indexable, Tensor};
@@ -130,9 +131,11 @@ impl<T, const R: usize, const S: Shape> DifferentiableTensor for GenericTensor<T
 {
 }
 
-impl<T, const R: usize, const S: Shape, const DIM: usize>
-    Reducible<GenericTensor<T, R, { reduced_shape(R, S, DIM) }>, DIM> for GenericTensor<T, R, S>
+impl<T, const R: usize, const S: Shape, const DIM: usize> Reducible<DIM> for GenericTensor<T, R, S>
+where
+    [(); num_elems(R, reduced_shape(R, S, DIM))]:,
 {
+    type Reduced = GenericTensor<T, R, { reduced_shape(R, S, DIM) }>;
 }
 
 impl<T, const R: usize, const S: Shape, const R_DEST: usize, const S_DEST: Shape>

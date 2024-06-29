@@ -1,4 +1,4 @@
-use crate::tensor::{Indexable, TensorIndex};
+use crate::tensor::{Indexable, Tensor, TensorIndex};
 use seq_macro::seq;
 
 pub const MAX_DIMS: usize = 6;
@@ -18,7 +18,9 @@ pub trait Transposable<Dest> {
     fn transpose(self) -> Dest;
 }
 
-pub trait Reducible<Dest, const DIM: usize> {}
+pub trait Reducible<const DIM: usize>: Indexable {
+    type Reduced: Tensor<T = Self::T, Idx = Self::Idx>;
+}
 
 pub trait Broadcastable<Dest>: Indexable
 where
