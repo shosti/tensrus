@@ -1,25 +1,5 @@
 use blas::{ddot, dgemm, dgemv, sdot, sgemm, sgemv};
 
-pub trait Numeric:
-    num::Float
-    + Copy
-    + std::fmt::Display
-    + std::fmt::Debug
-    + std::ops::MulAssign
-    + std::ops::AddAssign
-    + std::iter::Sum
-    + rand::distributions::uniform::SampleUniform
-    + BLASOps
-    + 'static
-{
-    fn two() -> Self {
-        Self::one() + Self::one()
-    }
-}
-
-impl Numeric for f32 {}
-impl Numeric for f64 {}
-
 macro_rules! blas_ops {
     ( $( $name:ident ( $( $var:ident : $t:ty , )* ) -> $ret:ty , )* ) => {
         #[allow(clippy::missing_safety_doc)]

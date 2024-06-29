@@ -1,361 +1,212 @@
 use crate::{
-    generic_tensor::GenericTensor,
-    numeric::Numeric,
-    shape::{Shape, Shaped},
-    storage::{num_elems, storage_idx, IndexError, Layout, Storage, TensorStorage},
-    tensor::{Indexable, Tensor, TensorLike},
+    blas::BLASOps,
+    differentiable::{Differentiable, DifferentiableTensor},
+    errors::IndexError,
+    generic_tensor::{GenericTensor, IntoGeneric},
+    shape::{self, broadcast_compat, Broadcastable, Reducible, Shape, Shaped, Transposable},
+    storage::{Layout, OwnedTensorStorage, Storage, TensorLayout, TensorStorage},
+    tensor::{Indexable, Tensor},
+    translation::Translation,
     type_assert::{Assert, IsTrue},
     vector::Vector,
     view::View,
 };
-use num::ToPrimitive;
-use std::ops::{Index, Mul};
+use std::{
+    fmt::Debug,
+    ops::{Index, Mul},
+};
 
-pub const fn matrix_shape(m: usize, n: usize) -> Shape {
-    [m, n, 0, 0, 0, 0]
+pub const RANK: usize = 2;
+
+#[derive(TensorStorage, OwnedTensorStorage, Tensor, Clone)]
+pub struct Matrix<T, const M: usize, const N: usize> {
+    storage: Storage<T>,
 }
 
-pub trait MatrixLike<T: Numeric, const M: usize, const N: usize> {
-    fn as_matrix(&self) -> MatrixView<T, M, N>;
-    fn into_matrix(self) -> Matrix<T, M, N>;
-}
-
-#[derive(Tensor, Clone)]
-#[tensor_rank = 2]
-#[tensor_shape = "matrix_shape(M, N)"]
-pub struct Matrix<T: Numeric, const M: usize, const N: usize> {
-    pub(crate) storage: Storage<T>,
-    pub layout: Layout,
-}
-
-impl<T: Numeric, const M: usize, const N: usize> Matrix<T, M, N> {
-    pub fn row(&self, i: usize) -> Result<Vector<T, N>, IndexError> {
-        if i >= M {
-            return Err(IndexError {});
-        }
-
-        Ok(Vector::from_fn(|[j]| self[&[i, *j]]))
-    }
-
-    pub fn col(&self, j: usize) -> Result<Vector<T, M>, IndexError> {
-        if j >= N {
-            return Err(IndexError {});
-        }
-
-        Ok(Vector::from_fn(|[i]| self[&[*i, j]]))
-    }
-
-    // This isn't terribly efficient, maybe think of a better way at some point?
-    pub fn map_rows(mut self, f: impl Fn(Vector<T, N>) -> Vector<T, N>) -> Self {
-        for i in 0..M {
-            let v = f(Vector::from_fn(|[j]| self[&[i, *j]]));
-            for j in 0..N {
-                let idx = storage_idx(Self::rank(), &[i, j], Self::shape(), self.layout).unwrap();
-                self.storage[idx] = v[&[j]];
-            }
-        }
-        self
-    }
-
-    pub fn normalize_rows(self) -> Self {
-        self.map_rows(|v| v.normalize().into())
-    }
-
-    pub fn transpose(self) -> Matrix<T, N, M> {
-        Matrix {
-            storage: self.storage,
-            layout: self.layout.transpose(),
-        }
-    }
-
-    /// Multiplies self * other and adds the result to out, returning out
-    pub fn matmul_into<const P: usize>(
-        &self,
-        other: &Matrix<T, N, P>,
-        out: Matrix<T, M, P>,
-    ) -> Matrix<T, M, P> {
-        matmul_with_initial_impl::<T, M, N, P>(
-            &self.storage,
-            self.layout,
-            &other.storage,
-            other.layout,
-            out,
-        )
-    }
-
-    /// Multiplies self * other and adds the result to out, returning out
-    pub fn matmul_view_into<const P: usize>(
-        &self,
-        other: MatrixView<T, N, P>,
-        out: Matrix<T, M, P>,
-    ) -> Matrix<T, M, P> {
-        matmul_with_initial_impl::<T, M, N, P>(
-            &self.storage,
-            self.layout,
-            other.storage,
-            other.layout,
-            out,
-        )
-    }
-
-    /// Multiplies self * x and adds the result to out, returning out
-    pub fn matvecmul_into(&self, x: &Vector<T, N>, out: Vector<T, M>) -> Vector<T, M> {
-        matvecmul_with_initial_impl::<T, M, N>(&self.storage, self.layout, &x.storage, out)
-    }
-}
-
-impl<T: Numeric, const M: usize, const N: usize> MatrixLike<T, M, N> for Matrix<T, M, N> {
-    fn as_matrix(&self) -> MatrixView<T, M, N> {
-        MatrixView {
-            storage: &self.storage,
-            layout: self.layout,
-        }
-    }
-
+pub trait IntoMatrix<T, const M: usize, const N: usize>: OwnedTensorStorage<T> + Sized {
     fn into_matrix(self) -> Matrix<T, M, N> {
-        self
+        Matrix {
+            storage: self.into_storage(),
+        }
     }
 }
 
-impl<T: Numeric, const N: usize> Matrix<T, N, N> {
+impl<T, const M: usize, const N: usize> Matrix<T, M, N> {
+    pub const fn shape() -> Shape {
+        shape::rank2([M, N])
+    }
+
+    pub fn row(&self, i: usize) -> Result<Translation<Vector<T, N>>, IndexError> {
+        if i >= M {
+            return Err(IndexError::OutOfBounds);
+        }
+
+        let t = self.view().translate(move |idx: [usize; 1]| {
+            let j = idx[0];
+            [i, j]
+        });
+
+        Ok(t)
+    }
+
+    pub fn col(&self, j: usize) -> Result<Translation<Vector<T, M>>, IndexError> {
+        if j >= N {
+            return Err(IndexError::OutOfBounds);
+        }
+
+        let v = self.view().translate(move |idx: [usize; 1]| {
+            let i = idx[0];
+            [i, j]
+        });
+
+        Ok(v)
+    }
+
+    pub(crate) fn print(
+        this: impl Indexable<Idx = <Matrix<T, M, N> as Indexable>::Idx, T = T>,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> Result<(), std::fmt::Error>
+    where
+        T: Debug,
+    {
+        for row in 0..M {
+            for col in 0..N {
+                write!(f, "\t{:?}", this[&[row, col]])?;
+            }
+            writeln!(f)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn from_matrix<Tn>(self) -> Tn
+    where
+        Tn: IntoMatrix<T, M, N>,
+    {
+        Tn::from_storage(self.storage)
+    }
+}
+
+impl<T, const M: usize, const N: usize> IntoMatrix<T, M, N> for Matrix<T, M, N> {}
+
+impl<T, const N: usize> Matrix<T, N, N>
+where
+    T: num::One + num::Zero,
+{
     pub fn identity() -> Self {
         Self::from_fn(|[i, j]| if i == j { T::one() } else { T::zero() })
     }
 }
 
-impl<T: Numeric, const M: usize, const N: usize, U> From<[[U; N]; M]> for Matrix<T, M, N>
+impl<T, const M: usize, const P: usize> Matrix<T, M, P>
 where
-    U: ToPrimitive,
+    T: BLASOps + num::One,
 {
-    fn from(arrs: [[U; N]; M]) -> Self {
-        arrs.into_iter().flatten().collect()
+    /// matmul is a typesafe wrapper around gemm implementations that multiplies
+    /// `lhs` and `rhs` and adds the result to `self`. Generally, higher-level
+    /// Mul operations should be used instead of this method.
+    pub fn add_matmul<const N: usize>(
+        self,
+        lhs: View<Matrix<T, M, N>>,
+        rhs: View<Matrix<T, N, P>>,
+    ) -> Self {
+        matmul_impl::<T, M, N, P>(
+            &lhs.storage().data,
+            lhs.layout(),
+            &rhs.storage().data,
+            rhs.layout(),
+            self,
+        )
     }
 }
 
-impl<'a, T: Numeric, const M: usize, const N: usize> From<MatrixView<'a, T, M, N>>
-    for Matrix<T, M, N>
-{
-    fn from(src: MatrixView<'a, T, M, N>) -> Self {
-        Self {
-            storage: src.storage.into(),
-            layout: src.layout,
-        }
-    }
-}
-
-impl<T: Numeric, const M: usize, const N: usize, F: ToPrimitive> From<[F; M * N]>
-    for Matrix<T, M, N>
-{
-    fn from(arr: [F; M * N]) -> Self {
-        arr.into_iter().collect()
-    }
-}
-
-impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<&'a Matrix<T, N, P>>
-    for &'a Matrix<T, M, N>
+impl<'a, T, const M: usize, const N: usize, const P: usize> Mul<View<'a, Matrix<T, N, P>>>
+    for View<'a, Matrix<T, M, N>>
+where
+    T: Copy + num::Zero + num::One + BLASOps,
 {
     type Output = Matrix<T, M, P>;
 
-    fn mul(self, other: &Matrix<T, N, P>) -> Self::Output {
-        matmul_impl::<T, M, N, P>(&self.storage, self.layout, &other.storage, other.layout)
+    fn mul(self, rhs: View<'a, Matrix<T, N, P>>) -> Self::Output {
+        let out = Matrix::zeros();
+        out.add_matmul(self, rhs)
     }
 }
 
-#[derive(Debug)]
-pub struct MatrixView<'a, T: Numeric, const M: usize, const N: usize> {
-    pub(crate) storage: &'a [T],
-    pub layout: Layout,
-}
-
-impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
-    pub fn new(storage: &'a [T], layout: Layout) -> Self {
-        Self { storage, layout }
-    }
-}
-
-impl<'a, T: Numeric, const M: usize, const N: usize> MatrixLike<T, M, N>
-    for MatrixView<'a, T, M, N>
+impl<T, const M: usize, const N: usize, const P: usize> Mul<&Matrix<T, N, P>> for &Matrix<T, M, N>
+where
+    T: Copy + num::Zero + num::One + BLASOps,
 {
-    fn as_matrix(&self) -> MatrixView<T, M, N> {
-        Self::new(self.storage, self.layout)
-    }
+    type Output = Matrix<T, M, P>;
 
-    fn into_matrix(self) -> Matrix<T, M, N> {
-        Matrix::from_fn(|idx| self[idx])
+    fn mul(self, rhs: &Matrix<T, N, P>) -> Self::Output {
+        self.view() * rhs.view()
     }
 }
 
-impl<'a, T: Numeric, const M: usize, const N: usize> Indexable for MatrixView<'a, T, M, N> {
-    type Idx = <Matrix<T, M, N> as Indexable>::Idx;
-    type T = T;
-
-    fn num_elems() -> usize {
-        Matrix::<T, M, N>::num_elems()
-    }
-    fn default_idx() -> Self::Idx {
-        Matrix::<T, M, N>::default_idx()
-    }
-    fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
-        let shape = Matrix::<T, M, N>::shape();
-        let i =
-            crate::storage::storage_idx(Matrix::<T, M, N>::rank(), idx, shape, self.layout).ok()?;
-        if i >= Self::num_elems() - 1 {
-            return None;
-        }
-
-        crate::storage::nth_idx(i + 1, shape, self.layout).ok()
-    }
-}
-
-impl<'a, T: Numeric, const M: usize, const N: usize> TensorLike for MatrixView<'a, T, M, N> {}
-
-impl<'a, T: Numeric, const M: usize, const N: usize> MatrixView<'a, T, M, N> {
-    pub fn transpose(&self) -> MatrixView<'a, T, N, M> {
-        MatrixView {
-            storage: self.storage,
-            layout: self.layout.transpose(),
-        }
-    }
-
-    pub fn reshape<const M2: usize, const N2: usize>(&self) -> MatrixView<T, M2, N2>
-    where
-        Assert<{ num_elems(2, matrix_shape(M, N)) == num_elems(2, matrix_shape(M2, N2)) }>: IsTrue,
-    {
-        MatrixView {
-            storage: self.storage,
-            layout: self.layout,
-        }
-    }
-
-    pub fn view(&self) -> View<'a, Matrix<T, M, N>> {
-        View::new(self.storage, self.layout)
-    }
-
-    pub fn matmul_into<const P: usize>(
-        self,
-        other: &Matrix<T, N, P>,
-        out: Matrix<T, M, P>,
-    ) -> Matrix<T, M, P> {
-        matmul_with_initial_impl::<T, M, N, P>(
-            self.storage,
-            self.layout,
-            &other.storage,
-            other.layout,
-            out,
-        )
-    }
-
-    pub fn matmul_view_into<const P: usize>(
-        self,
-        other: MatrixView<T, N, P>,
-        out: Matrix<T, M, P>,
-    ) -> Matrix<T, M, P> {
-        matmul_with_initial_impl::<T, M, N, P>(
-            self.storage,
-            self.layout,
-            other.storage,
-            other.layout,
-            out,
-        )
-    }
-
-    /// Multiplies self * x and adds the result to out, returning out
-    pub fn matvecmul_into(&self, x: &Vector<T, N>, out: Vector<T, M>) -> Vector<T, M> {
-        matvecmul_with_initial_impl::<T, M, N>(self.storage, self.layout, &x.storage, out)
-    }
-}
-
-impl<'a, T: Numeric, const M: usize, const N: usize> TensorStorage<T> for MatrixView<'a, T, M, N> {
-    fn storage(&self) -> &[T] {
-        self.storage
-    }
-
-    fn layout(&self) -> Layout {
-        self.layout
-    }
-}
-
-impl<'a, T: Numeric, const M: usize, const N: usize> Index<&[usize; 2]>
-    for MatrixView<'a, T, M, N>
+impl<'a, T, const M: usize, const N: usize> Mul<View<'a, Vector<T, N>>>
+    for View<'a, Matrix<T, M, N>>
+where
+    T: Copy + num::Zero + num::One + BLASOps,
 {
-    type Output = T;
+    type Output = Vector<T, M>;
 
-    fn index(&self, idx: &[usize; 2]) -> &Self::Output {
-        let i = crate::storage::storage_idx(
-            Matrix::<T, M, N>::rank(),
-            idx,
-            matrix_shape(M, N),
-            self.layout,
-        )
-        .expect("out of bounds");
-        self.storage.index(i)
+    fn mul(self, rhs: View<'a, Vector<T, N>>) -> Self::Output {
+        let out = Vector::zeros();
+        out.add_matvecmul(self, rhs)
     }
 }
 
-impl<'a, T: Numeric, const M: usize, const N: usize> Shaped for MatrixView<'a, T, M, N> {
-    const R: usize = 2;
-    const S: Shape = { matrix_shape(M, N) };
-}
+impl<T, const M: usize, const N: usize> Mul<&Vector<T, N>> for &Matrix<T, M, N>
+where
+    T: Copy + num::Zero + num::One + BLASOps,
+{
+    type Output = Vector<T, M>;
 
-impl<'a, T: Numeric, const M: usize, const N: usize> Clone for MatrixView<'a, T, M, N> {
-    fn clone(&self) -> Self {
-        MatrixView {
-            storage: self.storage,
-            layout: self.layout,
-        }
+    fn mul(self, rhs: &Vector<T, N>) -> Self::Output {
+        self.view() * rhs.view()
     }
 }
 
-fn matmul_impl<T: Numeric, const M: usize, const N: usize, const P: usize>(
-    a_storage: &[T],
-    a_transpose: Layout,
-    b_storage: &[T],
-    b_transpose: Layout,
-) -> Matrix<T, M, P> {
-    matmul_with_initial_impl::<T, M, N, P>(
-        a_storage,
-        a_transpose,
-        b_storage,
-        b_transpose,
-        Matrix::zeros(),
-    )
-}
-
-fn matmul_with_initial_impl<T: Numeric, const M: usize, const N: usize, const P: usize>(
-    a_storage: &[T],
-    a_transpose: Layout,
-    b_storage: &[T],
-    b_transpose: Layout,
+fn matmul_impl<T, const M: usize, const N: usize, const P: usize>(
+    lhs_data: &[T],
+    lhs_layout: Layout,
+    rhs_data: &[T],
+    rhs_layout: Layout,
     mut out: Matrix<T, M, P>,
-) -> Matrix<T, M, P> {
+) -> Matrix<T, M, P>
+where
+    T: BLASOps + num::One,
+{
     // We need the out format to be column-major; if it isn't, take (B^T * A*T)^T
-    if !out.layout.is_transposed() {
-        let out_t = matmul_with_initial_impl::<T, P, N, M>(
-            b_storage,
-            b_transpose.transpose(),
-            a_storage,
-            a_transpose.transpose(),
+    if !out.storage.layout.is_transposed() {
+        let out_t = matmul_impl::<T, P, N, M>(
+            rhs_data,
+            rhs_layout.transpose(),
+            lhs_data,
+            lhs_layout.transpose(),
             out.transpose(),
         );
         return out_t.transpose();
     }
 
-    debug_assert!(out.layout.is_transposed());
+    debug_assert!(out.storage.layout.is_transposed());
 
+    // Safety: dimensions are enforced by the const params.
     unsafe {
         T::gemm(
-            a_transpose.to_blas(),
-            b_transpose.to_blas(),
+            lhs_layout.to_blas(),
+            rhs_layout.to_blas(),
             M as i32,
             P as i32,
             N as i32,
             T::one(),
-            a_storage,
-            if a_transpose.is_transposed() { M } else { N } as i32,
-            b_storage,
-            if b_transpose.is_transposed() { N } else { P } as i32,
+            lhs_data,
+            if lhs_layout.is_transposed() { M } else { N } as i32,
+            rhs_data,
+            if rhs_layout.is_transposed() { N } else { P } as i32,
             T::one(),
-            &mut out.storage,
+            &mut out.storage.data,
             M as i32,
         )
     }
@@ -363,140 +214,101 @@ fn matmul_with_initial_impl<T: Numeric, const M: usize, const N: usize, const P:
     out
 }
 
-fn matvecmul_impl<T: Numeric, const M: usize, const N: usize>(
-    a_storage: &[T],
-    a_transpose: Layout,
-    x_storage: &[T],
-) -> Vector<T, M> {
-    matvecmul_with_initial_impl::<T, M, N>(a_storage, a_transpose, x_storage, Vector::zeros())
-}
-
-fn matvecmul_with_initial_impl<T: Numeric, const M: usize, const N: usize>(
-    a_storage: &[T],
-    a_transpose: Layout,
-    x_storage: &[T],
-    mut out: Vector<T, M>,
-) -> Vector<T, M> {
-    debug_assert!(!out.layout.is_transposed());
-
-    // BLAS always uses column-major format, so if we're "transposed" we're
-    // already in BLAS format, otherwise we have to transpose.
-    let trans = a_transpose.to_blas();
-    let m = if a_transpose.is_transposed() { M } else { N } as i32;
-    let n = if a_transpose.is_transposed() { N } else { M } as i32;
-    let lda = m;
-
-    unsafe {
-        T::gemv(
-            trans,
-            m,
-            n,
-            T::one(),
-            a_storage,
-            lda,
-            x_storage,
-            1,
-            T::one(),
-            &mut out.storage,
-            1,
-        );
-    }
-
-    out
-}
-
-impl<'a, T: Numeric, const M: usize, const N: usize> Mul<&'a Vector<T, N>> for &'a Matrix<T, M, N> {
-    type Output = Vector<T, M>;
-
-    fn mul(self, other: &Vector<T, N>) -> Self::Output {
-        matvecmul_impl::<T, M, N>(&self.storage, self.layout, &other.storage)
-    }
-}
-
-impl<'a, T: Numeric, const M: usize, const N: usize> Mul<&'a Vector<T, N>>
-    for MatrixView<'a, T, M, N>
+impl<T, const M: usize, const N: usize> From<[[T; N]; M]> for Matrix<T, M, N>
+where
+    T: Default,
 {
-    type Output = Vector<T, M>;
-
-    fn mul(self, other: &Vector<T, N>) -> Self::Output {
-        matvecmul_impl::<T, M, N>(self.storage, self.layout, &other.storage)
+    fn from(arrs: [[T; N]; M]) -> Self {
+        arrs.into_iter().flatten().collect()
     }
 }
 
-impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<MatrixView<'a, T, N, P>>
-    for &'a Matrix<T, M, N>
-{
-    type Output = Matrix<T, M, P>;
+impl<T, const M: usize, const N: usize> Shaped for Matrix<T, M, N> {
+    fn rank() -> usize {
+        RANK
+    }
 
-    fn mul(self, other: MatrixView<'a, T, N, P>) -> Self::Output {
-        matmul_impl::<T, M, N, P>(&self.storage, self.layout, other.storage, other.layout)
+    fn shape() -> Shape {
+        Self::shape()
     }
 }
 
-impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<&'a Matrix<T, N, P>>
-    for MatrixView<'a, T, M, N>
-{
-    type Output = Matrix<T, M, P>;
-
-    fn mul(self, other: &'a Matrix<T, N, P>) -> Self::Output {
-        matmul_impl::<T, M, N, P>(self.storage, self.layout, &other.storage, other.layout)
-    }
-}
-
-impl<'a, T: Numeric, const M: usize, const N: usize, const P: usize> Mul<MatrixView<'a, T, N, P>>
-    for MatrixView<'a, T, M, N>
-{
-    type Output = Matrix<T, M, P>;
-
-    fn mul(self, other: MatrixView<'a, T, N, P>) -> Self::Output {
-        matmul_impl::<T, M, N, P>(self.storage, self.layout, other.storage, other.layout)
-    }
-}
-
-impl<T: Numeric, const M: usize, const N: usize> From<GenericTensor<T, 2, { matrix_shape(M, N) }>>
+impl<T, const M: usize, const N: usize> IntoGeneric<T, { RANK }, { Self::shape() }>
     for Matrix<T, M, N>
 {
-    fn from(t: GenericTensor<T, 2, { matrix_shape(M, N) }>) -> Self {
-        Self {
-            storage: t.storage,
-            layout: t.layout,
-        }
+}
+
+impl<T, const M: usize, const N: usize> Index<&[usize; RANK]> for Matrix<T, M, N> {
+    type Output = T;
+
+    fn index(&self, idx: &[usize; RANK]) -> &Self::Output {
+        self.storage
+            .index(idx, Self::rank(), Self::shape())
+            .unwrap()
     }
 }
 
-impl<T: Numeric, const M: usize, const N: usize> From<Matrix<T, M, N>>
-    for GenericTensor<T, 2, { matrix_shape(M, N) }>
+impl<T, const M: usize, const N: usize> Index<&[usize; RANK]> for &Matrix<T, M, N> {
+    type Output = T;
+
+    fn index(&self, idx: &[usize; RANK]) -> &Self::Output {
+        (*self).index(idx)
+    }
+}
+
+impl<T, const M: usize, const N: usize> Indexable for Matrix<T, M, N> {
+    type Idx = [usize; RANK];
+    type T = T;
+}
+
+impl<T, const M: usize, const N: usize> DifferentiableTensor for Matrix<T, M, N> where
+    T: Differentiable
 {
-    fn from(t: Matrix<T, M, N>) -> Self {
-        Self {
-            storage: t.storage,
-            layout: t.layout,
+}
+
+impl<T, const M: usize, const N: usize> Transposable<Matrix<T, N, M>> for Matrix<T, M, N> {
+    fn transpose(self) -> Matrix<T, N, M> {
+        Matrix {
+            storage: self.storage.transpose(),
         }
     }
 }
 
-impl<T: Numeric, const M: usize, const N: usize> std::fmt::Debug for Matrix<T, M, N> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+impl<T, const M: usize, const N: usize> Debug for Matrix<T, M, N>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Matrix<{}, {}> [", M, N)?;
-        for i in 0..M {
-            write!(f, "\t")?;
-            for j in 0..N {
-                write!(f, "{},\t", self[&[i, j]])?;
-            }
-            writeln!(f)?;
-        }
+        Self::print(self, f)?;
         writeln!(f, "]")?;
 
         Ok(())
     }
 }
 
+impl<T, const M: usize, const N: usize> Reducible<Matrix<T, 1, N>, 0> for Matrix<T, M, N> {}
+impl<T, const M: usize, const N: usize> Reducible<Matrix<T, M, 1>, 1> for Matrix<T, M, N> {}
+
+impl<T, const M: usize, const N: usize, const R_DEST: usize, const S_DEST: Shape>
+    Broadcastable<GenericTensor<T, R_DEST, S_DEST>> for Matrix<T, M, N>
+where
+    Assert<{ broadcast_compat(RANK, Self::shape(), R_DEST, S_DEST) }>: IsTrue,
+{
+}
+
+impl<T, const M: usize, const N: usize, const P: usize, const U: usize>
+    Broadcastable<Matrix<T, P, U>> for Matrix<T, M, N>
+where
+    Assert<{ broadcast_compat(RANK, Self::shape(), RANK, Matrix::<T, P, U>::shape()) }>: IsTrue,
+{
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::{generic_tensor::GenericTensor, view::View};
+
     use super::*;
-    use crate::vector::Vector;
-    use proptest::prelude::*;
-    use seq_macro::seq;
 
     #[test]
     #[rustfmt::skip]
@@ -506,31 +318,32 @@ mod tests {
             [2, 7, 9],
             [6, 5, 10],
             [3, 7, 3],
-        ]);
+        ]).into_iter().map(|(_, val)| val as f64).collect();
 
         assert_eq!(x[&[2, 1]], 5.0);
         assert_eq!(x[&[3, 2]], 3.0);
 
         let y: Matrix<f64, 4, 3> = Matrix::from([
-            3.0, 4.0, 5.0,
-            2.0, 7.0, 9.0,
-            6.0, 5.0, 10.0,
-            3.0, 7.0, 3.0
+            [3.0, 4.0, 5.0],
+            [2.0, 7.0, 9.0],
+            [6.0, 5.0, 10.0],
+            [3.0, 7.0, 3.0]
         ]);
         assert_eq!(x, y);
     }
 
     #[test]
     fn test_add() {
-        let x: Matrix<f64, _, _> = Matrix::from([[1, 2], [3, 4]]);
-        let y = GenericTensor::<f64, 2, { matrix_shape(2, 2) }>::from([1, 2, 3, 4]);
-        assert_eq!(x + y.view(), Matrix::from([[2, 4], [6, 8]]));
+        let x = Matrix::from([[1, 2], [3, 4]]);
+        let y_g = GenericTensor::<_, 2, { Matrix::<i32, 2, 2>::shape() }>::from([1, 2, 3, 4]);
+        let y: View<Matrix<_, 2, 2>> = y_g.view().from_generic();
+        assert_eq!(x + y, Matrix::from([[2, 4], [6, 8]]));
     }
 
     #[test]
     #[rustfmt::skip]
     fn test_from_iter() {
-        let x: Matrix<f64, 3, 2> = [1, 2, 3].into_iter().cycle().collect();
+        let x: Matrix<f64, 3, 2> = [1.0, 2.0, 3.0].into_iter().cycle().collect();
         let y: Matrix<f64, _, _> = Matrix::from([
             [1.0, 2.0],
             [3.0, 1.0],
@@ -540,133 +353,9 @@ mod tests {
     }
 
     #[test]
-    fn test_matmul_distributive() {
-        let a: Matrix<f64, 1, 1> = Matrix::zeros();
-        let b: Matrix<f64, 1, 2> = Matrix::zeros();
-        let c: Matrix<f64, 1, 2> = Matrix::zeros();
-
-        assert_eq!(&a * &(b.clone() + &c), (&a * &b) + &(&a * &c));
-    }
-
-    seq!(N in 1..=20 {
-        proptest! {
-            #[test]
-            #[cfg(feature = "proptest")]
-            fn test_identity_~N(v in prop::collection::vec(any::<f64>(), N)) {
-                let i = Matrix::<f64, N, N>::identity();
-                let x: Matrix::<f64, N, N> = v.into_iter().collect();
-
-                assert_eq!(&i * &x, x);
-                assert_eq!(&x * &i, x);
-            }
-        }
-    });
-
-    #[cfg(feature = "proptest")]
-    fn assert_eq_within_tolerance<const M: usize, const N: usize>(
-        a: Matrix<f64, M, N>,
-        b: Matrix<f64, M, N>,
-    ) {
-        const TOLERANCE: f64 = 0.00001;
-        for i in 0..M {
-            for j in 0..N {
-                assert!((a[&[i, j]] - b[&[i, j]]).abs() < TOLERANCE);
-            }
-        }
-    }
-
-    seq!(M in 1..=5 {
-        seq!(N in 1..=5 {
-            seq!(P in 1..=5 {
-                proptest! {
-                    #[test]
-                    #[cfg(feature = "proptest")]
-                    #[allow(clippy::identity_op)]
-                    fn test_matmul_~M~N~P(v_a in proptest::collection::vec(-10000.0..10000.0, M * N),
-                                          v_b in proptest::collection::vec(-10000.0..10000.0, N * P)) {
-                        let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
-                        let b: Matrix::<f64, N, P> = v_b.into_iter().collect();
-
-                        let c = &a * &b;
-
-                        for i in 0..M {
-                            for j in 0..P {
-                                const TOLERANCE: f64 = 0.00001;
-                                assert!((a.row(i).unwrap().dot(&b.col(j).unwrap()) - c[&[i, j]]).abs() < TOLERANCE);
-                            }
-                        }
-                    }
-
-                    #[test]
-                    #[cfg(feature = "proptest")]
-                    #[allow(clippy::identity_op)]
-                    fn test_matmul_distributivity_~M~N~P(v_a in proptest::collection::vec(-10000.0..10000.0, M * N),
-                                                         v_b in proptest::collection::vec(-10000.0..10000.0, N * P),
-                                                         v_c in proptest::collection::vec(-10000.0..10000.0, N * P)) {
-                        let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
-                        let b: Matrix::<f64, N, P> = v_b.into_iter().collect();
-                        let c: Matrix::<f64, N, P> = v_c.into_iter().collect();
-
-                        assert_eq_within_tolerance(&a * &(b.clone() + &c), (&a * &b) + &(&a * &c));
-                    }
-
-                    #[test]
-                    #[cfg(feature = "proptest")]
-                    #[allow(clippy::identity_op)]
-                    fn test_matmul_transpose_~M~N~P(v_a in proptest::collection::vec(-10000.0..10000.0, M * N),
-                                                    v_b in proptest::collection::vec(-10000.0..10000.0, N * P)) {
-                        let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
-                        let b: Matrix::<f64, N, P> = v_b.into_iter().collect();
-
-                        assert_eq_within_tolerance(&a * &b, (&b.clone().transpose() * &a.clone().transpose()).transpose());
-                        assert_eq_within_tolerance(&a * b.matrix_view(), (&b.clone().transpose() * a.matrix_view().transpose()).transpose());
-                        assert_eq_within_tolerance(a.matrix_view() * &b, (&b.clone().transpose() * a.matrix_view().transpose()).transpose());
-                        assert_eq_within_tolerance(a.matrix_view() * b.matrix_view(), (b.matrix_view().transpose() * a.matrix_view().transpose()).transpose());
-                    }
-                }
-            });
-        });
-    });
-
-    seq!(N in 1..=20 {
-        proptest! {
-            #[test]
-            #[cfg(feature = "proptest")]
-            fn test_matvecmul_identity_~N(v in prop::collection::vec(any::<f64>(), N)) {
-                let i = Matrix::<f64, N, N>::identity();
-                let x: Vector::<f64, N> = v.into_iter().collect();
-
-                assert_eq!(&i * &x, x);
-            }
-        }
-    });
-
-    seq!(M in 1..=10 {
-        seq!(N in 1..=10 {
-            proptest! {
-                #[test]
-                #[cfg(feature = "proptest")]
-                #[allow(clippy::identity_op)]
-                fn test_matvecmul_~M~N(v_a in proptest::collection::vec(-10000.0..10000.0, M * N),
-                                       v_x in proptest::collection::vec(-10000.0..10000.0, N)) {
-                    let a: Matrix::<f64, M, N> = v_a.into_iter().collect();
-                    let x: Vector::<f64, N> = v_x.into_iter().collect();
-
-                    let b = &a * &x;
-
-                    for i in 0..M {
-                        const TOLERANCE: f64 = 0.00001;
-                        assert!((a.row(i).unwrap().dot(&x) - b[&[i]]).abs() < TOLERANCE);
-                    }
-                }
-            }
-        });
-    });
-
-    #[test]
     #[allow(clippy::zero_prefixed_literal)]
     fn test_from_fn() {
-        let x: Matrix<f64, 3, 4> = Matrix::from_fn(|idx| {
+        let x = Matrix::from_fn(|idx| {
             let [i, j] = idx;
             let s = format!("{}{}", i, j);
             s.parse().unwrap()
@@ -677,55 +366,40 @@ mod tests {
     }
 
     #[test]
-    fn test_matrix_vector_conversions() {
-        let x: Matrix<f64, _, _> = Matrix::from([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]);
-
-        assert_eq!(x.col(0), Ok(Vector::from([1, 4, 7, 10])));
-        assert_eq!(x.col(1), Ok(Vector::from([2, 5, 8, 11])));
-        assert_eq!(x.col(2), Ok(Vector::from([3, 6, 9, 12])));
-        assert_eq!(x.col(3), Err(IndexError {}));
-        assert_eq!(x.row(0), Ok(Vector::from([1, 2, 3])));
-        assert_eq!(x.row(1), Ok(Vector::from([4, 5, 6])));
-        assert_eq!(x.row(2), Ok(Vector::from([7, 8, 9])));
-        assert_eq!(x.row(3), Ok(Vector::from([10, 11, 12])));
-        assert_eq!(x.row(4), Err(IndexError {}));
-    }
-
-    #[test]
     fn test_matrix_multiply() {
         #[rustfmt::skip]
         let x: Matrix<f64, _, _> = Matrix::from([
-            [1, 2],
-            [3, 4],
-            [5, 6]
+            [1.0, 2.0],
+            [3.0, 4.0],
+            [5.0, 6.0]
         ]);
         #[rustfmt::skip]
         let x_t: Matrix<f64, _, _> = Matrix::from([
-            [1, 3, 5],
-            [2, 4, 6],
+            [1.0, 3.0, 5.0],
+            [2.0, 4.0, 6.0],
         ]).transpose();
 
         #[rustfmt::skip]
         let y: Matrix<f64, _, _> = Matrix::from([
-            [7, 8, 9, 10],
-            [9, 10, 11, 12]
+            [7.0, 8.0, 9.0, 10.0],
+            [9.0, 10.0, 11.0, 12.0]
         ]);
         #[rustfmt::skip]
         let y_t: Matrix<f64, _, _> = Matrix::from([
-            [7, 9],
-            [8, 10],
-            [9, 11],
-            [10, 12],
+            [7.0, 9.0],
+            [8.0, 10.0],
+            [9.0, 11.0],
+            [10.0, 12.0],
         ]).transpose();
 
         #[rustfmt::skip]
         let want: Matrix<f64, _, _> = Matrix::from([
-            [25, 28, 31, 34],
-            [57, 64, 71, 78],
-            [89, 100, 111, 122]
+            [25.0, 28.0, 31.0, 34.0],
+            [57.0, 64.0, 71.0, 78.0],
+            [89.0, 100.0, 111.0, 122.0]
         ]);
 
-        // assert_eq!(&x * &y, want);
+        assert_eq!(&x * &y, want);
         assert_eq!(&x_t * &y, want);
         assert_eq!(&x * &y_t, want);
         assert_eq!(&x_t * &y_t, want);
@@ -734,19 +408,19 @@ mod tests {
     #[test]
     fn test_matrix_vector_multiply() {
         #[rustfmt::skip]
-        let a: Matrix<f64, _, _> = Matrix::from([
-            [1, -1, 2],
-            [0, -3, 1],
+        let a = Matrix::from([
+            [1.0, -1.0, 2.0],
+            [0.0, -3.0, 1.0],
         ]);
         #[rustfmt::skip]
-        let a_t: Matrix<f64, _, _> = Matrix::from([
-            [1, 0],
-            [-1, -3],
-            [2, 1],
+        let a_t = Matrix::from([
+            [1.0, 0.0],
+            [-1.0, -3.0],
+            [2.0, 1.0],
         ]).transpose();
-        let x: Vector<f64, _> = Vector::from([2, 1, 0]);
+        let x = Vector::from([2.0, 1.0, 0.0]);
 
-        let want = Vector::from([1, -3]);
+        let want = Vector::from([1.0, -3.0]);
 
         assert_eq!(&a * &x, want);
         assert_eq!(&a_t * &x, want);
@@ -754,18 +428,18 @@ mod tests {
 
     #[test]
     fn test_transpose() {
-        let x: Matrix<f64, _, _> = Matrix::from([[1, 2, 3], [4, 5, 6]]);
-        let y: Matrix<f64, _, _> = Matrix::from([[1, 4], [2, 5], [3, 6]]);
+        let x = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+        let y = Matrix::from([[1, 4], [2, 5], [3, 6]]);
 
         assert_eq!(x.transpose(), y);
     }
 
     #[test]
     fn test_reduce_dim() {
-        let m = Matrix::<f64, _, _>::from([[1, 2, 3], [4, 5, 6]]);
-        let m2: Matrix<f64, 1, 3> = m.view().to_generic().reduce_dim::<0>(|x, y| x + y).into();
-        assert_eq!(m2, Matrix::<f64, _, _>::from([[5, 7, 9]]));
-        let m3: Matrix<f64, 2, 1> = m.view().to_generic().reduce_dim::<1>(|x, y| x + y).into();
-        assert_eq!(m3, Matrix::<f64, _, _>::from([[6], [15]]));
+        let m = Matrix::from([[1, 2, 3], [4, 5, 6]]);
+        let m2: Matrix<_, 1, 3> = m.view().reduce_dim::<_, 0>(|x, y| x + y);
+        assert_eq!(m2, Matrix::from([[5, 7, 9]]));
+        let m3: Matrix<_, 2, 1> = m.view().reduce_dim::<_, 1>(|x, y| x + y);
+        assert_eq!(m3, Matrix::from([[6], [15]]));
     }
 }

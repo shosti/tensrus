@@ -1,80 +1,88 @@
-use std::fmt::Debug;
-use std::{
-    any::Any,
-    iter::Map,
-    ops::{Index, Mul},
+use crate::{
+    generic_tensor::{GenericTensor, IntoGeneric},
+    iterator::Iter,
+    scalar::Scalar,
+    shape::{Shape, Shaped},
+    storage::{self, Layout, OwnedTensorStorage, Storage, TensorLayout},
+    view::View,
 };
-
 use num::{One, Zero};
-use rand::Rng;
-use rand_distr::{Distribution, StandardNormal};
+use std::{fmt::Debug, ops::IndexMut};
+use std::{iter::Sum, ops::Index};
 
-use crate::numeric::Numeric;
-use crate::scalar::Scalar;
-use crate::shape::{Shape, Shaped};
-use crate::storage::TensorStorage;
-use crate::view::View;
-
-pub trait BasicTensor<T: Numeric>: Debug + for<'a> Index<&'a [usize], Output = T> {
-    fn as_any(&self) -> &dyn Any;
-    fn as_any_boxed(self: Box<Self>) -> Box<dyn Any>;
-    fn len(&self) -> usize;
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-    fn clone_boxed(&self) -> Box<dyn BasicTensor<T>>;
-
-    // Returns a new tensor of zeros with the same shape as self
-    fn zeros_with_shape(&self) -> Box<dyn BasicTensor<T>>;
-
-    // Returns a new tensor of ones with the same shape as self
-    fn ones_with_shape(&self) -> Box<dyn BasicTensor<T>>;
-
-    fn add(self: Box<Self>, other: &dyn BasicTensor<T>, scale: T) -> Box<dyn BasicTensor<T>>;
-}
-
-pub trait TensorIndex: AsRef<[usize]> + Copy {
-    fn from_slice(s: &[usize]) -> Self;
-}
-
-impl<const R: usize> TensorIndex for [usize; R] {
-    fn from_slice(s: &[usize]) -> Self {
-        let mut ret = [0; R];
-        ret.copy_from_slice(&s[..R]);
-        ret
-    }
-}
-
-pub trait TensorLike: Shaped + TensorStorage<Self::T> + Indexable {}
-
-pub trait Indexable: for<'a> Index<&'a Self::Idx, Output = Self::T> {
-    type Idx: TensorIndex;
-    type T: Numeric;
-
-    fn num_elems() -> usize;
-    fn default_idx() -> Self::Idx;
-    fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx>;
-}
-
-pub trait Tensor:
-    Clone
-    + BasicTensor<Self::T>
-    + Mul<Self::T, Output = Self>
-    + TensorLike
-    + Eq
-    + FromIterator<Self::T>
+pub trait TensorIndex:
+    AsRef<[usize]>
+    + AsMut<[usize]>
+    + Copy
+    + Debug
+    + Index<usize, Output = usize>
+    + IndexMut<usize>
     + 'static
 {
-    // Required methods
-    fn rank() -> usize;
-    fn shape() -> Shape;
+    fn from_slice(s: &[usize]) -> Self;
+    fn default() -> Self;
+    fn transpose(self) -> Self;
+}
 
-    fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self;
-    fn set(self, idx: &Self::Idx, f: impl Fn(Self::T) -> Self::T) -> Self;
+pub trait Indexable:
+    for<'a> Index<&'a Self::Idx, Output = Self::T> + Sized + Shaped + TensorLayout
+{
+    type Idx: TensorIndex;
+    type T;
 
-    // Provided methods
-    fn map(mut self, f: impl Fn(&Self::Idx, Self::T) -> Self::T) -> Self {
-        let mut next_idx = Some(Self::default_idx());
+    fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
+        let i =
+            storage::storage_idx(idx.as_ref(), Self::rank(), Self::shape(), self.layout()).ok()?;
+        if i >= Self::num_elems() - 1 {
+            return None;
+        }
+
+        let mut idx = Self::Idx::default();
+        Storage::<Self::T>::get_nth_idx(
+            i + 1,
+            idx.as_mut(),
+            Self::rank(),
+            Self::shape(),
+            self.layout(),
+        )
+        .ok();
+        Some(idx)
+    }
+}
+
+pub trait Tensor: Indexable + OwnedTensorStorage<Self::T> {
+    fn from_fn(f: impl Fn(&Self::Idx) -> Self::T) -> Self {
+        let storage = Storage::from_fn(
+            |i| {
+                let mut idx = Self::Idx::default();
+                Storage::<Self::T>::get_nth_idx(
+                    i,
+                    idx.as_mut(),
+                    Self::rank(),
+                    Self::shape(),
+                    Layout::default(),
+                )
+                .unwrap();
+                f(&idx)
+            },
+            Self::num_elems(),
+        );
+
+        Self::from_storage(storage)
+    }
+
+    fn set(self, idx: &Self::Idx, f: impl Fn(&Self::T) -> Self::T) -> Self {
+        let mut storage = self.into_storage();
+        let i = storage
+            .storage_idx(idx.as_ref(), Self::rank(), Self::shape())
+            .unwrap();
+        storage.data[i] = f(storage.data.index(i));
+
+        Self::from_storage(storage)
+    }
+
+    fn map(mut self, f: impl Fn(&Self::Idx, &Self::T) -> Self::T) -> Self {
+        let mut next_idx = Some(Self::Idx::default());
         while let Some(idx) = next_idx {
             self = self.set(&idx, |val| f(&idx, val));
             next_idx = self.next_idx(&idx);
@@ -83,111 +91,100 @@ pub trait Tensor:
         self
     }
 
-    fn view(&self) -> View<Self>
-    where
-        Self: TensorStorage<Self::T>,
-    {
-        self.into()
+    fn iter(&self) -> Iter<Self> {
+        Iter::new(self)
     }
-    fn repeat(n: Self::T) -> Self {
+
+    fn repeat(n: Self::T) -> Self
+    where
+        Self::T: Copy,
+    {
         Self::from_fn(|_| n)
     }
-    fn zeros() -> Self {
+
+    fn zeros() -> Self
+    where
+        Self::T: Zero + Copy,
+    {
         Self::repeat(Self::T::zero())
     }
-    fn ones() -> Self {
+
+    fn ones() -> Self
+    where
+        Self::T: One + Copy,
+    {
         Self::repeat(Self::T::one())
     }
-    fn rand(d: impl Distribution<Self::T>, rng: &mut impl Rng) -> Self {
-        d.sample_iter(rng)
-            .take(<Self as Indexable>::num_elems())
-            .collect()
+
+    fn view(&self) -> View<Self> {
+        View::new(self.storage())
     }
-    fn randn(rng: &mut impl Rng) -> Self
+
+    fn as_generic<const R: usize, const S: Shape>(&self) -> View<GenericTensor<Self::T, R, S>>
     where
-        StandardNormal: Distribution<Self::T>,
+        Self: IntoGeneric<Self::T, R, S>,
     {
-        Self::rand(StandardNormal, rng)
+        View::new(self.storage())
     }
 
-    fn iter(&self) -> TensorIterator<Self> {
-        TensorIterator::new(self)
-    }
-
-    fn ref_from_basic(from: &dyn BasicTensor<Self::T>) -> &Self {
-        let any_ref = from.as_any();
-        any_ref.downcast_ref().unwrap()
-    }
-
-    fn from_basic(from: &dyn BasicTensor<Self::T>) -> Self {
-        if from.len() != <Self as Indexable>::num_elems() {
-            panic!("cannot create a Tensor from a BasicTensor unless the number of elements is identical");
-        }
-
-        Self::from_fn(|idx| from[idx.as_ref()])
-    }
-
-    fn from_basic_boxed(from: Box<dyn BasicTensor<Self::T>>) -> Box<Self> {
-        from.as_any_boxed().downcast().unwrap()
-    }
-
-    fn sum(&self) -> Scalar<Self::T> {
-        let s: Self::T = self.iter().values().sum();
-        Scalar::from(s)
-    }
-
-    // Operations
-    fn relu(self) -> Self {
+    fn relu(self) -> Self
+    where
+        Self::T: Copy + Zero + PartialOrd,
+    {
         self.map(|_, val| {
-            if val < Self::T::zero() {
+            if *val < Self::T::zero() {
                 Self::T::zero()
             } else {
-                val
+                *val
             }
         })
     }
-}
 
-pub struct TensorIterator<'a, Tn>
-where
-    Tn: Indexable,
-{
-    t: &'a Tn,
-    cur: Option<Tn::Idx>,
-}
-
-impl<'a, Tn> TensorIterator<'a, Tn>
-where
-    Tn: Indexable,
-{
-    pub fn new(t: &'a Tn) -> Self {
-        Self {
-            t,
-            cur: Some(Tn::default_idx()),
-        }
-    }
-
-    pub fn values(self) -> Map<TensorIterator<'a, Tn>, impl FnMut((Tn::Idx, Tn::T)) -> Tn::T> {
-        self.map(|(_, v)| v)
+    fn sum(&self) -> Scalar<Self::T>
+    where
+        Self::T: Sum + Copy,
+    {
+        let s: Self::T = self.iter().values().copied().sum();
+        Scalar::from(s)
     }
 }
 
-impl<'a, Tn> Iterator for TensorIterator<'a, Tn>
+impl<const R: usize> TensorIndex for [usize; R] {
+    fn from_slice(s: &[usize]) -> Self {
+        let mut ret = [0; R];
+        ret.copy_from_slice(&s[..R]);
+        ret
+    }
+
+    fn default() -> Self {
+        [0; R]
+    }
+
+    fn transpose(mut self) -> Self {
+        self.reverse();
+        self
+    }
+}
+
+impl<Tn: Shaped> Shaped for &Tn {
+    fn rank() -> usize {
+        Tn::rank()
+    }
+
+    fn shape() -> Shape {
+        Tn::shape()
+    }
+}
+
+impl<'a, Tn> Indexable for &'a Tn
 where
     Tn: Indexable,
+    &'a Tn: for<'b> Index<&'b Tn::Idx, Output = Tn::T>,
 {
-    type Item = (Tn::Idx, Tn::T);
+    type Idx = Tn::Idx;
+    type T = Tn::T;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        match &self.cur {
-            None => None,
-            Some(idx) => {
-                let cur_idx = *idx;
-                let item = (cur_idx, self.t[&cur_idx]);
-                self.cur = self.t.next_idx(&cur_idx);
-
-                Some(item)
-            }
-        }
+    fn next_idx(&self, idx: &Self::Idx) -> Option<Self::Idx> {
+        (*self).next_idx(idx)
     }
 }

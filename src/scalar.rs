@@ -1,56 +1,78 @@
 use crate::{
-    generic_tensor::GenericTensor, numeric::Numeric, shape::{self, Shape}, storage::{Layout, Storage}, tensor::Tensor
+    differentiable::{Differentiable, DifferentiableTensor},
+    generic_tensor::IntoGeneric,
+    shape::{self, Broadcastable, Shape, Shaped},
+    storage::Storage,
+    tensor::{Indexable, Tensor},
 };
-use num::ToPrimitive;
+use std::ops::Index;
 
-pub const fn scalar_shape() -> Shape {
-    [0; shape::MAX_DIMS]
-}
+pub const RANK: usize = 0;
 
-#[derive(Tensor, Debug, Clone)]
-#[tensor_rank = 0]
-#[tensor_shape = "scalar_shape()"]
-pub struct Scalar<T: Numeric> {
+#[derive(TensorStorage, OwnedTensorStorage, Tensor, Debug, Clone)]
+pub struct Scalar<T> {
     storage: Storage<T>,
-    layout: Layout,
 }
 
-impl<T: Numeric> Scalar<T> {
-    pub fn val(&self) -> T {
-        self[&[]]
+impl<T> Scalar<T> {
+    pub const fn shape() -> Shape {
+        shape::rank0()
+    }
+
+    pub fn val(&self) -> T
+    where
+        T: Clone,
+    {
+        self[&[]].clone()
     }
 }
 
-impl<T: Numeric, F> From<F> for Scalar<T>
-where
-    F: ToPrimitive + Copy,
-{
-    fn from(val: F) -> Self {
-        let vals = vec![T::from(val).unwrap()];
+impl<T> Shaped for Scalar<T> {
+    fn rank() -> usize {
+        RANK
+    }
+
+    fn shape() -> Shape {
+        Self::shape()
+    }
+}
+
+impl<T> From<T> for Scalar<T> {
+    fn from(val: T) -> Self {
         Self {
-            storage: vals.into(),
-            layout: Layout::default(),
+            storage: [val].into(),
         }
     }
 }
 
-impl<T: Numeric> From<GenericTensor<T, 0, { scalar_shape() }>> for Scalar<T> {
-    fn from(t: GenericTensor<T, 0, { scalar_shape() }>) -> Self {
-        Self {
-            storage: t.storage,
-            layout: t.layout,
-        }
+impl<T> IntoGeneric<T, { RANK }, { Self::shape() }> for Scalar<T> {}
+
+impl<T> Index<&[usize; RANK]> for Scalar<T> {
+    type Output = T;
+
+    fn index(&self, idx: &[usize; RANK]) -> &Self::Output {
+        self.storage
+            .index(idx, Self::rank(), Self::shape())
+            .unwrap()
     }
 }
 
-impl<T: Numeric> From<Scalar<T>> for GenericTensor<T, 0, { scalar_shape() }> {
-    fn from(t: Scalar<T>) -> Self {
-        Self {
-            storage: t.storage,
-            layout: t.layout,
-        }
+impl<T> Index<&[usize; RANK]> for &Scalar<T> {
+    type Output = T;
+
+    fn index(&self, idx: &[usize; RANK]) -> &Self::Output {
+        (*self).index(idx)
     }
 }
+
+impl<T> Indexable for Scalar<T> {
+    type Idx = [usize; RANK];
+    type T = T;
+}
+
+impl<T> DifferentiableTensor for Scalar<T> where T: Differentiable {}
+
+impl<Tn: Tensor> Broadcastable<Tn> for Scalar<Tn::T> {}
 
 #[cfg(test)]
 mod tests {
@@ -59,22 +81,19 @@ mod tests {
 
     #[test]
     fn basics() {
-        let a: Scalar<f64> = Scalar::from(42);
+        let a = Scalar::from(42);
 
-        assert_eq!(a[&[]], 42.0);
-        assert_eq!(a.val(), 42.0);
+        assert_eq!(a[&[]], 42);
+        assert_eq!(a.val(), 42);
     }
 
     #[test]
     fn multiplication() {
-        assert_eq!(
-            Scalar::<f64>::from(6) * Scalar::<f64>::from(7),
-            Scalar::<f64>::from(42)
-        );
+        assert_eq!(Scalar::from(6) * Scalar::from(7), Scalar::from(42));
 
-        let x: Vector<f64, _> = Vector::from([1, 2, 3]);
-        let a: Scalar<f64> = Scalar::from(6);
+        let x = Vector::from([1, 2, 3]);
+        let a = Scalar::from(6);
 
-        assert_eq!(x * a, Vector::<f64, 3>::from([6, 12, 18]));
+        assert_eq!(x * a, Vector::from([6, 12, 18]));
     }
 }

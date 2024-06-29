@@ -1,38 +1,41 @@
 use crate::{
-    generic_tensor::GenericTensor,
-    matrix::MatrixView,
-    numeric::Numeric,
-    shape::Shape,
-    storage::{Layout, Storage},
-    tensor::Tensor,
+    blas::BLASOps,
+    differentiable::{Differentiable, DifferentiableTensor},
+    encoding::EncodingError,
+    generic_tensor::{GenericTensor, IntoGeneric},
+    matrix::{self, IntoMatrix, Matrix},
+    shape::{self, broadcast_compat, Broadcastable, Shape, Shaped, Transposable},
+    storage::{Layout, Storage, TensorLayout, TensorStorage},
+    tensor::{Indexable, Tensor},
+    type_assert::{Assert, IsTrue},
+    view::View,
 };
-use num::{Integer, ToPrimitive};
+use std::ops::Index;
 
-pub const fn vector_shape(n: usize) -> Shape {
-    [n, 0, 0, 0, 0, 0]
+pub const RANK: usize = 1;
+
+#[derive(TensorStorage, OwnedTensorStorage, Tensor, Debug, Clone)]
+pub struct Vector<T, const N: usize> {
+    storage: Storage<T>,
 }
 
-#[derive(Tensor, Debug, Clone)]
-#[tensor_rank = 1]
-#[tensor_shape = "vector_shape(N)"]
-pub struct Vector<T: Numeric, const N: usize> {
-    pub(crate) storage: Storage<T>,
-    pub layout: Layout,
-}
+impl<T, const N: usize> Vector<T, N> {
+    pub const fn shape() -> Shape {
+        shape::rank1([N])
+    }
 
-// Convenience types for rows/columns
-type RowVector<'a, T, const N: usize> = MatrixView<'a, T, 1, N>;
-type ColumnVector<'a, T, const N: usize> = MatrixView<'a, T, N, 1>;
+    pub fn dot(&self, rhs: &Self) -> T
+    where
+        T: BLASOps,
+    {
+        // Safety: dimensions are checked by type params
+        unsafe { T::dot(N as i32, &self.storage.data, 1, &rhs.storage.data, 1) }
+    }
 
-#[derive(Debug, PartialEq)]
-pub enum EncodingError {
-    InvalidOneHotInput,
-}
-
-impl<T: Numeric, const N: usize> Vector<T, N> {
     pub fn one_hot<U>(n: U) -> Result<Self, EncodingError>
     where
-        U: Integer + ToPrimitive,
+        T: num::One + num::Zero,
+        U: num::Integer + num::ToPrimitive,
     {
         let i = n.to_usize().ok_or(EncodingError::InvalidOneHotInput)?;
         if i >= N {
@@ -48,118 +51,172 @@ impl<T: Numeric, const N: usize> Vector<T, N> {
         }))
     }
 
-    pub fn dot(&self, other: &Self) -> T {
-        unsafe { T::dot(N as i32, &self.storage, 1, &other.storage, 1) }
+    pub fn as_col_vector(&self) -> View<Matrix<T, N, 1>> {
+        self.view().as_matrix()
     }
 
-    pub fn normalize(self) -> NormalizedVector<T, N> {
-        let s = self.sum().val();
-        if s == T::one() {
-            NormalizedVector { v: self }
-        } else if s == T::zero() {
-            let val = T::one() / T::from(N).unwrap();
-            NormalizedVector {
-                v: self.map(|_, _| val),
-            }
-        } else {
-            NormalizedVector {
-                v: self.map(|_, n| n / s),
-            }
-        }
-    }
-
-    pub fn as_col_vector(&self) -> ColumnVector<T, N> {
-        debug_assert_eq!(self.layout, Layout::Normal);
-
-        MatrixView {
-            storage: &self.storage,
-            layout: self.layout,
-        }
-    }
-
-    pub fn as_row_vector(&self) -> RowVector<T, N> {
+    pub fn as_row_vector(&self) -> View<Matrix<T, 1, N>> {
         self.as_col_vector().transpose()
     }
 }
 
-impl<T: Numeric, const N: usize, F: ToPrimitive> From<[F; N]> for Vector<T, N> {
-    fn from(arr: [F; N]) -> Self {
-        let vals = arr.into_iter().map(|v| T::from(v).unwrap()).collect();
+// Default Vectors as being interpreted as column vectors (seems mathematically
+// reasonable)
+impl<T, const N: usize> IntoMatrix<T, N, 1> for Vector<T, N> {}
+
+impl<T, const N: usize> Shaped for Vector<T, N> {
+    fn rank() -> usize {
+        RANK
+    }
+
+    fn shape() -> Shape {
+        Self::shape()
+    }
+}
+
+impl<T, const M: usize> Vector<T, M>
+where
+    T: BLASOps + num::One,
+{
+    /// add_matvecmul is a typesafe wrapper around gemv implementations that
+    /// multiplies `lhs` and `rhs` and adds the result to `self`. Generally,
+    /// higher-level Mul operations should be used instead of this method.
+    pub fn add_matvecmul<const N: usize>(
+        self,
+        lhs: View<Matrix<T, M, N>>,
+        rhs: View<Vector<T, N>>,
+    ) -> Self {
+        matvecmul_impl::<T, M, N>(
+            &lhs.storage().data,
+            lhs.layout(),
+            &rhs.storage().data,
+            rhs.layout(),
+            self,
+        )
+    }
+}
+
+fn matvecmul_impl<T, const M: usize, const N: usize>(
+    lhs_data: &[T],
+    lhs_layout: Layout,
+    rhs_data: &[T],
+    rhs_layout: Layout,
+    mut out: Vector<T, M>,
+) -> Vector<T, M>
+where
+    T: BLASOps + num::One,
+{
+    debug_assert!(!out.storage.layout.is_transposed());
+    debug_assert!(!rhs_layout.is_transposed());
+
+    // BLAS always uses column-major format, so if we're "transposed" we're
+    // already in BLAS format, otherwise we have to transpose.
+    let trans = lhs_layout.to_blas();
+    let m = if lhs_layout.is_transposed() { M } else { N } as i32;
+    let n = if lhs_layout.is_transposed() { N } else { M } as i32;
+    let lda = m;
+
+    // Safety: dimensions are checked by type parameters
+    unsafe {
+        T::gemv(
+            trans,
+            m,
+            n,
+            T::one(),
+            lhs_data,
+            lda,
+            rhs_data,
+            1,
+            T::one(),
+            &mut out.storage.data,
+            1,
+        );
+    }
+
+    out
+}
+
+impl<T, const N: usize> From<[T; N]> for Vector<T, N> {
+    fn from(vals: [T; N]) -> Self {
         Self {
-            storage: vals,
-            layout: Layout::default(),
+            storage: vals.into(),
         }
     }
 }
 
-impl<T: Numeric, const N: usize> From<GenericTensor<T, 1, { vector_shape(N) }>> for Vector<T, N> {
-    fn from(t: GenericTensor<T, 1, { vector_shape(N) }>) -> Self {
-        Self {
-            storage: t.storage,
-            layout: t.layout,
-        }
-    }
-}
+impl<T, const N: usize> IntoGeneric<T, { RANK }, { Self::shape() }> for Vector<T, N> {}
 
-impl<T: Numeric, const N: usize> From<Vector<T, N>> for GenericTensor<T, 1, { vector_shape(N) }> {
-    fn from(t: Vector<T, N>) -> Self {
-        Self {
-            storage: t.storage,
-            layout: t.layout,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct NormalizedVector<T: Numeric, const N: usize> {
-    v: Vector<T, N>,
-}
-
-impl<T: Numeric, const N: usize> NormalizedVector<T, N> {
-    pub fn as_vector(&self) -> &Vector<T, N> {
-        &self.v
-    }
-}
-
-impl<T: Numeric, const N: usize> std::ops::Index<&[usize; 1]> for NormalizedVector<T, N> {
+impl<T, const N: usize> Index<&[usize; RANK]> for Vector<T, N> {
     type Output = T;
 
-    fn index(&self, index: &[usize; 1]) -> &Self::Output {
-        self.v.index(index)
+    fn index(&self, idx: &[usize; RANK]) -> &Self::Output {
+        self.storage
+            .index(idx, Self::rank(), Self::shape())
+            .unwrap()
     }
 }
 
-impl<T: Numeric, const N: usize> From<NormalizedVector<T, N>> for Vector<T, N> {
-    fn from(v: NormalizedVector<T, N>) -> Self {
-        v.v
+impl<T, const N: usize> Index<&[usize; RANK]> for &Vector<T, N> {
+    type Output = T;
+
+    fn index(&self, idx: &[usize; RANK]) -> &Self::Output {
+        (*self).index(idx)
     }
+}
+
+impl<T, const N: usize> Indexable for Vector<T, N> {
+    type Idx = [usize; RANK];
+    type T = T;
+}
+
+impl<T, const N: usize> DifferentiableTensor for Vector<T, N> where T: Differentiable {}
+
+impl<T, const N: usize, const M: usize, const P: usize> Broadcastable<Matrix<T, M, P>>
+    for Vector<T, N>
+where
+    Assert<
+        {
+            broadcast_compat(
+                RANK,
+                Self::shape(),
+                matrix::RANK,
+                Matrix::<T, M, P>::shape(),
+            )
+        },
+    >: IsTrue,
+{
+}
+
+impl<T, const N: usize, const R: usize, const S: Shape> Broadcastable<GenericTensor<T, R, S>>
+    for Vector<T, N>
+where
+    Assert<{ broadcast_compat(RANK, Self::shape(), matrix::RANK, S) }>: IsTrue,
+{
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::matrix::Matrix;
-    use proptest::prelude::*;
-    use seq_macro::seq;
 
     #[test]
     fn test_basics() {
-        let a: Vector<f64, 5> = Vector::from([1, 2, 3, 4, 5]);
+        let a = Vector::from([1, 2, 3, 4, 5]);
 
-        assert_eq!(a[&[3]], 4.0);
+        assert_eq!(a[&[3]], 4);
     }
 
     #[test]
     fn test_from_fn() {
-        let a: Vector<_, 4> = Vector::from_fn(|idx| idx[0] as f32 * 2.0);
+        let a: Vector<_, 4> = Vector::from_fn(|idx| idx[0] * 2);
 
         assert_eq!(a, Vector::from([0, 2, 4, 6]));
     }
 
     #[test]
     fn test_dot_product() {
-        let a: Vector<f64, _> = Vector::from([1, 2, 3]);
-        let b: Vector<f64, _> = Vector::from([4, 5, 6]);
+        let a = Vector::from([1.0, 2.0, 3.0]);
+        let b = Vector::from([4.0, 5.0, 6.0]);
 
         assert_eq!(a.dot(&b), 32.0);
     }
@@ -168,7 +225,7 @@ mod tests {
     fn test_one_hot() {
         assert_eq!(
             Vector::<f64, 5>::one_hot(3).unwrap(),
-            Vector::<f64, _>::from([0, 0, 0, 1, 0]),
+            Vector::<f64, _>::from([0.0, 0.0, 0.0, 1.0, 0.0]),
         );
         assert_eq!(
             Vector::<f64, 5>::one_hot(-3),
@@ -182,25 +239,11 @@ mod tests {
 
     #[test]
     fn test_broadcast() {
-        let x: Vector<f64, _> = [1, 2, 3].into();
-        let m1: Matrix<f64, 2, 3> = x.view().to_generic().broadcast().from_generic().into();
-        assert_eq!(m1, Matrix::<f64, _, _>::from([[1, 2, 3], [1, 2, 3]]));
+        let x = Vector::from([1, 2, 3]);
+        let m1: Matrix<_, 2, 3> = x.view().broadcast().to_owned();
+        assert_eq!(m1, Matrix::from([[1, 2, 3], [1, 2, 3]]));
 
-        let x_col = x.as_col_vector().view();
-        let m2: Matrix<f64, 3, 2> = x_col.to_generic().broadcast().from_generic().into();
-        assert_eq!(m2, Matrix::<f64, _, _>::from([[1, 1], [2, 2], [3, 3]]));
+        let m2: Matrix<_, 3, 2> = x.as_col_vector().broadcast().to_owned();
+        assert_eq!(m2, Matrix::from([[1, 1], [2, 2], [3, 3]]));
     }
-
-    seq!(N in 1..10 {
-        proptest! {
-            #[test]
-            fn test_normalize_~N(v in prop::collection::vec(any::<f64>(), N)) {
-                let x: Vector<f64, N> = v.into_iter().collect();
-                let x_n = x.normalize();
-
-                const TOLERANCE: f64 = 0.00001;
-                assert!((x_n.as_vector().sum().val() - 1.0).abs() < TOLERANCE);
-            }
-        }
-    });
 }

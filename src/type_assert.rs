@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 pub struct Assert<const T: bool> {
-    __prevent_contstruction: PhantomData<()>,
+    _prevent_contstruction: PhantomData<()>,
 }
 
 impl const IsTrue for Assert<true> {}

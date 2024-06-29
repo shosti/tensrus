@@ -3,22 +3,17 @@ name = "tensrus"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[lib]
-name = "tensrus"
-path = "src/lib.rs"
-
 [dependencies]
-dot = { git = "https://github.com/przygienda/dot-rust.git" }
+seq-macro = "0.3"
 num = "0.4"
-rand = "0.9.0-alpha.1"
 tensrus-derive = { path = "tensrus-derive" }
 blas = "0.22"
-seq-macro = "0.3"
+rand = "0.9.0-alpha.1"
 rand_distr = "0.5.0-alpha.1"
+static_assertions = "1.1"
 
 [dev-dependencies]
 proptest = "1.0.0"
 
 [features]
-proptest = []
+slow_tests = []

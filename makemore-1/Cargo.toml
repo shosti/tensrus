@@ -1,9 +1,0 @@
-[package]
-name = "makemore-1"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-tensrus = { path = ".." }
-substring = "1.4"
-rand = "0.9.0-alpha.1"
