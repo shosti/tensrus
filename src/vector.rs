@@ -165,7 +165,7 @@ impl<T, const N: usize> Index<&[usize; RANK]> for &Vector<T, N> {
 }
 
 impl<T, const N: usize> Indexable for Vector<T, N> {
-    type Idx = [usize; RANK];
+    type Idx = [usize; 1];
     type T = T;
 }
 

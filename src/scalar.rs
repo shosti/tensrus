@@ -66,7 +66,7 @@ impl<T> Index<&[usize; RANK]> for &Scalar<T> {
 }
 
 impl<T> Indexable for Scalar<T> {
-    type Idx = [usize; RANK];
+    type Idx = [usize; 0];
     type T = T;
 }
 

@@ -257,7 +257,7 @@ impl<T, const M: usize, const N: usize> Index<&[usize; RANK]> for &Matrix<T, M, 
 }
 
 impl<T, const M: usize, const N: usize> Indexable for Matrix<T, M, N> {
-    type Idx = [usize; RANK];
+    type Idx = [usize; 2];
     type T = T;
 }
 
